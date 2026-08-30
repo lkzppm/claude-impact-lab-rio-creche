@@ -19,8 +19,8 @@ export type Segmento = "bercario" | "maternal_1" | "maternal_2";
 
 export const SEGMENTO_LABEL: Record<Segmento, string> = {
   bercario: "Berçário",
-  maternal_1: "Maternal 1",
-  maternal_2: "Maternal 2",
+  maternal_1: "Maternal I",
+  maternal_2: "Maternal II",
 };
 
 export interface VagasSegmento {
@@ -29,7 +29,8 @@ export interface VagasSegmento {
 }
 
 /** Unidade logada nesta sessão (viria da autenticação — fora de escopo aqui). */
-export const UNIDADE_EXEMPLO = { codigo: "EDI-EXEMPLO", nome: "EDI Exemplo — Jardim Botânico" };
+/** Unidade real da base (4ª CRE, Ramos) — os números abaixo continuam sendo de demonstração. */
+export const UNIDADE_EXEMPLO = { codigo: "0430813", nome: "EDI Armando de Salles Oliveira" };
 
 export const VAGAS_POR_SEGMENTO: VagasSegmento[] = [
   { segmento: "bercario", vagas: 12 },
@@ -166,10 +167,10 @@ export const TAMANHO_PAGINA_GALERIA = 10;
 export type StatusNovoAluno = "convocado" | "aprovado" | "recusado" | "perdeu_vaga";
 
 export const STATUS_NOVO_ALUNO_LABEL: Record<StatusNovoAluno, string> = {
-  convocado: "Convocado",
-  aprovado: "Aprovado",
-  recusado: "Recusado",
-  perdeu_vaga: "Perdeu a vaga",
+  convocado: "Selecionada",
+  aprovado: "Matrícula confirmada",
+  recusado: "Recusada",
+  perdeu_vaga: "Prazo vencido",
 };
 
 /** Prazo total, em dias, que a família tem para comparecer após a convocação. */

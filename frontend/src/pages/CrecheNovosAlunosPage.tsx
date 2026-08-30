@@ -149,7 +149,7 @@ export default function CrecheNovosAlunosPage() {
 
   return (
     <Page
-      title="Novos Alunos"
+      title="Crianças convocadas"
       subtitle="Convocados desta unidade têm 3 dias para comparecer. A creche confirma a matrícula quando o responsável aparece."
     >
       <Card
@@ -210,7 +210,7 @@ export default function CrecheNovosAlunosPage() {
         )}
       </Card>
 
-      <Card title="Cronograma de comparecimento" actions={<span className="text-sm muted">3 dias úteis para confirmar a vaga</span>}>
+      <Card title="Cronograma de comparecimento" actions={<span className="text-sm muted">3 dias (72 h) a partir do aviso à família</span>}>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ display: "flex", gap: 12, alignItems: "center", paddingBottom: 12, borderBottom: "1px solid var(--mr-grey-200)" }}>
             <MessageCircleQuestion size={20} style={{ color: "var(--info)" }} aria-hidden="true" />
@@ -223,7 +223,7 @@ export default function CrecheNovosAlunosPage() {
             <PhoneCall size={20} style={{ color: "var(--warn)" }} aria-hidden="true" />
             <div>
               <strong>Dia {PRAZO_2A_PERGUNTA_E_LIGACAO_DIAS}</strong>
-              <p className="text-sm muted">Pergunta repetida; se ainda sem resposta, a escola liga para o contato principal</p>
+              <p className="text-sm muted">Pergunta repetida; se ainda sem resposta, a unidade liga para o contato principal</p>
             </div>
           </div>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
@@ -231,8 +231,8 @@ export default function CrecheNovosAlunosPage() {
             <div>
               <strong>Dia {PRAZO_PERDA_VAGA_DIAS}</strong>
               <p className="text-sm muted">
-                Sem confirmação de presença, a criança perde a vaga nesta escola e entra no reparelhamento com outra
-                unidade — se a família não responder em nenhum dos 3 contatos obrigatórios em 2 dias, a inscrição é encerrada.
+                Sem confirmação no prazo, a vaga volta para a fila e o motor convoca a próxima criança. As outras
+                reservas da família continuam valendo — o histórico fica registrado e não é apagado.
               </p>
             </div>
           </div>
@@ -284,7 +284,7 @@ export default function CrecheNovosAlunosPage() {
                     <div className="aluno-card" key={a.id}>
                       <span className="aluno-card-nome">{a.nome}</span>
                       <span className="aluno-card-meta">{SEGMENTO_LABEL[a.segmento]}</span>
-                      <Pill tone="ok">Aprovado</Pill>
+                      <Pill tone="ok">Matrícula confirmada</Pill>
                       {a.aprovadoPor && <span className="aluno-card-meta">Autorizado por {a.aprovadoPor}</span>}
                     </div>
                   ))}
@@ -298,22 +298,22 @@ export default function CrecheNovosAlunosPage() {
       </Card>
 
       {perderamVaga.length > 0 && (
-        <Card title={`Perderam a vaga (${perderamVaga.length})`} flush>
+        <Card title={`Prazo vencido (${perderamVaga.length})`} flush>
           <p className="text-sm muted" style={{ padding: "0 16px" }}>
-            Não confirmaram presença em 3 dias úteis. Aparecem aqui pelos últimos 3 dias enquanto o reparelhamento com
-            outra escola está em andamento.
+            Não confirmaram presença em 3 dias (72 h). A vaga voltou para a fila; a criança aparece aqui por 3 dias
+            enquanto o motor repassa a vaga ao próximo da fila.
           </p>
           <DataTable
             rows={paginar(perderamVaga, paginaPerdeuVaga, TAMANHO_PAGINA_GALERIA)}
             rowKey={(a) => a.id}
             columns={[
               { key: "nome", header: "Criança", render: (a) => a.nome },
-              { key: "segmento", header: "Segmento", render: (a) => SEGMENTO_LABEL[a.segmento] },
+              { key: "segmento", header: "Grupamento", render: (a) => SEGMENTO_LABEL[a.segmento] },
               { key: "contato", header: "Contato", render: (a) => a.contatoPrincipal.nome },
               {
                 key: "status",
                 header: "Status",
-                render: (a) => <Pill tone="danger">Vaga perdida{a.perdeuVagaEm ? ` — ${fmtDateTime(a.perdeuVagaEm)}` : ""}</Pill>,
+                render: (a) => <Pill tone="danger">Prazo vencido{a.perdeuVagaEm ? ` — ${fmtDateTime(a.perdeuVagaEm)}` : ""}</Pill>,
               },
             ]}
             footer={

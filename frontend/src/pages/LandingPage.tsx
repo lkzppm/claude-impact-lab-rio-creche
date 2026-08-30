@@ -19,15 +19,15 @@ const PERFIS = [
   {
     to: "/sme",
     titulo: "Sou do Nível Central SME",
-    chamada: "Classificação e rede",
-    texto: "Rode a classificação por criança, compare regimes, acompanhe as 11 CREs e consulte a régua de pontuação.",
+    chamada: "Visão da rede",
+    texto: "Acompanhe o motor de classificação, as 11 CREs, o mapa do território e a régua de pontuação.",
     Icone: Landmark,
   },
   {
     to: "/creche",
     titulo: "Sou da creche / EDI",
     chamada: "Gestão da minha unidade",
-    texto: "Vagas por segmento, novos alunos para convocar e verificação de documentos dos responsáveis.",
+    texto: "Vagas por grupamento, crianças convocadas para a unidade e conferência de documentos dos responsáveis.",
     Icone: Baby,
   },
 ];
@@ -39,7 +39,7 @@ export default function LandingPage() {
         <header className="landing-head">
           <h1>Inscrição Creche</h1>
           <p>
-            Um só sistema, três jeitos de usar. Escolha o seu perfil — não precisa de senha nesta versão de demonstração.
+            Um só sistema, quatro jeitos de usar. Escolha o seu perfil — não precisa de senha nesta versão de demonstração.
           </p>
         </header>
         <ul className="perfil-grid">

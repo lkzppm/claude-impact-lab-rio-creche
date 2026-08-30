@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import "./tokens.css";
 import "./components.css";
@@ -33,10 +33,10 @@ const NAV_POR_AREA: Record<string, { to: string; label: string; end?: boolean }[
     { to: "/sme/regua", label: "Régua" },
   ],
   creche: [
-    { to: "/creche", label: "Dashboard", end: true },
-    { to: "/creche/vagas", label: "Administração de Vagas" },
-    { to: "/creche/novos-alunos", label: "Novos Alunos" },
-    { to: "/creche/documentos", label: "Verificação de Documentos" },
+    { to: "/creche", label: "Painel", end: true },
+    { to: "/creche/vagas", label: "Vagas" },
+    { to: "/creche/novos-alunos", label: "Convocadas" },
+    { to: "/creche/documentos", label: "Documentos" },
   ],
 };
 
@@ -79,11 +79,11 @@ export function AppHeader() {
         <div className="container">
           {area ? (
             <>
-              <span className="app-area">
+              <span className="app-area" key={area}>
                 {AREA_LABEL[area]}
                 {area === "creche" && <span className="app-unidade"> · {UNIDADE_EXEMPLO.nome}</span>}
               </span>
-              <nav aria-label="Principal">
+              <nav aria-label="Principal" key={`nav-${area}`}>
                 <ul className="app-nav">
                   {nav.map((n) => (
                     <li key={n.to}>
@@ -491,13 +491,13 @@ export function Pagination({
   return (
     <div className="pagination">
       <button type="button" className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
-        ‹ Anterior
+        <ChevronLeft size={16} aria-hidden="true" /> Anterior
       </button>
       <span className="text-sm muted">
         Página {page} de {totalPages}
       </span>
       <button type="button" className="btn btn-ghost btn-sm" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
-        Próxima ›
+        Próxima <ChevronRight size={16} aria-hidden="true" />
       </button>
     </div>
   );

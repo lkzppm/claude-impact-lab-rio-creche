@@ -97,8 +97,8 @@ function SegmentoCard({
 export default function CrecheVagasPage() {
   return (
     <Page
-      title="Administração de Vagas"
-      subtitle="Número de vagas por segmento de entrada. A edição só fica disponível durante o período de gestão de vaga."
+      title="Vagas da unidade"
+      subtitle="Número de vagas por grupamento de entrada. A edição só fica disponível durante o período de gestão de vaga."
     >
       {!PERIODO_GESTAO_VAGA_ABERTO && (
         <div className="alert alert-danger">

@@ -17,19 +17,19 @@ const ATALHOS = [
   {
     to: "/creche/vagas",
     Icone: ClipboardList,
-    titulo: "Administração de Vagas",
-    texto: "Vagas por segmento e prazo de gestão.",
+    titulo: "Vagas da unidade",
+    texto: "Vagas por grupamento e prazo de gestão.",
   },
   {
     to: "/creche/novos-alunos",
     Icone: Users,
-    titulo: "Novos Alunos",
+    titulo: "Crianças convocadas",
     texto: "Lista para ligar hoje e galeria de alunos por status.",
   },
   {
     to: "/creche/documentos",
     Icone: FileCheck2,
-    titulo: "Verificação de Documentos",
+    titulo: "Verificação de documentos",
     texto: "Fila de responsáveis e wizard de verificação.",
   },
 ];
@@ -65,8 +65,8 @@ export default function CrecheDashboardPage() {
 
   return (
     <Page
-      title={`Painel — ${UNIDADE_EXEMPLO.nome}`}
-      subtitle="Vagas por segmento, convocados aguardando comparecimento e a fila de verificação de documentos."
+      title={`Painel · ${UNIDADE_EXEMPLO.nome}`}
+      subtitle="Vagas por grupamento, convocados aguardando comparecimento e a fila de verificação de documentos."
     >
       <Card title="Para hoje">
         <div className="para-hoje">
@@ -91,7 +91,7 @@ export default function CrecheDashboardPage() {
       </Card>
 
       <div className="grid-2">
-        <Card title="Vagas por segmento">
+        <Card title="Vagas por grupamento">
           <BarList itens={vagasPorSegmento.map((s) => ({ label: s.label, value: s.value }))} tone="info" />
           <p className="text-sm muted" style={{ marginTop: 8 }}>
             {fmtInt(totalVagas)} vagas no total nesta unidade.
@@ -158,7 +158,7 @@ export default function CrecheDashboardPage() {
             <ShieldAlert size={20} style={{ color: "var(--danger)" }} aria-hidden="true" />
             <div>
               <strong>Dia {PRAZO_PERDA_CRITERIOS_DIAS}</strong>
-              <p className="text-sm muted">Critérios "irmão na rede" e "Pequenos Cariocas" deixam de contar na pontuação</p>
+              <p className="text-sm muted">O documento conferido fica registrado na ficha da criança — a pontuação não muda (a régua é norma)</p>
             </div>
           </div>
         </div>

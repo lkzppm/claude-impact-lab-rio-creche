@@ -1,5 +1,5 @@
 import { KeyboardEvent, ReactNode, useEffect, useRef, useState } from "react";
-import { MapPin, MessageCircle } from "lucide-react";
+import { MapPin, MessageCircle, X } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ApiError, perguntarAssistente } from "../api/client";
 import type { ChatFerramenta, ChatNavegacao } from "../api/types";
@@ -222,7 +222,7 @@ export default function ChatAssistente() {
           <span className="chat-head-sub">{rotulo} · só consulta, não altera nada</span>
         </div>
         <button type="button" className="chat-fechar" onClick={() => setAberto(false)} aria-label="Fechar o assistente">
-          ×
+          <X size={18} aria-hidden="true" />
         </button>
       </div>
 

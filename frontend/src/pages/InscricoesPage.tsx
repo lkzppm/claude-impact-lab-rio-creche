@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -123,10 +124,10 @@ export default function InscricoesPage() {
                 </span>
                 <span className="row">
                   <Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                    ‹ Anterior
+                    <ChevronLeft size={16} aria-hidden="true" /> Anterior
                   </Button>
                   <Button variant="ghost" size="sm" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
-                    Próxima ›
+                    Próxima <ChevronRight size={16} aria-hidden="true" />
                   </Button>
                 </span>
               </>

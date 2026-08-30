@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AppHeader } from "./design-system";
 import { AreaProvider } from "./areas/AreaContext";
 import LandingPage from "./pages/LandingPage";
@@ -26,9 +26,12 @@ import CrecheDocumentosPage from "./pages/CrecheDocumentosPage";
 import ChatAssistente from "./components/ChatAssistente";
 
 export default function App() {
+  const { pathname } = useLocation();
   return (
     <AreaProvider>
       <AppHeader />
+      {/* key no caminho: a página nova remonta e entra com a animação .rota-enter */}
+      <main key={pathname} className="rota-enter">
       <Routes>
         <Route path="/" element={<LandingPage />} />
 
@@ -73,6 +76,7 @@ export default function App() {
         <Route path="/unidades/*" element={<Navigate to="/sme/unidades" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      </main>
       {/* "Perguntar ao painel" — só nas áreas CRE e Nível Central */}
       <ChatAssistente />
     </AreaProvider>

@@ -48,7 +48,7 @@ export default function SmeRedePage() {
     ? [
         { label: "Matrículas confirmadas", value: r.confirmadas ?? 0, tone: "ok", hint: "a família compareceu e a vaga foi ocupada" },
         { label: "Ainda abertas", value: abertas, tone: "info", hint: "sem desfecho — a família ainda pode responder" },
-        { label: "Recusadas", value: r.recusadas ?? 0, tone: "warn", hint: "a vaga voltou para a fila" },
+        { label: "Recusadas", value: r.recusadas ?? 0, tone: "neutral", hint: "a vaga voltou para a fila" },
         { label: "Prazo vencido registrado", value: r.expiradas ?? 0, tone: "danger", hint: "a vaga voltou para a fila" },
       ]
     : [];

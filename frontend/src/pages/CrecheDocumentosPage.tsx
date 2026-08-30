@@ -46,7 +46,7 @@ export default function CrecheDocumentosPage() {
 
   return (
     <Page
-      title="Verificação de Documentos"
+      title="Verificação de documentos"
       subtitle={`Passo anterior à convocação — prazo de ${PRAZO_VERIFICACAO_DOCUMENTO_DIAS} dia. Quem tem visita agendada essa semana aparece primeiro; quem passou do prazo cai para "Em atraso".`}
       actions={
         <Button onClick={() => abrirWizard()} disabled={responsaveis.length === 0}>

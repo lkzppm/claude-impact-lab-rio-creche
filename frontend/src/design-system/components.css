@@ -172,7 +172,7 @@
   border-top: 5px solid var(--mr-cyan-600);
   color: var(--mr-ink);
   text-decoration: none;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2);
 }
 .perfil-card:hover,
 .perfil-card:focus-visible {
@@ -512,7 +512,7 @@
   letter-spacing: 0.02em;
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background var(--dur-2), color var(--dur-2), border-color var(--dur-2), transform var(--dur-1), box-shadow var(--dur-2);
   white-space: nowrap;
 }
 .btn:disabled {
@@ -629,7 +629,7 @@
   text-decoration: none;
   color: inherit;
   cursor: pointer;
-  transition: box-shadow 0.15s, transform 0.15s;
+  transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2);
 }
 .stat-tile-link:hover,
 .stat-tile-link:focus-visible {
@@ -840,7 +840,7 @@
   color: var(--mr-ink);
   text-decoration: none;
   border-top: 4px solid var(--mr-cyan-600);
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2);
 }
 .atalho-card:hover,
 .atalho-card:focus-visible {
@@ -915,7 +915,7 @@
   opacity: 0;
   transform: translateY(-4px);
   pointer-events: none;
-  transition: opacity 0.15s, transform 0.15s;
+  transition: opacity var(--dur-2), transform var(--dur-2) var(--ease-out);
   z-index: 10;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
@@ -1056,279 +1056,6 @@
   text-align: center;
 }
 
-/* ---------- visualizações (viz.tsx) — inspirado nos painéis CRE/SME ---------- */
-:root {
-  /* paleta das barras — validada (CVD + visão normal) em fundo branco, em qualquer ordem adjacente */
-  --viz-ok: #1e7f4f;
-  --viz-info: #028fbe;
-  --viz-warn: #c98500;
-  --viz-danger: #b8421a;
-  --viz-neutral: #9a9a9a;
-  --viz-ok-soft: #e3f3ea;
-  --viz-info-soft: #e0f3fa;
-  --viz-warn-soft: #fbf0d9;
-  --viz-danger-soft: #f9e5dc;
-  --viz-neutral-soft: #ececec;
-}
-.viz-stack {
-  display: flex;
-  gap: 2px;
-  width: 100%;
-  background: var(--mr-grey-200);
-  border-radius: 0 4px 4px 0;
-  overflow: hidden;
-}
-.viz-seg {
-  height: 100%;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--mr-white);
-  font-size: 11px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.viz-seg-label {
-  padding: 0 4px;
-}
-.viz-seg:last-child {
-  border-radius: 0 4px 4px 0;
-}
-.tone-ok.viz-seg,
-.tone-ok.viz-fill,
-.tone-ok.viz-swatch {
-  background: var(--viz-ok);
-}
-.tone-info.viz-seg,
-.tone-info.viz-fill,
-.tone-info.viz-swatch {
-  background: var(--viz-info);
-}
-.tone-warn.viz-seg,
-.tone-warn.viz-fill,
-.tone-warn.viz-swatch {
-  background: var(--viz-warn);
-}
-.tone-danger.viz-seg,
-.tone-danger.viz-fill,
-.tone-danger.viz-swatch {
-  background: var(--viz-danger);
-}
-.tone-neutral.viz-seg,
-.tone-neutral.viz-fill,
-.tone-neutral.viz-swatch {
-  background: var(--viz-neutral);
-}
-.viz-legend {
-  list-style: none;
-  margin: var(--sp-2) 0 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px var(--sp-4);
-  font-size: var(--fs-sm);
-  color: var(--mr-ink-soft);
-}
-.viz-legend li {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.viz-legend strong {
-  color: var(--mr-ink);
-  font-variant-numeric: tabular-nums;
-}
-.viz-swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  display: inline-block;
-  flex: none;
-}
-.viz-barlist {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-}
-.viz-barrow {
-  display: grid;
-  grid-template-columns: minmax(140px, 360px) 1fr 64px;
-  gap: var(--sp-3);
-  align-items: center;
-  font-size: var(--fs-sm);
-}
-.viz-barlabel {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.viz-track {
-  height: 14px;
-  background: var(--mr-grey-100);
-  border-radius: 0 4px 4px 0;
-}
-.viz-fill {
-  height: 100%;
-  border-radius: 0 4px 4px 0;
-  background: var(--mr-blue-700);
-  min-width: 2px;
-}
-.viz-value {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  color: var(--mr-ink);
-  font-weight: 600;
-}
-@media (max-width: 600px) {
-  .viz-barrow {
-    grid-template-columns: 1fr 56px;
-  }
-  .viz-barrow .viz-barlabel {
-    grid-column: 1 / -1;
-  }
-}
-.meter {
-  height: 8px;
-  border-radius: 4px;
-  background: var(--viz-info-soft);
-  overflow: hidden;
-  margin-top: 6px;
-}
-.meter-fill {
-  height: 100%;
-  border-radius: 4px;
-  background: var(--viz-info);
-}
-.meter.tone-ok {
-  background: var(--viz-ok-soft);
-}
-.meter.tone-ok .meter-fill {
-  background: var(--viz-ok);
-}
-.meter.tone-warn {
-  background: var(--viz-warn-soft);
-}
-.meter.tone-warn .meter-fill {
-  background: var(--viz-warn);
-}
-.meter.tone-danger {
-  background: var(--viz-danger-soft);
-}
-.meter.tone-danger .meter-fill {
-  background: var(--viz-danger);
-}
-.meter.tone-neutral {
-  background: var(--viz-neutral-soft);
-}
-.meter.tone-neutral .meter-fill {
-  background: var(--viz-neutral);
-}
-.viz-hero {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: var(--sp-3);
-}
-.viz-hero-value {
-  font-size: 48px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--mr-blue-900);
-}
-.viz-hero-label {
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--mr-ink-soft);
-}
-/* linhas "rótulo | barra empilhada | total" */
-.viz-rows {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-}
-.viz-row {
-  display: grid;
-  grid-template-columns: 90px 1fr 70px;
-  gap: var(--sp-3);
-  align-items: center;
-  font-size: var(--fs-sm);
-}
-.viz-row .viz {
-  min-width: 0;
-}
-.viz-row-label {
-  font-weight: 600;
-  white-space: nowrap;
-}
-.viz-row-total {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  color: var(--mr-ink);
-}
-@media (max-width: 600px) {
-  .viz-row {
-    grid-template-columns: 70px 1fr 56px;
-  }
-}
-
-/* donut */
-.donut-wrap {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-5);
-  flex-wrap: wrap;
-}
-.donut {
-  flex: none;
-}
-.donut-fatia.clicavel {
-  cursor: pointer;
-}
-.donut-fatia.clicavel:hover path:last-of-type {
-  filter: brightness(1.12);
-}
-.donut-centro {
-  font-size: 34px;
-  font-weight: 700;
-  fill: var(--mr-blue-900);
-}
-.donut-centro-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  fill: var(--mr-ink-soft);
-}
-.donut-legend {
-  flex-direction: column;
-  gap: var(--sp-2);
-  margin: 0;
-  font-size: var(--fs-md);
-}
-.donut-legend li {
-  gap: var(--sp-2);
-}
-.para-hoje {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--sp-5);
-  align-items: center;
-}
-.para-hoje-lado {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-}
-@media (max-width: 720px) {
-  .para-hoje {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* toast */
 .toast {
   position: fixed;
@@ -1419,7 +1146,7 @@
   text-decoration: none;
   color: inherit;
   cursor: pointer;
-  transition: box-shadow 0.15s, transform 0.15s;
+  transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2);
 }
 .stat-tile-link:hover,
 .stat-tile-link:focus-visible {
@@ -2222,7 +1949,7 @@
   font-weight: 700;
   font-size: var(--fs-xl);
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2);
 }
 .cre-card small {
   font-size: var(--fs-xs);
@@ -2330,7 +2057,7 @@
   /* paleta das barras — validada (CVD + visão normal) em fundo branco, em qualquer ordem adjacente */
   --viz-ok: #1e7f4f;
   --viz-info: #028fbe;
-  --viz-warn: #c98500;
+  --viz-warn: var(--warn);
   --viz-danger: #b8421a;
   --viz-neutral: #9a9a9a;
   --viz-ok-soft: #e3f3ea;
@@ -2931,4 +2658,213 @@
     max-width: min(var(--container), calc(100vw - 420px - 2 * var(--sp-4)));
     margin-right: 420px;
   }
+}
+
+/* ===================== movimento =====================
+   Uma régua só (tokens --dur-1/2/3 e --ease-out). Entradas curtas e para cima; nada "salta".
+   @media (prefers-reduced-motion) em tokens.css desliga tudo. */
+@keyframes entrar {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes surgir {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes esmaecer {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes deslizar-direita {
+  from { opacity: 0; transform: translateX(32px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes crescer {
+  from { transform: scaleX(0); }
+  to { transform: none; }
+}
+
+/* troca de rota: a página nova entra de baixo, rápida */
+.rota-enter {
+  animation: entrar var(--dur-3) var(--ease-out) both;
+}
+
+/* cabeçalho: área e menu entram quando o perfil muda; sublinhado do menu desliza */
+.app-area,
+.app-nav {
+  animation: entrar var(--dur-3) var(--ease-out) both;
+}
+.app-nav a {
+  position: relative;
+  border-bottom-color: transparent;
+  transition: background var(--dur-2), color var(--dur-2);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.app-nav a::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: -3px;
+  height: 3px;
+  background: var(--mr-white);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--dur-2) var(--ease-out), background var(--dur-2);
+}
+.app-nav a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-bottom-color: transparent;
+}
+.app-nav a:hover::after {
+  transform: scaleX(1);
+  background: var(--mr-cyan-400);
+}
+.app-nav a.active {
+  border-bottom-color: transparent;
+}
+.app-nav a.active::after {
+  transform: scaleX(1);
+  background: var(--mr-white);
+}
+.app-trocar,
+.chat-fechar,
+.app-cre select {
+  transition: opacity var(--dur-2), background var(--dur-2), border-color var(--dur-2);
+}
+
+/* cards, tiles e alertas entram em cascata curta (até 8 itens; depois todos juntos) */
+.card,
+.stat-tile,
+.alert,
+.perfil-card,
+.cre-card,
+.atalho-card,
+.trabalho li,
+.pc-sec,
+.fam-sec,
+.pc-unidade,
+.pc-escolhas-lista li,
+.aluno-card {
+  animation: entrar var(--dur-3) var(--ease-out) both;
+}
+.card:nth-child(2), .stat-tile:nth-child(2), .perfil-card:nth-child(2), .cre-card:nth-child(2), .atalho-card:nth-child(2), .trabalho li:nth-child(2), .pc-unidade:nth-child(2), .pc-escolhas-lista li:nth-child(2), .aluno-card:nth-child(2) { animation-delay: 40ms; }
+.card:nth-child(3), .stat-tile:nth-child(3), .perfil-card:nth-child(3), .cre-card:nth-child(3), .atalho-card:nth-child(3), .trabalho li:nth-child(3), .pc-unidade:nth-child(3), .pc-escolhas-lista li:nth-child(3), .aluno-card:nth-child(3) { animation-delay: 80ms; }
+.card:nth-child(4), .stat-tile:nth-child(4), .perfil-card:nth-child(4), .cre-card:nth-child(4), .atalho-card:nth-child(4), .trabalho li:nth-child(4), .pc-unidade:nth-child(4), .pc-escolhas-lista li:nth-child(4), .aluno-card:nth-child(4) { animation-delay: 120ms; }
+.card:nth-child(5), .stat-tile:nth-child(5), .cre-card:nth-child(5), .trabalho li:nth-child(5), .pc-unidade:nth-child(5), .pc-escolhas-lista li:nth-child(5), .aluno-card:nth-child(5) { animation-delay: 160ms; }
+.card:nth-child(6), .stat-tile:nth-child(6), .cre-card:nth-child(6), .trabalho li:nth-child(6), .aluno-card:nth-child(6) { animation-delay: 200ms; }
+.card:nth-child(7), .stat-tile:nth-child(7), .cre-card:nth-child(7), .trabalho li:nth-child(7), .aluno-card:nth-child(7) { animation-delay: 240ms; }
+.card:nth-child(8), .stat-tile:nth-child(8), .cre-card:nth-child(8), .trabalho li:nth-child(8), .aluno-card:nth-child(8) { animation-delay: 280ms; }
+.card .card,
+.card .alert,
+.card .stat-tile {
+  animation: none; /* filho de card já entra com o pai */
+}
+.card,
+.stat-tile,
+.pc-unidade,
+.mapa-item,
+.table tbody tr,
+.trabalho li {
+  transition: box-shadow var(--dur-2), border-color var(--dur-2), background var(--dur-1), transform var(--dur-2) var(--ease-out);
+}
+
+/* botões, pills e chips */
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(0, 80, 138, 0.25);
+}
+.pill,
+.chip,
+.chat-sugestao,
+.pc-radio,
+.pc-link,
+.stat-cta,
+a {
+  transition: background var(--dur-2), color var(--dur-2), border-color var(--dur-2), opacity var(--dur-2);
+}
+.chip:active,
+.chat-sugestao:active,
+.pc-radio:active {
+  transform: scale(0.97);
+}
+.chip,
+.chat-sugestao,
+.pc-radio,
+.mapa-top-n,
+.pc-escolha-acoes button {
+  transition: background var(--dur-2), color var(--dur-2), border-color var(--dur-2), transform var(--dur-1), box-shadow var(--dur-2);
+}
+.mapa-top-n:hover {
+  transform: scale(1.12);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+}
+.mapa-top-n.chance-sem_vaga {
+  color: var(--mr-ink);
+}
+
+/* medidores e barras crescem da esquerda ao aparecer e ao mudar de valor */
+.viz-fill,
+.meter-fill,
+.prazo-fill,
+.bar-fill {
+  transform-origin: left;
+  animation: crescer var(--dur-3) var(--ease-out) both;
+  transition: width var(--dur-3) var(--ease-out), background var(--dur-2);
+}
+.viz-seg {
+  transition: flex-basis var(--dur-3) var(--ease-out), width var(--dur-3) var(--ease-out), opacity var(--dur-2);
+}
+.donut-fatia path {
+  transition: opacity var(--dur-2), transform var(--dur-2) var(--ease-out);
+}
+
+/* diálogos e toast */
+.dialog-backdrop {
+  animation: esmaecer var(--dur-2) both;
+}
+.dialog {
+  animation: surgir var(--dur-3) var(--ease-out) both;
+}
+.toast {
+  animation: surgir var(--dur-3) var(--ease-out) both;
+}
+
+/* assistente: botão flutuante respira no hover, painel desliza da direita, balões entram por baixo */
+.chat-fab {
+  transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2), background var(--dur-2);
+}
+.chat-fab:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 80, 138, 0.35);
+}
+.chat-panel {
+  animation: deslizar-direita var(--dur-3) var(--ease-out) both;
+}
+.chat-msg,
+.chat-intro,
+.chat-nav,
+.spinner-wrap {
+  animation: entrar var(--dur-2) var(--ease-out) both;
+}
+.chat-sugestao:hover {
+  transform: translateY(-1px);
+}
+
+/* formulários */
+.field input,
+.field select,
+.field textarea,
+.dialog textarea,
+.fam input,
+.fam select,
+.pc input,
+.pc select {
+  transition: border-color var(--dur-2), box-shadow var(--dur-2), background var(--dur-2);
+}
+.skeleton,
+.pc-skeleton li {
+  animation-duration: 1.4s;
 }

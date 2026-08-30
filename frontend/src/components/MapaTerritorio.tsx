@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import type { MapaCre, MapaUnidade } from "../api/types";
 import type { VizTone } from "../design-system/viz";
+import { COR_TOM, RIO, criarMapa, estiloBolha } from "./mapaBase";
+
+export { COR_TOM };
 
 /** Campos que CRE e unidade têm em comum — as métricas leem daqui e servem aos dois níveis. */
 export interface Territorio {
@@ -15,14 +17,6 @@ export interface Territorio {
   confirmadas: number;
   em_atraso: number;
 }
-
-export const COR_TOM: Record<VizTone, string> = {
-  ok: "#1e7f4f",
-  info: "#028fbe",
-  warn: "#c98500",
-  danger: "#b8421a",
-  neutral: "#9a9a9a",
-};
 
 export interface Metrica {
   key: string;
@@ -110,8 +104,6 @@ interface Props {
   onUnidade?: (codigo: string) => void;
 }
 
-const RIO: L.LatLngExpression = [-22.92, -43.4];
-
 /** Mapa do território com drill-down: bolhas por CRE na rede, uma bolha por creche dentro da CRE.
    Área da bolha proporcional ao valor da métrica (raio ∝ √valor), cor pela faixa da métrica. */
 export default function MapaTerritorio({ nivel, cres, unidades, metrica, unidadeSelecionada, onCre, onUnidade }: Props) {
@@ -123,14 +115,7 @@ export default function MapaTerritorio({ nivel, cres, unidades, metrica, unidade
 
   useEffect(() => {
     if (!ref.current || mapRef.current) return;
-    const map = L.map(ref.current, { scrollWheelZoom: false, zoomControl: true, attributionControl: true });
-    // OpenStreetMap padrão: sem chave de API (o basemap claro da CARTO passou a exigir uma e carimba
-    // "API KEY REQUIRED" sobre os ladrilhos). A opacidade deixa o mapa em segundo plano, atrás das bolhas.
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      opacity: 0.55,
-      attribution: "© OpenStreetMap",
-    }).addTo(map);
+    const map = criarMapa(ref.current); // mesmo provedor e moldura do mapa da Família
     map.setView(RIO, 10);
     camadaRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -156,13 +141,7 @@ export default function MapaTerritorio({ nivel, cres, unidades, metrica, unidade
         if (c.lat == null || c.lon == null) continue;
         const v = tamanho(c);
         const raio = 10 + 24 * Math.sqrt(Math.max(0, v) / max);
-        const bolha = L.circleMarker([c.lat, c.lon], {
-          radius: raio,
-          color: "#ffffff",
-          weight: 2,
-          fillColor: COR_TOM[metrica.tom(c)],
-          fillOpacity: 0.75,
-        }).bindTooltip(`<strong>${c.cre}ª CRE</strong><br>${metrica.formato(c)}<br>${num(c.unidades)} unidades`, {
+        const bolha = L.circleMarker([c.lat, c.lon], { ...estiloBolha(metrica.tom(c), false, raio), weight: 2 }).bindTooltip(`<strong>${c.cre}ª CRE</strong><br>${metrica.formato(c)}<br>${num(c.unidades)} unidades`, {
           direction: "top",
         });
         bolha.on("click", () => cbRef.current.onCre?.(c.cre));
@@ -179,13 +158,7 @@ export default function MapaTerritorio({ nivel, cres, unidades, metrica, unidade
         const v = tamanho(u);
         const raio = 5 + 15 * Math.sqrt(Math.max(0, v) / max);
         const escolhida = u.codigo === unidadeSelecionada;
-        const bolha = L.circleMarker([u.lat, u.lon], {
-          radius: raio,
-          color: escolhida ? "#005e96" : "#ffffff",
-          weight: escolhida ? 3 : 1.5,
-          fillColor: COR_TOM[metrica.tom(u)],
-          fillOpacity: 0.8,
-        }).bindTooltip(`<strong>${u.nome ?? u.codigo}</strong><br>${metrica.formato(u)}`, { direction: "top" });
+        const bolha = L.circleMarker([u.lat, u.lon], estiloBolha(metrica.tom(u), escolhida, raio)).bindTooltip(`<strong>${u.nome ?? u.codigo}</strong><br>${metrica.formato(u)}`, { direction: "top" });
         bolha.on("click", () => cbRef.current.onUnidade?.(u.codigo));
         bolha.addTo(camada);
         pontos.push([u.lat, u.lon]);

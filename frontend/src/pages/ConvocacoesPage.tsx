@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -98,7 +99,7 @@ export default function ConvocacoesPage() {
   return (
     <Page
       title={cre ? `Convocações · ${cre}ª CRE` : "Convocações"}
-      subtitle="Cada linha é uma criança chamada para uma vaga. Escolha uma fila e trabalhe de cima para baixo: a lista vem da mais urgente para a menos."
+      subtitle="Cada linha é uma criança convocada para uma vaga. Escolha uma fila e trabalhe de cima para baixo: a lista vem da mais urgente para a menos."
       actions={
         <Button variant="secondary" size="sm" onClick={() => window.print()}>
           Imprimir lista
@@ -155,7 +156,7 @@ export default function ConvocacoesPage() {
             <p>
               {fila === "vencidas"
                 ? "Boa notícia: nenhuma vaga com prazo vencido aqui."
-                : "As convocações são geradas pelo Nível Central; quando saírem, aparecem aqui. Troque a fila ou o filtro de unidade."}
+                : "O motor gera as convocações sozinho conforme as rodadas rodam; quando saírem, aparecem aqui. Troque a fila ou o filtro de unidade."}
             </p>
           </EmptyState>
         )}
@@ -237,10 +238,10 @@ export default function ConvocacoesPage() {
                 </span>
                 <span className="row no-print">
                   <Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                    ‹ Anterior
+                    <ChevronLeft size={16} aria-hidden="true" /> Anterior
                   </Button>
                   <Button variant="ghost" size="sm" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
-                    Próxima ›
+                    Próxima <ChevronRight size={16} aria-hidden="true" />
                   </Button>
                 </span>
               </>

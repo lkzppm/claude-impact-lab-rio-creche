@@ -1,13 +1,16 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import type { Chance, UnidadeSugerida } from "../api/types";
+import type { VizTone } from "../design-system/viz";
+import { COR_TOM, criarMapa, estiloBolha } from "./mapaBase";
 
+/** Chance → tom semântico do design system (mesmas cores dos painéis CRE/Central). */
+export const TOM_CHANCE: Record<Chance, VizTone> = { alta: "ok", media: "warn", baixa: "neutral", sem_vaga: "neutral" };
 export const COR_CHANCE: Record<Chance, string> = {
-  alta: "#1e7f4f",
-  media: "#b7791f",
-  baixa: "#8a8a8a",
-  sem_vaga: "#c9c9c9",
+  alta: COR_TOM.ok,
+  media: COR_TOM.warn,
+  baixa: COR_TOM.neutral,
+  sem_vaga: "#d9d9d9",
 };
 
 export const ROTULO_CHANCE: Record<Chance, string> = {
@@ -30,7 +33,7 @@ interface Props {
   casaAproximada?: boolean;
 }
 
-/** Mapa minimalista (CARTO Positron): casa da família, top 5 numerados, demais creches como pontos. */
+/** Mapa da família (mesma base dos painéis CRE/Central): casa, top 5 numerados, demais creches como bolhas. */
 export default function MapaCreches({ casa, unidades, escolhidas, onSelecionar, casaAproximada }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -40,23 +43,7 @@ export default function MapaCreches({ casa, unidades, escolhidas, onSelecionar, 
 
   useEffect(() => {
     if (!ref.current || mapRef.current) return;
-    const map = L.map(ref.current, { scrollWheelZoom: false, dragging: true, tap: true, zoomControl: true, attributionControl: true } as L.MapOptions);
-    // Provedor de tiles configurável. Padrão: Esri Light Gray Canvas (base + rótulos) — claro, minimalista, sem
-    // chave e sem marca d'água (o CARTO Positron passou a carimbar "API KEY REQUIRED" nos tiles sem chave).
-    // Para outro provedor, defina VITE_MAP_TILES_URL (com a chave na URL, se houver) e VITE_MAP_ATTRIBUTION no .env.
-    const tilesUrl = import.meta.env.VITE_MAP_TILES_URL;
-    if (tilesUrl) {
-      L.tileLayer(tilesUrl, {
-        maxZoom: 19,
-        subdomains: tilesUrl.includes("{s}") ? (import.meta.env.VITE_MAP_SUBDOMAINS || "abcd") : "",
-        attribution: import.meta.env.VITE_MAP_ATTRIBUTION || "",
-      }).addTo(map);
-    } else {
-      const esri = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/";
-      const opts = { maxNativeZoom: 16, maxZoom: 18, attribution: "Tiles © Esri — Esri, HERE, Garmin, © OpenStreetMap contributors" };
-      L.tileLayer(`${esri}World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`, opts).addTo(map);
-      L.tileLayer(`${esri}World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { ...opts, attribution: "", pane: "overlayPane" }).addTo(map);
-    }
+    const map = criarMapa(ref.current, { dragging: true, tap: true } as L.MapOptions);
     map.setView([-22.91, -43.35], 11);
     camadaRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -93,20 +80,14 @@ export default function MapaCreches({ casa, unidades, escolhidas, onSelecionar, 
       if (top5) {
         const icone = L.divIcon({
           className: "mapa-top",
-          html: `<span class="mapa-top-n ${escolhida ? "escolhida" : ""}" style="background:${COR_CHANCE[u.chance]}">${u.ordem_sugerida}</span>`,
+          html: `<span class="mapa-top-n chance-${u.chance} ${escolhida ? "escolhida" : ""}" style="background:${COR_CHANCE[u.chance]}">${u.ordem_sugerida}</span>`,
           iconSize: [30, 30],
           iconAnchor: [15, 15],
         });
         marker = L.marker([u.lat, u.lon], { icon: icone, title: u.nome, zIndexOffset: 500 });
         pontos.push([u.lat, u.lon]);
       } else {
-        marker = L.circleMarker([u.lat, u.lon], {
-          radius: 5,
-          color: escolhida ? "#005e96" : "#ffffff",
-          weight: escolhida ? 3 : 1,
-          fillColor: "#9aa3ad",
-          fillOpacity: 0.9,
-        });
+        marker = L.circleMarker([u.lat, u.lon], estiloBolha(TOM_CHANCE[u.chance], escolhida, 5));
       }
       marker.on("click", () => onSelecionarRef.current?.(u.codigo));
       marker.addTo(camada);

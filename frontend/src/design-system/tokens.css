@@ -52,6 +52,12 @@
   --sp-5: 24px;
   --sp-6: 32px;
   --sp-7: 48px;
+
+  /* movimento — uma régua só para todo o app (ver "movimento" em components.css) */
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+  --ease-out: cubic-bezier(0.22, 0.8, 0.3, 1);
 }
 
 *,

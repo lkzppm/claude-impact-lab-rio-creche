@@ -120,7 +120,7 @@ export default function PainelPage() {
     ? [
         { label: "Matrículas confirmadas", value: r.confirmadas ?? 0, tone: "ok", hint: "a família compareceu e a vaga foi ocupada", to: porStatus("confirmada") },
         { label: "Ainda abertas", value: abertas, tone: "info", hint: "sem desfecho — a família ainda pode responder", to: lista("abertas") },
-        { label: "Recusadas", value: r.recusadas ?? 0, tone: "warn", hint: "a vaga voltou para a fila", to: porStatus("recusada") },
+        { label: "Recusadas", value: r.recusadas ?? 0, tone: "neutral", hint: "a vaga voltou para a fila", to: porStatus("recusada") },
         { label: "Prazo vencido registrado", value: r.expiradas ?? 0, tone: "danger", hint: "a vaga voltou para a fila", to: porStatus("expirada") },
       ]
     : [];
