@@ -1,11 +1,17 @@
 import type {
   Alocacao,
+  Capacidade,
   Comprovacao,
   Convocacao,
   ConvocacaoDetalhe,
   Evento,
   Explicacao,
+  ExpirarVencidasResposta,
+  FilaConvocacao,
+  FilaUnidade,
   GerarConvocacoesResposta,
+  MultiReservaItem,
+  NovaCapacidade,
   Health,
   Inscricao,
   InscricaoDetalhe,
@@ -72,6 +78,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 const get = <T>(path: string, params?: Query) => request<T>(`${path}${qs(params)}`);
 const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
+const put = <T>(path: string, body?: unknown) =>
+  request<T>(path, { method: "PUT", body: body === undefined ? undefined : JSON.stringify(body) });
 
 /* ---------- health / processos ---------- */
 export const getHealth = () => get<Health>("/health");
@@ -82,6 +90,10 @@ export const getRegua = (ano: number) => get<Pergunta[]>(`/processos/${ano}/regu
 export const getUnidades = (params?: { cre?: string; q?: string; limit?: number }) =>
   get<Unidade[]>("/unidades", params);
 export const getUnidade = (codigo: string) => get<UnidadeDetalhe>(`/unidades/${encodeURIComponent(codigo)}`);
+export const getFilaUnidade = (codigo: string, params?: { grupamento?: string; horario?: string; limit?: number }) =>
+  get<FilaUnidade>(`/unidades/${encodeURIComponent(codigo)}/fila`, params);
+export const informarCapacidade = (codigo: string, body: NovaCapacidade) =>
+  put<Capacidade>(`/unidades/${encodeURIComponent(codigo)}/capacidade`, body);
 
 /* ---------- inscrições ---------- */
 export const getInscricoes = (params?: { ano?: number; unidade?: string; situacao?: string; page?: number; size?: number }) =>
@@ -109,17 +121,24 @@ export const getConvocacoes = (params?: {
   unidade?: string;
   status?: string;
   atrasadas?: boolean;
+  fila?: FilaConvocacao;
   page?: number;
   size?: number;
 }) => get<Paginated<Convocacao>>("/convocacoes", params);
 export const getConvocacao = (id: number) => get<ConvocacaoDetalhe>(`/convocacoes/${id}`);
 export const registrarEvento = (id: number, body: NovoEvento) =>
-  post<{ status: string; evento: Evento }>(`/convocacoes/${id}/eventos`, body);
+  post<{ status: string; evento: Evento; convocacao: ConvocacaoDetalhe }>(`/convocacoes/${id}/eventos`, body);
+export const expirarVencidas = (body: { cre?: string; unidade?: string; ator?: string | null }) =>
+  post<ExpirarVencidasResposta>("/convocacoes/expirar-vencidas", body);
+export const convocarProximo = (id: number, ator?: string | null) =>
+  post<ConvocacaoDetalhe>(`/convocacoes/${id}/convocar-proximo`, { ator });
 
 /* ---------- painel ---------- */
 export const getPainelResumo = (params?: { cre?: string; unidade?: string }) =>
   get<PainelResumo>("/painel/resumo", params);
 export const getPainelUnidades = (params?: { cre?: string }) => get<PainelUnidade[]>("/painel/unidades", params);
+export const getMultiReserva = (params?: { cre?: string; unidade?: string; limit?: number }) =>
+  get<MultiReservaItem[]>("/painel/multireserva", params);
 
 /* ---------- família ---------- */
 import type { FamiliaInscricao, FamiliaResposta, PainelCre } from "./types";

@@ -811,3 +811,267 @@
   z-index: 60;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
+
+/* ---------- CRE: painel orientado a ação ---------- */
+.stat-tile-link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.stat-tile-link:hover,
+.stat-tile-link:focus-visible {
+  text-decoration: none;
+  color: inherit;
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 2px var(--mr-cyan-600);
+}
+.stat-cta {
+  color: var(--mr-cyan-600);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* chips de fila (e de canal no diálogo) */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 4px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--mr-grey-300);
+  background: var(--mr-white);
+  color: var(--mr-ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.chip:hover {
+  border-color: var(--mr-cyan-600);
+  color: var(--mr-blue-900);
+}
+.chip.active {
+  background: var(--mr-blue-700);
+  border-color: var(--mr-blue-700);
+  color: var(--mr-white);
+}
+.chip-n {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.chip-danger:not(.active) {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.chip-warn:not(.active) {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+/* relógio da convocação */
+.prazo {
+  margin-top: var(--sp-1);
+}
+.prazo-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--mr-grey-200);
+  overflow: hidden;
+}
+.prazo-fill {
+  height: 100%;
+  background: var(--ok);
+  border-radius: 4px;
+}
+.prazo-bar.tone-warn .prazo-fill {
+  background: var(--warn);
+}
+.prazo-bar.tone-danger .prazo-fill {
+  background: var(--danger);
+}
+.prazo-legenda {
+  margin-top: 4px;
+  font-size: var(--fs-sm);
+  color: var(--mr-ink-soft);
+}
+
+/* quem registra (barra azul) */
+.app-ator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-left: var(--sp-2);
+  white-space: nowrap;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mr-white);
+}
+.app-ator input {
+  min-height: 34px;
+  width: 132px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--mr-white);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.app-ator input::placeholder {
+  color: rgba(255, 255, 255, 0.75);
+}
+.app-ator input:focus {
+  outline: none;
+  background: var(--mr-white);
+  color: var(--mr-blue-900);
+}
+@media (max-width: 720px) {
+  .app-ator span {
+    display: none;
+  }
+  .app-ator input {
+    width: 110px;
+  }
+}
+
+/* primeiro acesso: escolher a CRE */
+.cre-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--sp-3);
+}
+.cre-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 92px;
+  padding: var(--sp-4);
+  background: var(--mr-white);
+  border: 0;
+  border-top: 4px solid var(--mr-cyan-600);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  color: var(--mr-blue-900);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: var(--fs-xl);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.cre-card small {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mr-ink-soft);
+}
+.cre-card:hover,
+.cre-card:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 80, 138, 0.18);
+  border-top-color: var(--mr-blue-700);
+}
+
+/* fila de trabalho e próximo da fila */
+.trabalho {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.trabalho li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr);
+  gap: var(--sp-2) var(--sp-4);
+  align-items: center;
+  padding: var(--sp-3) 0;
+  border-top: 1px solid var(--mr-grey-200);
+}
+.trabalho li:first-child {
+  border-top: 0;
+}
+.trabalho-acao {
+  font-size: var(--fs-sm);
+  color: var(--mr-ink-soft);
+}
+.trabalho-acao strong {
+  color: var(--mr-blue-900);
+}
+@media (max-width: 720px) {
+  .trabalho li {
+    grid-template-columns: 1fr;
+  }
+}
+.proximo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.proximo-nome {
+  font-weight: 700;
+  color: var(--mr-blue-900);
+}
+
+/* capacidade: edição em linha */
+.cap-form {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.cap-form input {
+  width: 80px;
+  min-height: 32px;
+  padding: 2px 8px;
+  border: 1px solid var(--mr-grey-300);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  text-align: right;
+}
+
+/* lista para imprimir (o polo ainda trabalha com a folha de ligações) */
+@media print {
+  .app-header,
+  .filters,
+  .chips,
+  .btn,
+  .toast,
+  .no-print,
+  .page-head .row {
+    display: none !important;
+  }
+  .page {
+    padding: 0;
+  }
+  .card {
+    box-shadow: none;
+    border: 1px solid var(--mr-grey-300);
+    break-inside: avoid;
+  }
+  .table th,
+  .table td {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}

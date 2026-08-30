@@ -138,7 +138,7 @@ export default function ClassificacaoPage() {
       qc.invalidateQueries({ queryKey: ["convocacoes"] });
       qc.invalidateQueries({ queryKey: ["painel-resumo"] });
       qc.invalidateQueries({ queryKey: ["painel-unidades"] });
-      toast.show(`${fmtInt(res.n_convocacoes)} convocações geradas.`);
+      toast.show(`${fmtInt(res.convocacoes_criadas)} convocações geradas${res.ja_existentes ? ` (${fmtInt(res.ja_existentes)} já existiam)` : ""}.`);
     },
     onError: (e) => toast.show(`Não deu para gerar: ${e instanceof Error ? e.message : String(e)}`),
   });
@@ -146,7 +146,7 @@ export default function ClassificacaoPage() {
   return (
     <Page
       title="Classificação por criança"
-      subtitle="O motor lê a pontuação vigente e a ordem de preferência de cada família e resolve a fila inteira de uma vez: cada criança recebe no máximo uma vaga, a melhor possível pela sua lista. Ninguém segura vaga de ninguém."
+      subtitle="O motor lê a pontuação vigente e a ordem de preferência de cada família e resolve a fila inteira de uma vez, em memória. Cada criança recebe até 3 vagas reservadas nas unidades mais preferidas em que a pontuação alcança, mais 2 alternativas na fila — e a cascata de liberações roda aqui, não no calendário. Com 1 vaga reservada, é o Deferred Acceptance clássico."
     >
       <Card title="Rodar uma nova classificação">
         <div className="filters" style={{ marginBottom: 0 }}>
