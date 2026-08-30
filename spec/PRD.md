@@ -67,8 +67,11 @@ Duas peças, uma só base de dados:
 
 - A **tabela de pontuação** (Res. SME 542/2025) e os critérios de desempate. Norma, não parâmetro.
 - O portal de inscrição (`matricula.rio`) e a unidade como lugar da confirmação de matrícula.
-- Nenhum LLM decide alocação. Nesta fase não há LLM em lugar nenhum; ele entra depois, sobre o log de
-  decisão (explicação à família) e sobre o log de eventos (interrogação do gestor).
+- Nenhum LLM decide alocação. O único LLM da aplicação é o **assistente de consulta** dos painéis da CRE e do
+  Nível Central ("Perguntar ao painel"): ele só lê o banco por ferramentas, mostra o que consultou, não
+  registra contato, não confirma matrícula, não muda status nem pontuação — e é restrito, no servidor, ao
+  território de quem pergunta. A explicação do resultado à família continua sendo texto templado do log de
+  decisão.
 
 ## 4. Usuários — três painéis, uma base
 
@@ -133,6 +136,11 @@ credenciais, planejamento por coorte (SINASC × capacidade). Todos descritos em
   dito na banca.
 - **APIs de governo exigem adesão institucional** — o mock reproduz o contrato para que a troca seja de
   configuração, não de código.
+- **Assistente com LLM sobre dado de criança.** Mitigação: só leitura (ferramentas de consulta; a `consulta_sql`
+  do Nível Central roda SELECT-only em transação `READ ONLY` com timeout), escopo por CRE aplicado no servidor,
+  agregados por padrão e códigos anônimos só quando pedidos, log de acesso append-only (`consulta_agente`) com
+  hash da pergunta e sem texto, e o prompt de sistema afirma que a pontuação é norma e a alocação é do motor.
+  O assistente é opcional: sem `ANTHROPIC_API_KEY` os painéis funcionam sem ele.
 
 ## 10. Status
 
@@ -147,6 +155,7 @@ credenciais, planejamento por coorte (SINASC × capacidade). Todos descritos em
 | Adaptadores de comprovação (`backend/app/integracoes/`) | mock pronto; Conecta (CadÚnico, Bolsa Família, CPF Light) e RMI com contrato real, `pendente` sem credencial |
 | Frontend React com design system do matricula.rio (`frontend/`) | reestruturado em 3 painéis (Família / CRE / Nível Central) com os logos oficiais no header |
 | `docker-compose` (db + backend + frontend) | pronto — `make up` sobe os três; validado em 30/08 12h40 |
+| Assistente "Perguntar ao painel" (`backend/app/agente/`, `POST /chat`, `frontend/src/components/ChatAssistente.tsx`) | pronto — 12 ferramentas só leitura, escopo por CRE no servidor, log de acesso `consulta_agente`; testes sem rede com cliente falso |
 
 ### Primeiro resultado sobre dados reais (2025, Berçário Integral, capacidade estimada)
 
