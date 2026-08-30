@@ -337,8 +337,8 @@ export default function PreCadastroPage() {
   if (!r.horario) pendencias.push("Passo 1: o horário");
   if (!cpfValido(r.cpf)) pendencias.push("Passo 1: o seu CPF");
   if (!cepOk) pendencias.push(cepDigitos.length === 8 ? "Passo 3: confira o CEP (ou marque “continuar mesmo assim”)" : "Passo 3: o CEP da sua casa");
-  if (contatosValidos.length < MIN_CONTATOS) pendencias.push("Passo 4: 3 contatos completos, com nome e número");
-  if (r.escolhas.length < 1) pendencias.push("Passo 5: escolha pelo menos 1 creche");
+  if (contatosValidos.length < MIN_CONTATOS) pendencias.push("Passo 5: 3 contatos completos, com nome e número");
+  if (r.escolhas.length < 1) pendencias.push("Passo 4: escolha pelo menos 1 creche");
   if (r.nomeResponsavel.trim().length < 3) pendencias.push("Passo 6: o seu nome");
   if (!r.consentimento) pendencias.push("Passo 6: marque que autoriza o uso dos dados");
 
@@ -377,7 +377,7 @@ export default function PreCadastroPage() {
     });
   }
 
-  const passosFeitos = [!!nascAnoMes && cpfOk, true, cepOk, contatosValidos.length >= MIN_CONTATOS, r.escolhas.length > 0, r.nomeResponsavel.trim().length >= 3 && r.consentimento];
+  const passosFeitos = [!!nascAnoMes && cpfOk, true, cepOk, r.escolhas.length > 0, contatosValidos.length >= MIN_CONTATOS, r.nomeResponsavel.trim().length >= 3 && r.consentimento];
 
   /* ---------- sucesso ---------- */
   if (enviado) {
@@ -642,10 +642,77 @@ export default function PreCadastroPage() {
           <input id="cepAlt" className="fam-input" inputMode="numeric" placeholder="00000-000" value={r.cepAlternativo} onChange={(e) => set("cepAlternativo", mascaraCep(e.target.value))} />
         </section>
 
-        {/* 4. Contatos */}
+        {/* 4. Creches */}
+        <section className="fam-sec pc-sec" ref={secCreches}>
+          <h2>
+            <span className="pc-num">4</span> Escolha as creches
+          </h2>
+          <p className="fam-sec-lead">
+            Escolha <strong>até 5</strong>. A primeira é a que você mais quer. As de cima são as que têm mais chance perto da sua casa.
+          </p>
+          {!podeSugerir && <p className="fam-ajuda">Preencha a data de nascimento e o horário (passo 1) para ver as creches.</p>}
+          {podeSugerir && cepDigitos.length < 8 && <p className="fam-ajuda">Escreva o CEP (passo 3) para ver as creches perto de casa.</p>}
+          {sug.isFetching && !sug.data && <Spinner label="Procurando creches…" />}
+          {sug.isError && <p className="fam-erro">Não deu para buscar as creches agora.</p>}
+
+          {unidades.length > 0 && (
+            <>
+              <MapaCreches casa={casa} unidades={unidades} escolhidas={r.escolhas} onSelecionar={focarUnidade} casaAproximada={casaAproximada} />
+              {casaAproximada && (
+                <p className="fam-ajuda">
+                  <Home size={16} aria-hidden="true" /> A casa no mapa é mais ou menos, pelo bairro.
+                </p>
+              )}
+
+              {r.escolhas.length > 0 && (
+                <div className="pc-escolhas">
+                  <h3 className="pc-h3">Suas escolhas ({r.escolhas.length} de 5)</h3>
+                  <ol className="pc-escolhas-lista">
+                    {r.escolhas.map((c, i) => (
+                      <li key={c}>
+                        <span className="pc-escolha-n">{i + 1}ª</span>
+                        <span className="pc-escolha-nome">{nomeUnidade(c)}</span>
+                        <span className="pc-escolha-acoes">
+                          <button type="button" aria-label="Subir" onClick={() => mover(i, -1)} disabled={i === 0}>
+                            <ChevronUp size={18} aria-hidden="true" />
+                          </button>
+                          <button type="button" aria-label="Descer" onClick={() => mover(i, 1)} disabled={i === r.escolhas.length - 1}>
+                            <ChevronDown size={18} aria-hidden="true" />
+                          </button>
+                          <button type="button" aria-label="Tirar" onClick={() => remover(c)}>
+                            <X size={18} aria-hidden="true" />
+                          </button>
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              <ul className="pc-unidades">
+                {top5.map((u) => (
+                  <CardUnidade key={u.codigo} u={u} escolhida={r.escolhas.includes(u.codigo)} destacada={destacada === u.codigo} cheio={r.escolhas.length >= 5} onEscolher={escolher} onRemover={remover} destaque />
+                ))}
+              </ul>
+              {resto.length > 0 && (
+                <details className="pc-mais">
+                  <summary>Ver mais creches perto ({resto.length})</summary>
+                  <ul className="pc-unidades">
+                    {resto.map((u) => (
+                      <CardUnidade key={u.codigo} u={u} escolhida={r.escolhas.includes(u.codigo)} destacada={destacada === u.codigo} cheio={r.escolhas.length >= 5} onEscolher={escolher} onRemover={remover} />
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </>
+          )}
+          {podeSugerir && sug.data && unidades.length === 0 && <p className="fam-ajuda">Não achamos creches. Confira o CEP e a data de nascimento.</p>}
+        </section>
+
+        {/* 5. Contatos */}
         <section className="fam-sec pc-sec">
           <h2>
-            <span className="pc-num">4</span> Como falar com você
+            <span className="pc-num">5</span> Como falar com você
           </h2>
           <div className="pc-aviso pc-aviso-forte">
             <Phone size={22} aria-hidden="true" />
@@ -721,73 +788,6 @@ export default function PreCadastroPage() {
           <button type="button" className="btn btn-secondary fam-btn" onClick={addContato}>
             + Mais um contato
           </button>
-        </section>
-
-        {/* 5. Creches */}
-        <section className="fam-sec pc-sec" ref={secCreches}>
-          <h2>
-            <span className="pc-num">5</span> Escolha as creches
-          </h2>
-          <p className="fam-sec-lead">
-            Escolha <strong>até 5</strong>. A primeira é a que você mais quer. As de cima são as que têm mais chance perto da sua casa.
-          </p>
-          {!podeSugerir && <p className="fam-ajuda">Preencha a data de nascimento e o horário (passo 1) para ver as creches.</p>}
-          {podeSugerir && cepDigitos.length < 8 && <p className="fam-ajuda">Escreva o CEP (passo 3) para ver as creches perto de casa.</p>}
-          {sug.isFetching && !sug.data && <Spinner label="Procurando creches…" />}
-          {sug.isError && <p className="fam-erro">Não deu para buscar as creches agora.</p>}
-
-          {unidades.length > 0 && (
-            <>
-              <MapaCreches casa={casa} unidades={unidades} escolhidas={r.escolhas} onSelecionar={focarUnidade} casaAproximada={casaAproximada} />
-              {casaAproximada && (
-                <p className="fam-ajuda">
-                  <Home size={16} aria-hidden="true" /> A casa no mapa é mais ou menos, pelo bairro.
-                </p>
-              )}
-
-              {r.escolhas.length > 0 && (
-                <div className="pc-escolhas">
-                  <h3 className="pc-h3">Suas escolhas ({r.escolhas.length} de 5)</h3>
-                  <ol className="pc-escolhas-lista">
-                    {r.escolhas.map((c, i) => (
-                      <li key={c}>
-                        <span className="pc-escolha-n">{i + 1}ª</span>
-                        <span className="pc-escolha-nome">{nomeUnidade(c)}</span>
-                        <span className="pc-escolha-acoes">
-                          <button type="button" aria-label="Subir" onClick={() => mover(i, -1)} disabled={i === 0}>
-                            <ChevronUp size={18} aria-hidden="true" />
-                          </button>
-                          <button type="button" aria-label="Descer" onClick={() => mover(i, 1)} disabled={i === r.escolhas.length - 1}>
-                            <ChevronDown size={18} aria-hidden="true" />
-                          </button>
-                          <button type="button" aria-label="Tirar" onClick={() => remover(c)}>
-                            <X size={18} aria-hidden="true" />
-                          </button>
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-
-              <ul className="pc-unidades">
-                {top5.map((u) => (
-                  <CardUnidade key={u.codigo} u={u} escolhida={r.escolhas.includes(u.codigo)} destacada={destacada === u.codigo} cheio={r.escolhas.length >= 5} onEscolher={escolher} onRemover={remover} destaque />
-                ))}
-              </ul>
-              {resto.length > 0 && (
-                <details className="pc-mais">
-                  <summary>Ver mais creches perto ({resto.length})</summary>
-                  <ul className="pc-unidades">
-                    {resto.map((u) => (
-                      <CardUnidade key={u.codigo} u={u} escolhida={r.escolhas.includes(u.codigo)} destacada={destacada === u.codigo} cheio={r.escolhas.length >= 5} onEscolher={escolher} onRemover={remover} />
-                    ))}
-                  </ul>
-                </details>
-              )}
-            </>
-          )}
-          {podeSugerir && sug.data && unidades.length === 0 && <p className="fam-ajuda">Não achamos creches. Confira o CEP e a data de nascimento.</p>}
         </section>
 
         {/* 6. Enviar */}
