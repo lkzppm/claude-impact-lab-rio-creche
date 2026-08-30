@@ -53,6 +53,7 @@ auditoria das bases em [`out/auditoria-dados.md`](out/auditoria-dados.md).
 cp .env.example .env
 make up                      # Postgres 16 + API FastAPI (:8000/docs) + frontend React (:5173)
 make venv && make load       # carrega as bases da SME no Postgres (todos os anos; --anos 2025 para só um)
+make seed                    # dados de demonstração: classificação + 5 dias de convocação simulados (SEED_ARGS="--limpar")
 make audit                   # regera out/auditoria-dados.md
 make test                    # invariantes do motor
 ```

@@ -80,6 +80,8 @@ docker-compose.yml  db (Postgres 16) + backend + frontend
 
 Ambiente Python local: `.venv/` na raiz (`python3 -m venv .venv && .venv/bin/pip install -e backend[dev]`).
 Auditoria dos dados: `cd backend && ../.venv/bin/python -m app.etl.audit` → `out/auditoria-dados.md`.
+Dados de demonstração (depois de `make load`): `make seed` (`backend/app/etl/seed_demo.py`) — eventos simulados
+com carimbo de tempo, pelas mesmas funções da API; `--limpar` zera as tabelas de operação.
 
 Pastas de código (`engine/`, `app/`) são criadas conforme o projeto avança; ao criar uma, registre-a aqui
 em uma linha.

@@ -75,7 +75,7 @@ Duas peças, uma só base de dados:
 | Painel | Usuário | O que faz |
 |---|---|---|
 | **Família** (`/familia`, celular) | responsável pela criança | consulta a inscrição pelo código (em produção, CPF via gov.br); vê as 5 opções com resultado e posição; **confirma ou recusa uma reserva na hora**; vê a pontuação critério a critério com a comprovação automática; lê a explicação do resultado |
-| **CRE / polo** (`/cre`) | servidor do polo (usuário principal) | painel do território: reservas por faixa de tempo, vagas em risco, famílias sem contato; registra tentativas e desfechos; ficha da inscrição |
+| **CRE / polo** (`/cre`) | servidor do polo (usuário principal) | painel do território como **fila de trabalho**: vencidas, vencem em 24 h, sem aviso, crianças com várias reservas (cada número abre a lista, da mais urgente para a menos, com a próxima ação); registra tentativas e desfechos com canal e nome de quem registrou; vaga recusada/vencida mostra **o próximo da fila** e o convoca; fila de espera e capacidade informada por unidade; expiração em lote; ficha da inscrição |
 | **Nível Central SME** (`/sme`) | equipe central | visão da rede por CRE; executa rodadas, compara 1 vaga × 3 reservas, gera convocações; régua do ano (norma, só leitura) |
 
 ## 5. Fluxos
@@ -91,7 +91,14 @@ reservada e o evento correspondente. O servidor registra `contato_tentado` (repe
 as outras reservas da mesma criança viram `liberada` automaticamente, com evento.
 
 **Rematch.** Vagas liberadas/recusadas/expiradas voltam ao pool → rodada `tipo = rematch` restrita às
-unidades com vaga e às crianças em lista de espera, mesma régua.
+unidades com vaga e às crianças em lista de espera, mesma régua. **No polo**, o gesto unitário é
+"convocar o próximo da fila": a vaga liberada vai para a 1ª criança da lista de espera daquela
+unidade/grupamento/turno, na `posicao_fila` do motor, pulando quem já confirmou ou já segura 3 reservas —
+evento `selecionada_da_lista`, o mesmo nome que a SME usa hoje. Uma vaga liberada só é repassada uma vez.
+
+**Expiração.** O polo registra "prazo vencido" uma a uma ou em lote (todas as vencidas do recorte). Como
+rotina automática (`EXPIRACAO_AUTOMATICA_MINUTOS`, ator `sistema`) fica desligada na demonstração, para as
+vencidas aparecerem no painel.
 
 **Comprovação.** `POST /inscricoes/{id}/comprovar` consulta os provedores configurados
 (`COMPROVACAO_PROVIDER=mock` nesta fase) e grava uma linha por critério com fonte, resultado, protocolo e
@@ -145,7 +152,9 @@ credenciais, planejamento por coorte (SINASC × capacidade). Todos descritos em
 | Motor DA com `vagas_presas` (`backend/app/engine/`) | pronto — 18 testes; 2025 Berçário Integral (30.141 inscrições) em ~4 s |
 | API FastAPI (`backend/app/routers/`) | pronto — fluxo rodada → convocações → eventos → painel validado |
 | Adaptadores de comprovação (`backend/app/integracoes/`) | mock pronto; Conecta (CadÚnico, Bolsa Família, CPF Light) e RMI com contrato real, `pendente` sem credencial |
-| Frontend React com design system do matricula.rio (`frontend/`) | reestruturado em 3 painéis (Família / CRE / Nível Central) com os logos oficiais no header |
+| Frontend React com design system do matricula.rio (`frontend/`) | 3 painéis (Família / CRE / Nível Central) com os logos oficiais no header; painel da CRE reescrito como fila de trabalho (30/08 13h) |
+| Ferramentas do polo (`fila=`, próxima ação, convocar próximo da fila, fila da unidade, capacidade informada, expirar em lote, várias reservas, tempo até desfecho) | pronto — cobertas pelo teste de integração e validadas sobre 2025 Berçário Integral |
+| Seed de demonstração (`make seed`) | pronto — 18.967 convocações de 11.788 crianças em 5 dias simulados, 37 s |
 | `docker-compose` (db + backend + frontend) | pronto — `make up` sobe os três; validado em 30/08 12h40 |
 
 ### Primeiro resultado sobre dados reais (2025, Berçário Integral, capacidade estimada)
