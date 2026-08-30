@@ -1,0 +1,357 @@
+/* Design system — espelho do matricula.rio (spec/11-baseline-tecnico.md) */
+:root {
+  /* paleta institucional (extraída de matricula.rio/App_Themes/v2025) */
+  --mr-blue-900: #004a80;
+  --mr-blue-800: #00508a;
+  --mr-blue-700: #005e96;
+  --mr-cyan-600: #028fbe;
+  --mr-cyan-400: #1bb5d9;
+  --mr-ink: #181818;
+  --mr-ink-soft: #424242;
+  --mr-ink-muted: #6b6b6b;
+  --mr-grey-100: #f4f4f4;
+  --mr-grey-200: #ececec;
+  --mr-grey-300: #d9d9d9;
+  --mr-white: #ffffff;
+
+  /* estados semânticos (nossos) */
+  --ok: #1e7f4f;
+  --ok-soft: #e3f3ea;
+  --warn: #b7791f;
+  --warn-soft: #fbf0d9;
+  --danger: #b8421a;
+  --danger-soft: #f9e5dc;
+  --info: #028fbe;
+  --info-soft: #e0f3fa;
+  --neutral-soft: #ececec;
+
+  /* geometria */
+  --radius-card: 8px;
+  --radius-pill: 25px;
+  --radius-sm: 4px;
+  --container: 1140px;
+  --header-h: 80px;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+
+  /* tipografia */
+  --font: "Montserrat", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 15px;
+  --fs-lg: 18px;
+  --fs-xl: 24px;
+  --fs-2xl: 32px;
+
+  /* espaçamento */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font);
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  color: var(--mr-ink);
+  background: var(--mr-grey-100);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--mr-cyan-600);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--mr-blue-800);
+  text-decoration: underline;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  color: var(--mr-blue-900);
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+h1 {
+  font-size: var(--fs-2xl);
+}
+h2 {
+  font-size: var(--fs-xl);
+}
+h3 {
+  font-size: var(--fs-lg);
+}
+
+p {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--mr-cyan-400);
+  outline-offset: 2px;
+}
+
+.container {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 var(--sp-4);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--mr-ink-muted);
+}
+
+.text-sm {
+  font-size: var(--fs-sm);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.row {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.grid-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--sp-4);
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-4);
+}
+@media (max-width: 800px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* formulários */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 160px;
+}
+.field label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mr-ink-soft);
+}
+.field input,
+.field select {
+  padding: 8px 12px;
+  border: 1px solid var(--mr-grey-300);
+  border-radius: var(--radius-sm);
+  background: var(--mr-white);
+  min-height: 38px;
+}
+.field input:focus,
+.field select:focus {
+  border-color: var(--mr-cyan-600);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(2, 143, 190, 0.18);
+}
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--mr-blue-700);
+}
+
+/* alertas */
+.alert {
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-card);
+  border: 1px solid transparent;
+  font-size: var(--fs-sm);
+}
+.alert-danger {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.alert-info {
+  background: var(--info-soft);
+  border-color: var(--mr-cyan-400);
+  color: var(--mr-blue-900);
+}
+.alert-ok {
+  background: var(--ok-soft);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+/* definition list */
+.dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--sp-2) var(--sp-4);
+  margin: 0;
+}
+.dl dt {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--mr-ink-soft);
+}
+.dl dd {
+  margin: 0;
+}
+
+/* timeline */
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  border-left: 2px solid var(--mr-grey-300);
+  padding-left: var(--sp-4);
+}
+.timeline li {
+  position: relative;
+}
+.timeline li::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--sp-4) - 7px);
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--mr-cyan-600);
+  border: 2px solid var(--mr-white);
+}
+.timeline time {
+  display: block;
+  font-size: var(--fs-xs);
+  color: var(--mr-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* steps (propostas do motor) */
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.step {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: var(--sp-3);
+  align-items: start;
+  padding: var(--sp-3);
+  border-radius: var(--radius-card);
+  background: var(--mr-grey-100);
+}
+.step-n {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  background: var(--mr-blue-700);
+  color: var(--mr-white);
+}
+.step.aceita .step-n {
+  background: var(--ok);
+}
+.step.rejeitada .step-n {
+  background: var(--danger);
+}
+
+/* barras simples */
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.bar-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 70px;
+  gap: var(--sp-3);
+  align-items: center;
+  font-size: var(--fs-sm);
+}
+.bar-track {
+  height: 12px;
+  background: var(--mr-grey-200);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: var(--mr-cyan-600);
+  border-radius: 6px;
+}
+
+/* painel lateral */
+.side-panel {
+  position: sticky;
+  top: calc(var(--header-h) + var(--sp-4));
+  align-self: start;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

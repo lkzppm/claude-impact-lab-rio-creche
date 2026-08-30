@@ -19,6 +19,8 @@ Projeto do time para o desafio da **Secretaria Municipal de Educação do Rio**:
 | Decidir escopo, priorizar, ou preparar o pitch | `spec/10-regras-e-entrega.md` (Impacto Real vale 40 de 100) |
 | Decidir onde usar LLM e onde não usar | `spec/05-arquitetura-e-riscos.md` |
 | Encontrar uma sigla | `spec/06-glossario.md` |
+| Mexer em backend, frontend, banco ou API | `spec/11-baseline-tecnico.md` (**é o contrato**) e `spec/PRD.md` |
+| Saber o que a base tem de ruído e como foi tratado | `out/auditoria-dados.md` (gerado por `backend/app/etl/audit.py`) |
 | Citar um número ou uma fonte | `spec/08-fontes.md` |
 
 ## Precedência das informações
@@ -69,7 +71,15 @@ Projeto do time para o desafio da **Secretaria Municipal de Educação do Rio**:
 spec/            base de conhecimento (comece aqui)
 spec/fontes/     material original da SME — não editar
 data/            bases da SME, cópia byte a byte do repo oficial — não editar
+backend/         FastAPI + SQLAlchemy; app/engine (motor DA), app/etl (leitura, auditoria, carga), app/integracoes (comprovação)
+frontend/        React + Vite + TS; design system espelhando o matricula.rio em src/design-system
+db/              schema SQL versionado, aplicado pelo Postgres na subida
+out/             relatórios gerados (auditoria dos dados) — commitados
+docker-compose.yml  db (Postgres 16) + backend + frontend
 ```
+
+Ambiente Python local: `.venv/` na raiz (`python3 -m venv .venv && .venv/bin/pip install -e backend[dev]`).
+Auditoria dos dados: `cd backend && ../.venv/bin/python -m app.etl.audit` → `out/auditoria-dados.md`.
 
 Pastas de código (`engine/`, `app/`) são criadas conforme o projeto avança; ao criar uma, registre-a aqui
 em uma linha.

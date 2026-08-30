@@ -1,0 +1,19 @@
+Metadata-Version: 2.4
+Name: creche-backend
+Version: 0.1.0
+Summary: Backend do baseline SME-Rio Inscrição Creche: motor de classificação por criança + painel de convocação
+Requires-Python: >=3.12
+Requires-Dist: fastapi>=0.115
+Requires-Dist: uvicorn[standard]>=0.30
+Requires-Dist: sqlalchemy>=2.0
+Requires-Dist: psycopg[binary]>=3.2
+Requires-Dist: pydantic>=2.8
+Requires-Dist: pydantic-settings>=2.4
+Requires-Dist: python-dotenv>=1.0
+Requires-Dist: duckdb>=1.1
+Requires-Dist: pandas>=2.2
+Requires-Dist: openpyxl>=3.1
+Requires-Dist: pyarrow>=17
+Provides-Extra: dev
+Requires-Dist: pytest>=8; extra == "dev"
+Requires-Dist: httpx>=0.27; extra == "dev"

@@ -1,0 +1,958 @@
+{
+  "gerado_em": "2026-08-30 11:29",
+  "duracao_s": 8.121422052383423,
+  "metricas": {
+    "arquivos": {
+      "QueryA": {
+        "bytes": 20267364,
+        "bom": true,
+        "crlf": true,
+        "sem_cabecalho": false,
+        "primeira_linha": "ano;prm_id;plm_id;ipl_id;opcao;unidade;nome_unidade;grupamento;horario;data_criacao;aluno_anon;sexo_crianca;nascimento_a"
+      },
+      "QueryB": {
+        "bytes": 14171511,
+        "bom": true,
+        "crlf": true,
+        "sem_cabecalho": false,
+        "primeira_linha": "ano;prm_id;plm_id;ipl_id;ich_perg_id;pergunta_texto;pergunta_legenda;pergunta_ordem;resposta;confirmado"
+      },
+      "QueryC": {
+        "bytes": 6297,
+        "bom": true,
+        "crlf": true,
+        "sem_cabecalho": false,
+        "primeira_linha": "ano;prm_id;ich_perg_id;perg_id;pergunta_texto;pergunta_legenda;perg_ordemVisualizacao;perg_pontuacao;perg_criterio"
+      },
+      "QueryD": {
+        "bytes": 199508,
+        "bom": true,
+        "crlf": true,
+        "sem_cabecalho": true,
+        "primeira_linha": "408;NULL;EDI INFANTE DE SAGRES;3;NULL;NULL;NULL;NULL;NULL"
+      }
+    },
+    "query_a": {
+      "linhas": 837179,
+      "inscricoes": 343308,
+      "criancas": 259924,
+      "unidades": 872,
+      "por_ano": {
+        "2021": 198498,
+        "2022": 158122,
+        "2023": 123174,
+        "2024": 197406,
+        "2025": 159979
+      },
+      "prm_ano": [
+        [
+          179,
+          2021,
+          198498
+        ],
+        [
+          181,
+          2022,
+          158122
+        ],
+        [
+          184,
+          2023,
+          123174
+        ],
+        [
+          194,
+          2024,
+          197406
+        ],
+        [
+          195,
+          2025,
+          159979
+        ]
+      ],
+      "grupamento_raw": [
+        [
+          "'Berçário'",
+          335731
+        ],
+        [
+          "'Maternal I'",
+          295552
+        ],
+        [
+          "'Maternal II '",
+          205896
+        ]
+      ],
+      "situacao": {
+        "Cancelado pelo sistema": 326316,
+        "Confirmado": 192570,
+        "Lista de espera": 178731,
+        "Cancelado na confirmacao": 118816,
+        "Cancelado": 18722,
+        "Selecionado da lista": 1191,
+        "Ativo": 606,
+        "Selecionado": 227
+      },
+      "grupamento": {
+        "Berçário": 335731,
+        "Maternal I": 295552,
+        "Maternal II": 205896
+      },
+      "horario": {
+        "Integral": 694458,
+        "Parcial": 142721
+      },
+      "sexo": {
+        "M": 439690,
+        "F": 397489
+      },
+      "opcao": {
+        "1": 343308,
+        "2": 210410,
+        "3": 142266,
+        "4": 85558,
+        "5": 55626,
+        "6": 11
+      },
+      "opcoes_por_inscricao": {
+        "1": 132891,
+        "2": 68152,
+        "3": 56704,
+        "4": 29938,
+        "5": 55618,
+        "6": 5
+      },
+      "criancas_em_mais_de_um_ano": 34486,
+      "nulos": {
+        "cep": 23617,
+        "bairro": 23725,
+        "data_criacao": 0,
+        "nascimento": 0,
+        "unidade": 0
+      },
+      "data_criacao_por_ano": [
+        [
+          2021,
+          "2021-01-05 18:30:02.343000",
+          "2022-06-13 09:25:46.327000",
+          0
+        ],
+        [
+          2022,
+          "2021-11-24 12:43:41.573000",
+          "2023-08-11 16:17:42.837000",
+          0
+        ],
+        [
+          2023,
+          "2022-12-01 07:54:33.410000",
+          "2024-05-13 13:20:16.697000",
+          0
+        ],
+        [
+          2024,
+          "2023-12-13 08:49:48.167000",
+          "2026-05-26 14:10:33.067000",
+          4
+        ],
+        [
+          2025,
+          "2024-12-10 08:47:10.683000",
+          "2026-08-24 11:00:34.877000",
+          0
+        ]
+      ],
+      "idade_fora_faixa": [
+        [
+          2021,
+          6,
+          0,
+          0
+        ],
+        [
+          2022,
+          10,
+          0,
+          0
+        ],
+        [
+          2023,
+          15,
+          0,
+          0
+        ],
+        [
+          2024,
+          0,
+          0,
+          0
+        ],
+        [
+          2025,
+          0,
+          0,
+          0
+        ]
+      ],
+      "idade_mediana_por_grupamento_meses": {
+        "Berçário": 17,
+        "Maternal I": 29,
+        "Maternal II": 41
+      }
+    },
+    "unidades": {
+      "queryd_linhas": 2188,
+      "queryd_codigo_nulo": 21,
+      "queryd_codigo_duplicado": 56,
+      "queryd_tipo": {
+        "1": 1973,
+        "3": 116,
+        "4": 99
+      },
+      "cobertura_a_d": {
+        "unidades_a": 872,
+        "casadas": 872
+      },
+      "loc_linhas": 1941,
+      "loc_sem_coordenada": 0,
+      "loc_fora_do_rio": 1,
+      "loc_designacao_duplicada": 0,
+      "cobertura_a_loc": {
+        "unidades_a": 872,
+        "com_latlong": 852
+      },
+      "cobertura_a_polo": {
+        "unidades_a": 872,
+        "com_polo": 871
+      },
+      "unidades_por_cre": {
+        "1": 52,
+        "10": 133,
+        "11": 17,
+        "2": 91,
+        "3": 87,
+        "4": 107,
+        "5": 56,
+        "6": 53,
+        "7": 87,
+        "8": 69,
+        "9": 100
+      }
+    },
+    "query_b": {
+      "linhas": 4357119,
+      "resposta": {
+        "Nao": 3946241,
+        "Sim": 410878
+      },
+      "confirmado": {
+        "Nao": 3815454,
+        "Sim": 541665
+      },
+      "respostas_orfas": 221,
+      "inscricoes_sem_resposta": 8162,
+      "confirmado_pct_sim_vs_nao": [
+        [
+          2021,
+          88.4,
+          28.8
+        ],
+        [
+          2022,
+          10.6,
+          6.6
+        ],
+        [
+          2023,
+          8.6,
+          5.5
+        ],
+        [
+          2024,
+          8.5,
+          7.3
+        ],
+        [
+          2025,
+          8.5,
+          7.6
+        ]
+      ]
+    },
+    "query_c": {
+      "linhas": 65,
+      "por_ano": [
+        [
+          2021,
+          13,
+          465,
+          2
+        ],
+        [
+          2022,
+          13,
+          465,
+          2
+        ],
+        [
+          2023,
+          13,
+          465,
+          2
+        ],
+        [
+          2024,
+          13,
+          100,
+          2
+        ],
+        [
+          2025,
+          13,
+          100,
+          2
+        ]
+      ],
+      "perg_criterio_raw": {
+        "Sim": 10,
+        "Não": 55
+      },
+      "maior_peso_por_ano": [
+        [
+          2021,
+          2,
+          100,
+          "A criança tem alguma deficiência?"
+        ],
+        [
+          2021,
+          3,
+          100,
+          "Possui Cartão Carioca?"
+        ],
+        [
+          2021,
+          11,
+          100,
+          "Faz parte do programa bolsa família?"
+        ],
+        [
+          2021,
+          21,
+          100,
+          "A criança pertence ao Programa Territórios Sociais?"
+        ],
+        [
+          2022,
+          2,
+          100,
+          "A criança tem alguma deficiência?"
+        ],
+        [
+          2022,
+          3,
+          100,
+          "Possui Cartão Carioca?"
+        ],
+        [
+          2022,
+          11,
+          100,
+          "Faz parte do programa bolsa família?"
+        ],
+        [
+          2022,
+          21,
+          100,
+          "A criança pertence ao Programa Territórios Sociais?"
+        ],
+        [
+          2023,
+          2,
+          100,
+          "A criança tem alguma deficiência?"
+        ],
+        [
+          2023,
+          3,
+          100,
+          "Possui Cartão Carioca?"
+        ],
+        [
+          2023,
+          11,
+          100,
+          "Faz parte do programa bolsa família?"
+        ],
+        [
+          2023,
+          21,
+          100,
+          "A criança pertence ao Programa Territórios Sociais?"
+        ],
+        [
+          2024,
+          2,
+          25,
+          "A criança tem alguma deficiência?"
+        ],
+        [
+          2024,
+          28,
+          25,
+          "Criança cuja família seja inscrita no CadÚnico (Cadastro Único para Pr"
+        ],
+        [
+          2025,
+          28,
+          51,
+          "Criança cuja família seja inscrita no CadÚnico (Cadastro Único para Pr"
+        ]
+      ]
+    },
+    "ocupacao": {
+      "por_ano": [
+        [
+          2021,
+          514,
+          60324,
+          0
+        ],
+        [
+          2022,
+          510,
+          56690,
+          1257
+        ],
+        [
+          2023,
+          498,
+          51174,
+          0
+        ],
+        [
+          2024,
+          495,
+          49762,
+          0
+        ],
+        [
+          2025,
+          488,
+          46975,
+          0
+        ]
+      ],
+      "grupamentos": {
+        "Maternal II": 5274,
+        "Maternal I": 4624,
+        "Berçário": 3066
+      },
+      "cobertura_a_ocupacao": {
+        "unidades_a": 872,
+        "com_ocupacao": 520
+      },
+      "capacidade_estimada_por_ano": [
+        [
+          2021,
+          1226,
+          29166,
+          1,
+          22.0,
+          203
+        ],
+        [
+          2022,
+          1275,
+          34893,
+          1,
+          23.0,
+          205
+        ],
+        [
+          2023,
+          1224,
+          28329,
+          1,
+          20.0,
+          123
+        ],
+        [
+          2024,
+          2129,
+          51494,
+          1,
+          20.0,
+          163
+        ],
+        [
+          2025,
+          2114,
+          48688,
+          1,
+          18.0,
+          213
+        ]
+      ]
+    },
+    "nascidos_vivos": {
+      "por_ano": [
+        [
+          2016,
+          82854,
+          169
+        ],
+        [
+          2017,
+          84339,
+          169
+        ],
+        [
+          2018,
+          82484,
+          169
+        ],
+        [
+          2019,
+          76475,
+          169
+        ],
+        [
+          2020,
+          72406,
+          169
+        ],
+        [
+          2021,
+          68412,
+          169
+        ],
+        [
+          2022,
+          64636,
+          169
+        ],
+        [
+          2023,
+          62647,
+          169
+        ],
+        [
+          2024,
+          57443,
+          169
+        ],
+        [
+          2025,
+          58699,
+          169
+        ],
+        [
+          2026,
+          33346,
+          169
+        ]
+      ]
+    }
+  },
+  "achados": [
+    {
+      "id": "QueryA-bom",
+      "area": "arquivo",
+      "severidade": "alerta",
+      "titulo": "QueryA: BOM UTF-8 no início",
+      "valor": "sim",
+      "detalhe": "Sem `utf-8-sig`/leitor que ignore BOM, a 1ª coluna vira `\\ufeffano`.",
+      "tratamento": "DuckDB ignora o BOM; leitores pandas devem usar encoding='utf-8-sig'."
+    },
+    {
+      "id": "QueryA-crlf",
+      "area": "arquivo",
+      "severidade": "alerta",
+      "titulo": "QueryA: quebras de linha CRLF",
+      "valor": "sim",
+      "detalhe": "A última coluna recebe `\\r` grudado em leitores ingênuos; comparações falham em silêncio.",
+      "tratamento": "DuckDB detecta; além disso todas as strings recebem trim()."
+    },
+    {
+      "id": "QueryB-bom",
+      "area": "arquivo",
+      "severidade": "alerta",
+      "titulo": "QueryB: BOM UTF-8 no início",
+      "valor": "sim",
+      "detalhe": "Sem `utf-8-sig`/leitor que ignore BOM, a 1ª coluna vira `\\ufeffano`.",
+      "tratamento": "DuckDB ignora o BOM; leitores pandas devem usar encoding='utf-8-sig'."
+    },
+    {
+      "id": "QueryB-crlf",
+      "area": "arquivo",
+      "severidade": "alerta",
+      "titulo": "QueryB: quebras de linha CRLF",
+      "valor": "sim",
+      "detalhe": "A última coluna recebe `\\r` grudado em leitores ingênuos; comparações falham em silêncio.",
+      "tratamento": "DuckDB detecta; além disso todas as strings recebem trim()."
+    },
+    {
+      "id": "QueryC-bom",
+      "area": "arquivo",
+      "severidade": "alerta",
+      "titulo": "QueryC: BOM UTF-8 no início",
+      "valor": "sim",
+      "detalhe": "Sem `utf-8-sig`/leitor que ignore BOM, a 1ª coluna vira `\\ufeffano`.",
+      "tratamento": "DuckDB ignora o BOM; leitores pandas devem usar encoding='utf-8-sig'."
+    },
+    {
+      "id": "QueryC-crlf",
+      "area": "arquivo",
+      "severidade": "alerta",
+      "titulo": "QueryC: quebras de linha CRLF",
+      "valor": "sim",
+      "detalhe": "A última coluna recebe `\\r` grudado em leitores ingênuos; comparações falham em silêncio.",
+      "tratamento": "DuckDB detecta; além disso todas as strings recebem trim()."
+    },
+    {
+      "id": "QueryD-bom",
+      "area": "arquivo",
+      "severidade": "alerta",
+      "titulo": "QueryD: BOM UTF-8 no início",
+      "valor": "sim",
+      "detalhe": "Sem `utf-8-sig`/leitor que ignore BOM, a 1ª coluna vira `\\ufeffano`.",
+      "tratamento": "DuckDB ignora o BOM; leitores pandas devem usar encoding='utf-8-sig'."
+    },
+    {
+      "id": "QueryD-crlf",
+      "area": "arquivo",
+      "severidade": "alerta",
+      "titulo": "QueryD: quebras de linha CRLF",
+      "valor": "sim",
+      "detalhe": "A última coluna recebe `\\r` grudado em leitores ingênuos; comparações falham em silêncio.",
+      "tratamento": "DuckDB detecta; além disso todas as strings recebem trim()."
+    },
+    {
+      "id": "QueryD-header",
+      "area": "arquivo",
+      "severidade": "erro",
+      "titulo": "QueryD: arquivo SEM linha de cabeçalho",
+      "valor": "408;NULL;EDI INFANTE DE SAGRES;3;NULL;NULL;NULL;NULL;NULL",
+      "detalhe": "Ler com header=True perde a primeira unidade e nomeia colunas com dados.",
+      "tratamento": "Lido com header=false e nomes explícitos (readers.QUERYD_COLS)."
+    },
+    {
+      "id": "A-prm-ano",
+      "area": "QueryA",
+      "severidade": "info",
+      "titulo": "Mapeamento prm_id → ano",
+      "valor": "consistente",
+      "detalhe": "179→2021 (198,498); 181→2022 (158,122); 184→2023 (123,174); 194→2024 (197,406); 195→2025 (159,979)",
+      "tratamento": ""
+    },
+    {
+      "id": "A-grupamento-espaco",
+      "area": "QueryA",
+      "severidade": "alerta",
+      "titulo": "`grupamento` com espaço à direita no arquivo",
+      "valor": "'Maternal II '",
+      "detalhe": "Agrupar sem strip() cria categorias duplicadas.",
+      "tratamento": "trim() no leitor."
+    },
+    {
+      "id": "A-dom-situacao",
+      "area": "QueryA",
+      "severidade": "info",
+      "titulo": "Domínio de `situacao`",
+      "valor": "8 valores, todos esperados",
+      "detalhe": "Cancelado pelo sistema=326,316, Confirmado=192,570, Lista de espera=178,731, Cancelado na confirmacao=118,816, Cancelado=18,722, Selecionado da lista=1,191, Ativo=606, Selecionado=227",
+      "tratamento": ""
+    },
+    {
+      "id": "A-dom-grupamento",
+      "area": "QueryA",
+      "severidade": "info",
+      "titulo": "Domínio de `grupamento`",
+      "valor": "3 valores, todos esperados",
+      "detalhe": "Berçário=335,731, Maternal I=295,552, Maternal II=205,896",
+      "tratamento": ""
+    },
+    {
+      "id": "A-dom-horario",
+      "area": "QueryA",
+      "severidade": "info",
+      "titulo": "Domínio de `horario`",
+      "valor": "2 valores, todos esperados",
+      "detalhe": "Integral=694,458, Parcial=142,721",
+      "tratamento": ""
+    },
+    {
+      "id": "A-situacao-acento",
+      "area": "QueryA",
+      "severidade": "alerta",
+      "titulo": "`Cancelado na confirmacao` vem sem cedilha nem til",
+      "valor": "118,816 linhas",
+      "detalhe": "Filtrar por 'Cancelado na confirmação' (com acento) devolve zero linhas.",
+      "tratamento": "Domínio canônico em readers.SITUACOES, exatamente como na base."
+    },
+    {
+      "id": "A-opcao-6",
+      "area": "QueryA",
+      "severidade": "alerta",
+      "titulo": "Opções com ordem > 5",
+      "valor": "11 linhas",
+      "detalhe": "A regra é até 5 opções; a 6ª aparece em pouquíssimas inscrições.",
+      "tratamento": "Carregar como está; o motor aceita listas de qualquer tamanho."
+    },
+    {
+      "id": "A-dup-chave",
+      "area": "QueryA",
+      "severidade": "info",
+      "titulo": "Duplicatas de (inscrição, opcao)",
+      "valor": "0",
+      "detalhe": "",
+      "tratamento": ""
+    },
+    {
+      "id": "A-dup-unidade",
+      "area": "QueryA",
+      "severidade": "alerta",
+      "titulo": "Mesma unidade/grupamento/turno repetida na mesma inscrição",
+      "valor": "5 casos",
+      "detalhe": "A família escolheu a mesma unidade em duas ordens.",
+      "tratamento": "O motor ignora a repetição (mantém a 1ª ordem)."
+    },
+    {
+      "id": "A-crianca-multi-inscricao",
+      "area": "QueryA",
+      "severidade": "alerta",
+      "titulo": "Crianças com mais de uma inscrição no mesmo processo",
+      "valor": "38,765",
+      "detalhe": "Pode ser reinscrição legítima (fluxo contínuo) ou colisão nome+nascimento sem CPF/DNV/NIS (gap reconhecido pela SME).",
+      "tratamento": "Cada inscrição é tratada como uma linha própria; a contagem por criança é aproximada."
+    },
+    {
+      "id": "A-nulos-endereco",
+      "area": "QueryA",
+      "severidade": "info",
+      "titulo": "CEP / bairro do responsável nulos",
+      "valor": "CEP 23,617 · bairro 23,725 (2.8%)",
+      "detalhe": "",
+      "tratamento": "Sem endereço a distância não é calculável; a linha entra normalmente no motor."
+    },
+    {
+      "id": "A-data-fora-janela",
+      "area": "QueryA",
+      "severidade": "alerta",
+      "titulo": "Inscrições criadas mais de um ano depois do processo",
+      "valor": "4 linhas",
+      "detalhe": "2021: 2021-01-05 → 2022-06-13; 2022: 2021-11-24 → 2023-08-11; 2023: 2022-12-01 → 2024-05-13; 2024: 2023-12-13 → 2026-05-26; 2025: 2024-12-10 → 2026-08-24",
+      "tratamento": "O processo 2025 segue aberto (fluxo contínuo) — `data_criacao` chega a 2026. Não filtrar; só desempate usa a data."
+    },
+    {
+      "id": "A-idade",
+      "area": "QueryA",
+      "severidade": "alerta",
+      "titulo": "Idade fora de 0–47 meses em 31/03 do ano do processo",
+      "valor": "31 linhas",
+      "detalhe": "2021: <0m 6, >47m 0, s/ nasc. 0; 2022: <0m 10, >47m 0, s/ nasc. 0; 2023: <0m 15, >47m 0, s/ nasc. 0; 2024: <0m 0, >47m 0, s/ nasc. 0; 2025: <0m 0, >47m 0, s/ nasc. 0",
+      "tratamento": "Anonimização generaliza o nascimento para ano-mês; não usar idade para excluir, só como informação."
+    },
+    {
+      "id": "A-multi-confirmado",
+      "area": "QueryA",
+      "severidade": "info",
+      "titulo": "Inscrições com mais de uma opção `Confirmado`",
+      "valor": "0",
+      "detalhe": "Deveria ser no máximo uma; o excesso vem de reprocessamento ou de colisão de identidade.",
+      "tratamento": "Na estimativa de capacidade cada confirmação conta como vaga ocupada; para 'criança atendida' conta uma vez."
+    },
+    {
+      "id": "A-estados-transitorios",
+      "area": "QueryA",
+      "severidade": "info",
+      "titulo": "Linhas em estado transitório (Ativo/Selecionado/Selecionado da lista)",
+      "valor": "2,024",
+      "detalhe": "Estados de processos já encerrados; não servem de amostra para durações.",
+      "tratamento": "Excluídos de qualquer métrica de convocação."
+    },
+    {
+      "id": "D-codigo-nulo",
+      "area": "QueryD",
+      "severidade": "alerta",
+      "titulo": "Unidades sem código (coluna 1 = NULL)",
+      "valor": "21",
+      "detalhe": "A chave de junção com a QueryA é a coluna 1; sem ela a unidade não é referenciável.",
+      "tratamento": "Mantidas na carga com código sintético `SEQ-<seq>`; nunca casam com inscrições."
+    },
+    {
+      "id": "D-codigo-dup",
+      "area": "QueryD",
+      "severidade": "erro",
+      "titulo": "Códigos de unidade duplicados na QueryD",
+      "valor": "56 códigos",
+      "detalhe": "Exemplos: [('0204015', 2), ('04054', 2), ('0411803', 2), ('07040', 2), ('10062', 2)]",
+      "tratamento": "Na carga fica a linha com endereço preenchido (ou a 1ª); as demais vão para o log."
+    },
+    {
+      "id": "D-sem-endereco",
+      "area": "QueryD",
+      "severidade": "info",
+      "titulo": "Unidades sem logradouro, bairro e CEP",
+      "valor": "258",
+      "detalhe": "",
+      "tratamento": "Endereço vem então da planilha de localização (lat/long), quando existir."
+    },
+    {
+      "id": "AD-join",
+      "area": "junção",
+      "severidade": "info",
+      "titulo": "QueryA.unidade → QueryD.esc_codigo",
+      "valor": "872/872 unidades casam",
+      "detalhe": "",
+      "tratamento": "Chave = coluna 1 da QueryD (não a coluna 0)."
+    },
+    {
+      "id": "LOC-zero-esquerda",
+      "area": "localização",
+      "severidade": "erro",
+      "titulo": "Planilhas .xlsx perderam o zero à esquerda dos códigos de unidade",
+      "valor": "junção crua 150/872 → normalizada 852",
+      "detalhe": "QueryA usa '0734802'; a planilha traz 734802 (célula numérica). Junção literal casa só unidades sem zero.",
+      "tratamento": "Toda tabela ganha `codigo_norm = ltrim(codigo, '0')`; é a chave entre CSV e xlsx. Lat/long, CRE e polo vêm por ela."
+    },
+    {
+      "id": "LOC-coord",
+      "area": "localização",
+      "severidade": "alerta",
+      "titulo": "Unidades sem coordenada ou fora da caixa do município",
+      "valor": "sem coordenada 0 · fora do Rio 1",
+      "detalhe": "Caixa usada: lat -23.1…-22.74, lon -43.8…-43.09",
+      "tratamento": "Coordenada inválida vira NULL; a unidade continua existindo, só não entra em cálculo de distância."
+    },
+    {
+      "id": "ALOC-join",
+      "area": "junção",
+      "severidade": "alerta",
+      "titulo": "QueryA.unidade → planilha de localização (lat/long)",
+      "valor": "852/872 unidades com coordenada",
+      "detalhe": "",
+      "tratamento": "Sem coordenada a unidade aparece no painel sem mapa; distância não calculada."
+    },
+    {
+      "id": "B-legenda",
+      "area": "QueryB",
+      "severidade": "info",
+      "titulo": "`pergunta_legenda` preenchida",
+      "valor": "0 de 4,357,119",
+      "detalhe": "",
+      "tratamento": "Coluna descartada na carga."
+    },
+    {
+      "id": "B-dom-resposta",
+      "area": "QueryB",
+      "severidade": "info",
+      "titulo": "Domínio de `resposta`",
+      "valor": "Nao=3,946,241, Sim=410,878",
+      "detalhe": "",
+      "tratamento": "Convertido para boolean (Sim → true)."
+    },
+    {
+      "id": "B-dom-confirmado",
+      "area": "QueryB",
+      "severidade": "info",
+      "titulo": "Domínio de `confirmado`",
+      "valor": "Nao=3,815,454, Sim=541,665",
+      "detalhe": "",
+      "tratamento": "Convertido para boolean (Sim → true)."
+    },
+    {
+      "id": "B-dup",
+      "area": "QueryB",
+      "severidade": "info",
+      "titulo": "Duplicatas de (inscrição, pergunta)",
+      "valor": "0",
+      "detalhe": "",
+      "tratamento": ""
+    },
+    {
+      "id": "AB-orfas",
+      "area": "junção",
+      "severidade": "alerta",
+      "titulo": "Respostas sem inscrição correspondente (QueryB → QueryA)",
+      "valor": "221",
+      "detalhe": "",
+      "tratamento": "Descartadas na carga (FK)."
+    },
+    {
+      "id": "AB-sem-resposta",
+      "area": "junção",
+      "severidade": "alerta",
+      "titulo": "Inscrições sem nenhuma resposta ao questionário",
+      "valor": "8,162 (2.4%)",
+      "detalhe": "Sem respostas a pontuação é 0 — a criança concorre só pelo desempate.",
+      "tratamento": "Carregadas com pontuacao = 0 e marcadas no painel."
+    },
+    {
+      "id": "BC-join",
+      "area": "junção",
+      "severidade": "info",
+      "titulo": "QueryB → QueryC por (ano, ich_perg_id)",
+      "valor": "0 respostas sem pergunta na régua do ano",
+      "detalhe": "",
+      "tratamento": "Junção sempre por (ano, ich_perg_id); nunca por perg_id sozinho."
+    },
+    {
+      "id": "C-regua",
+      "area": "QueryC",
+      "severidade": "info",
+      "titulo": "Régua por ano: perguntas · soma dos pesos · nº de desempates",
+      "valor": "2021: 13 perg, Σ=465, 2 desemp.; 2022: 13 perg, Σ=465, 2 desemp.; 2023: 13 perg, Σ=465, 2 desemp.; 2024: 13 perg, Σ=100, 2 desemp.; 2025: 13 perg, Σ=100, 2 desemp.",
+      "detalhe": "A régua muda todo ano. A do dataset (até proc. 195/2025) NÃO é a da Res. 542/2025 (2026).",
+      "tratamento": "Tabela `pergunta` com chave (ano, ich_perg_id); o motor recebe a régua do ano."
+    },
+    {
+      "id": "B-confirmado-ruido",
+      "area": "QueryB",
+      "severidade": "alerta",
+      "titulo": "`confirmado` deixa de discriminar Sim/Não a partir de 2022",
+      "valor": "2021: Sim 88.4% · Não 28.8%; 2022: Sim 10.6% · Não 6.6%; 2023: Sim 8.6% · Não 5.5%; 2024: Sim 8.5% · Não 7.3%; 2025: Sim 8.5% · Não 7.6%",
+      "detalhe": "Em 2021 quem respondeu Sim é confirmado ~3× mais; de 2022 em diante a taxa é igual — o campo virou ruído (validação passou a ser feita no RMI e não volta para a coluna).",
+      "tratamento": "A pontuação é calculada sobre `resposta`, não sobre `confirmado`. `confirmado` é carregado só para referência."
+    },
+    {
+      "id": "OC-layout",
+      "area": "ocupação",
+      "severidade": "alerta",
+      "titulo": "Layout das planilhas de ocupação muda por ano",
+      "valor": "2021: 514 unid., 60,324 alunos; 2022: 510 unid., 56,690 alunos (sem turno); 2023: 498 unid., 51,174 alunos; 2024: 495 unid., 49,762 alunos; 2025: 488 unid., 46,975 alunos",
+      "detalhe": "2021 usa TP/TU; 2022 não separa turno; 2023+ usa Integral/Parcial. Nomes de coluna e linhas de cabeçalho variam.",
+      "tratamento": "Leitor detecta a linha 'Aluno' e normaliza grupamento/turno; 2022 fica com horario NULL."
+    },
+    {
+      "id": "AOC-join",
+      "area": "junção",
+      "severidade": "info",
+      "titulo": "QueryA.unidade → planilhas de ocupação",
+      "valor": "520/872 unidades",
+      "detalhe": "Ocupação ≠ oferta: a base não traz vagas ofertadas por processo.",
+      "tratamento": "Capacidade do motor é ESTIMADA pelo nº de Confirmado por unidade/grupamento/turno/ano (fonte = estimada_confirmados)."
+    },
+    {
+      "id": "CAP-estimada",
+      "area": "capacidade",
+      "severidade": "alerta",
+      "titulo": "Capacidade estimada (nº de Confirmado) por unidade/grupamento/turno",
+      "valor": "2021: 1226 turmas-alvo, 29,166 vagas, mediana 22; 2022: 1275 turmas-alvo, 34,893 vagas, mediana 23; 2023: 1224 turmas-alvo, 28,329 vagas, mediana 20; 2024: 2129 turmas-alvo, 51,494 vagas, mediana 20; 2025: 2114 turmas-alvo, 48,688 vagas, mediana 18",
+      "detalhe": "É um piso: vagas que ficaram vazias não aparecem. Otimizar sobre capacidade estimada é otimizar sobre número incerto.",
+      "tratamento": "Marcada como `estimada_confirmados`; a unidade pode informar o número real (fonte = informada)."
+    },
+    {
+      "id": "NV-total",
+      "area": "nascidos vivos",
+      "severidade": "alerta",
+      "titulo": "Planilha traz linha 'Total' e bairros 'IGNORADO'/'EM BRANCO'",
+      "valor": "2016: 82,854; 2017: 84,339; 2018: 82,484; 2019: 76,475; 2020: 72,406 …",
+      "detalhe": "Sem excluir a linha Total, toda soma dobra. 2026 é parcial.",
+      "tratamento": "Linha Total excluída no leitor; 'IGNORADO'/'EM BRANCO' mantidos e sinalizados."
+    }
+  ]
+}
