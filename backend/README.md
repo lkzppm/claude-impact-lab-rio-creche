@@ -27,6 +27,7 @@ make up          # db + backend (:8000) + frontend (:5173)
 | `app/integracoes/` | Provedores de **comprovação** de critérios (`base.py` = interface; `mock.py` = Conecta CadÚnico / Bolsa Família / Receita CPF / RMI simulados; `registry.py` escolhe por `COMPROVACAO_PROVIDER`) |
 | `app/engine/scoring.py` | Pontuação a partir das respostas × régua do ano (só `Sim` pontua; desempates viram flags) |
 | `app/routers/classificacao.py` | Executa rodadas (`inicial` / `rematch`), persiste `rodada` + `alocacao`, explica o resultado a partir do log de decisão |
+| `app/motor.py` | **Motor contínuo**: sobe com a API e roda um ciclo a cada `MOTOR_INTERVALO_SEGUNDOS` — classifica (bootstrap ou quando a entrada muda), convoca as vagas presas, opcionalmente expira as vencidas e repassa cada vaga liberada ao próximo da fila da unidade. Estado em `GET /motor`; ciclo manual em `POST /motor/ciclo` |
 | `app/routers/convocacoes.py` | Máquina de estados da convocação; cada transição gera um `evento` (append-only) |
 | `app/routers/painel.py` | KPIs da CRE/polo em SQL: faixas de tempo, vencidas, vencem em 24 h, sem aviso, crianças com várias reservas, tempo até o desfecho |
 | `app/routers/unidades.py` | Ficha, **fila de espera da unidade** (ordem do motor) e **capacidade informada** pela unidade (`fonte = informada`, com evento) |
@@ -45,7 +46,25 @@ make up          # db + backend (:8000) + frontend (:5173)
 `POST /convocacoes/{id}/convocar-proximo` · `POST /convocacoes/expirar-vencidas` ·
 `GET /unidades/{codigo}/fila` · `PUT /unidades/{codigo}/capacidade` ·
 `GET /painel/resumo` · `GET /painel/unidades` · `GET /painel/multireserva` · `GET /painel/cres` ·
+`GET /painel/mapa?cre=` · `GET /motor` · `POST /motor/ciclo` · `GET /motor/eventos` ·
 `GET /familia/inscricao` · `POST /familia/convocacoes/{id}/responder` · `POST /chat`
+
+### Motor contínuo (24/7)
+
+`app/motor.py` sobe junto com a API (`lifespan`) e executa um ciclo a cada `MOTOR_INTERVALO_SEGUNDOS`
+(padrão 60; `0` desliga a rotina e deixa só o `POST /motor/ciclo`). Cada ciclo, na ordem:
+
+1. **classifica** se não há rodada do processo vigente (bootstrap) ou se a entrada mudou — a assinatura
+   `(inscrições, opções, soma das vagas)` do ano —, repetindo o recorte e os parâmetros da última rodada;
+2. **convoca** as vagas presas da rodada nova (`gerar_convocacoes`), pulando quem já confirmou matrícula,
+   quem já foi convocado para aquela unidade e o que passaria da cota de reservas abertas;
+3. **expira** as vencidas, se `MOTOR_EXPIRAR_VENCIDAS=1`;
+4. **repassa** cada vaga liberada ainda sem repasse para o próximo da fila da unidade (`proximo_da_fila`,
+   a mesma ordem da tela do polo), com evento `selecionada_da_lista` e ator `motor`; teto de
+   `MOTOR_MAX_REPASSES_POR_CICLO` (padrão 200) por ciclo.
+
+Erro no ciclo não derruba a API (fica em `ultimo_erro`, o próximo ciclo tenta de novo). Ciclos que mudam
+alguma coisa viram `evento` de tipo `motor_ciclo`.
 
 ### Rodada: "3 vagas presas + 2 alternativas"
 
@@ -79,8 +98,9 @@ Ao registrar `contato_confirmado`, `prazo_fim` é recalculado: o relógio conta 
   naquela unidade e quem já segura `vagas_presas` reservas. Evento `selecionada_da_lista` (o nome que a SME
   já usa: "Selecionado da lista"). Uma vaga liberada só é repassada uma vez (`repassada_para` no detalhe).
 - **Expirar em lote** — `POST /convocacoes/expirar-vencidas {cre?, unidade?, ator?}` registra `expirada` em
-  todas as abertas com `prazo_fim` passado. A mesma função roda como rotina se `EXPIRACAO_AUTOMATICA_MINUTOS > 0`
-  (ator `sistema`); por padrão fica desligada para a demonstração mostrar as vencidas no painel.
+  todas as abertas com `prazo_fim` passado. A mesma função roda dentro do motor contínuo se
+  `MOTOR_EXPIRAR_VENCIDAS=1` (ator `motor`); por padrão fica desligada para a demonstração mostrar as
+  vencidas no painel.
 - **Fila de espera da unidade** — `GET /unidades/{codigo}/fila?grupamento=&horario=`: quem é o próximo, com a
   situação de cada criança (`aguardando`, `convocada_aqui`, `confirmada_em_outra`, `reservas_cheias`).
 - **Capacidade informada** — `PUT /unidades/{codigo}/capacidade {ano, grupamento, horario, vagas, ator?}` grava

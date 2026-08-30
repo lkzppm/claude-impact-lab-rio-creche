@@ -34,6 +34,8 @@ class Secao:
 
 SECOES: tuple[Secao, ...] = (
     # ---------------------------------------------------------------- CRE / polo
+    Secao("cre.motor", "cre", "Painel da CRE", "/cre", "Motor de classificação",
+          "estado do motor contínuo (ligado/desligado, último ciclo, intervalo) — versão compacta no painel da CRE"),
     Secao("cre.para_hoje", "cre", "Painel da CRE", "/cre", "Para hoje",
           "rosca das convocações abertas por urgência (vencidas, vencem em 24 h, no prazo) com o total de abertas no "
           "centro; quantas famílias ainda não foram avisadas (sem aviso); quantas crianças seguram mais de uma vaga; "
@@ -79,10 +81,9 @@ SECOES: tuple[Secao, ...] = (
     Secao("sme.tabela_cre", "sme", "Visão da rede", "/sme", "Tabela por CRE",
           "tabela com uma linha por CRE: unidades, vagas, inscrições, reservadas, convocadas, abertas, confirmadas, "
           "vencidas e lista de espera"),
-    Secao("sme.classificacao_comparar", "sme", "Classificação", "/sme/classificacao", "Comparar regimes",
-          "comparação entre rodadas do mesmo ano, grupamento e turno feitas com 1 e com 3 reservas por criança"),
-    Secao("sme.classificacao_rodadas", "sme", "Classificação", "/sme/classificacao", "Classificações já feitas",
-          "rodadas já executadas: ano, tipo, parâmetros (vagas presas, alternativas) e resumo"),
+    Secao("sme.motor", "sme", "Visão da rede", "/sme", "Motor de classificação",
+          "estado do motor contínuo (ligado/desligado, último ciclo, intervalo) e as rodadas já executadas: ano, tipo, "
+          "parâmetros (vagas presas, alternativas) e resumo"),
     Secao("sme.inscricoes", "sme", "Inscrições", "/sme/inscricoes", "Inscrições",
           "lista de inscrições com filtros por ano, CRE, unidade e grupamento"),
     Secao("sme.unidades", "sme", "Unidades", "/sme/unidades", "Unidades",

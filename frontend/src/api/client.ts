@@ -15,6 +15,8 @@ import type {
   Health,
   Inscricao,
   InscricaoDetalhe,
+  Mapa,
+  MotorEstado,
   NovaRodada,
   NovoEvento,
   Paginated,
@@ -133,7 +135,12 @@ export const expirarVencidas = (body: { cre?: string; unidade?: string; ator?: s
 export const convocarProximo = (id: number, ator?: string | null) =>
   post<ConvocacaoDetalhe>(`/convocacoes/${id}/convocar-proximo`, { ator });
 
+/* ---------- motor contínuo ---------- */
+export const getMotor = () => get<MotorEstado>("/motor");
+export const rodarCicloMotor = () => post<MotorEstado>("/motor/ciclo");
+
 /* ---------- painel ---------- */
+export const getMapa = (params?: { cre?: string; ano?: number }) => get<Mapa>("/painel/mapa", params);
 export const getPainelResumo = (params?: { cre?: string; unidade?: string }) =>
   get<PainelResumo>("/painel/resumo", params);
 export const getPainelUnidades = (params?: { cre?: string }) => get<PainelUnidade[]>("/painel/unidades", params);

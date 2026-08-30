@@ -16,6 +16,7 @@ import {
   StatusPill,
   Pill,
   StackedBar,
+  Breakdown,
   BarList,
   Meter,
   Hero,
@@ -28,6 +29,7 @@ import {
 } from "../design-system";
 import type { Fatia, Segmento } from "../design-system";
 import { UnidadeSelect, CRES } from "../components/Filters";
+import MotorCard from "../components/MotorCard";
 import { useArea } from "../areas/AreaContext";
 import { useToast } from "../components/useToast";
 
@@ -103,6 +105,7 @@ export default function PainelPage() {
   const r = resumo.data;
   const linhas = (unidades.data ?? []).filter((u) => !unidade || u.unidade_codigo === unidade);
   const lista = (fila: string) => `${base}/convocacoes?fila=${fila}${unidade ? `&unidade=${encodeURIComponent(unidade)}` : ""}`;
+  const porStatus = (status: string) => `${base}/convocacoes?status=${status}${unidade ? `&unidade=${encodeURIComponent(unidade)}` : ""}`;
   const vencidas = r?.vencidas ?? 0;
   const abertas = r?.selecionadas_aguardando.total ?? 0;
   const faixas: Segmento[] = r
@@ -113,12 +116,12 @@ export default function PainelPage() {
         { label: "Mais de 3 dias", value: r.selecionadas_aguardando.faixa_mais_72h, tone: "danger", hint: "parada — agir agora" },
       ]
     : [];
-  const desfechos: Segmento[] = r
+  const desfechos: Fatia[] = r
     ? [
-        { label: "Ainda abertas", value: abertas, tone: "info" },
-        { label: "Matrículas confirmadas", value: r.confirmadas ?? 0, tone: "ok" },
-        { label: "Recusadas", value: r.recusadas ?? 0, tone: "warn", hint: "a vaga voltou para a fila" },
-        { label: "Prazo vencido registrado", value: r.expiradas ?? 0, tone: "danger", hint: "a vaga voltou para a fila" },
+        { label: "Matrículas confirmadas", value: r.confirmadas ?? 0, tone: "ok", hint: "a família compareceu e a vaga foi ocupada", to: porStatus("confirmada") },
+        { label: "Ainda abertas", value: abertas, tone: "info", hint: "sem desfecho — a família ainda pode responder", to: lista("abertas") },
+        { label: "Recusadas", value: r.recusadas ?? 0, tone: "warn", hint: "a vaga voltou para a fila", to: porStatus("recusada") },
+        { label: "Prazo vencido registrado", value: r.expiradas ?? 0, tone: "danger", hint: "a vaga voltou para a fila", to: porStatus("expirada") },
       ]
     : [];
   const maisVencidas = [...linhas].filter((u) => u.em_atraso > 0).sort((a, b) => b.em_atraso - a.em_atraso).slice(0, 8);
@@ -145,6 +148,8 @@ export default function PainelPage() {
           </span>
         )}
       </div>
+
+      <MotorCard compacto />
 
       {resumo.isLoading && <Spinner label="Calculando o resumo…" />}
       {resumo.isError && <ErrorBox error={resumo.error} />}
@@ -191,7 +196,7 @@ export default function PainelPage() {
             {trabalho.isLoading && <Spinner label="Montando a fila…" />}
             {trabalho.isError && <ErrorBox error={trabalho.error} />}
             {trabalho.data && trabalho.data.items.length === 0 && (
-              <p className="muted text-sm">Nenhuma convocação aberta neste recorte. Quando o Nível Central gerar convocações, elas aparecem aqui.</p>
+              <p className="muted text-sm">Nenhuma convocação aberta neste recorte. O motor gera as convocações sozinho — assim que sair uma, ela aparece aqui.</p>
             )}
             {trabalho.data && trabalho.data.items.length > 0 && (
               <>
@@ -230,45 +235,46 @@ export default function PainelPage() {
 
       {r && (
         <>
-          <div className="grid-2">
-            <Card title="Há quanto tempo as convocações estão paradas" secao="cre.tempo_paradas">
-              <Hero value={fmtInt(abertas)} label="convocações abertas" hint="cada barra é uma parte do total; passe o mouse para ver o detalhe" />
-              <StackedBar segmentos={faixas} ariaLabel="Convocações abertas por tempo na situação atual" />
-              <p className="text-sm" style={{ marginTop: 12 }}>
-                <Link to={lista("abertas")}>Ver todas as abertas →</Link>
-              </p>
-            </Card>
-            <Card title="Como as convocações estão terminando" secao="cre.desfechos">
-              <StackedBar segmentos={desfechos} ariaLabel="Convocações por desfecho" />
-              <div className="grid-tiles" style={{ marginTop: 16, gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
-                <div>
-                  <div className="stat-label">Tempo até o desfecho</div>
-                  <div className="stat-value" style={{ fontSize: 24 }}>{r.tempo_medio_ate_desfecho_h == null ? "—" : fmtHoras(r.tempo_medio_ate_desfecho_h)}</div>
-                  <div className="stat-hint">média de {fmtInt(r.n_desfechos ?? 0)} desfecho(s)</div>
-                </div>
-                <div>
-                  <div className="stat-label">Liberadas hoje</div>
-                  <div className="stat-value" style={{ fontSize: 24 }}>{fmtInt(r.vagas_liberadas_hoje ?? 0)}</div>
-                  <div className="stat-hint">voltaram para a fila</div>
-                </div>
-                <div>
-                  <div className="stat-label">Reservas por criança</div>
-                  <div className="stat-value" style={{ fontSize: 24 }}>
-                    {r.vagas_presas_por_crianca == null ? "—" : r.vagas_presas_por_crianca.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
-                  </div>
-                  <Meter share={r.vagas_presas_por_crianca != null ? r.vagas_presas_por_crianca / 3 : 0} tone="neutral" label="média de reservas, de 1 a 3" />
-                  <div className="stat-hint">de no máximo 3</div>
-                </div>
-                {r.inconsistencias > 0 && (
-                  <div>
-                    <div className="stat-label">Inconsistências</div>
-                    <div className="stat-value" style={{ fontSize: 24, color: "var(--danger)" }}>{fmtInt(r.inconsistencias)}</div>
-                    <div className="stat-hint">matriculada e ainda com reserva aberta</div>
-                  </div>
-                )}
+          <Card title="Há quanto tempo as convocações estão paradas" secao="cre.tempo_paradas">
+            <Hero value={fmtInt(abertas)} label="convocações abertas" hint="cada barra é uma parte do total; passe o mouse para ver o detalhe" />
+            <StackedBar segmentos={faixas} ariaLabel="Convocações abertas por tempo na situação atual" />
+            <p className="text-sm" style={{ marginTop: 12 }}>
+              <Link to={lista("abertas")}>Ver todas as abertas →</Link>
+            </p>
+          </Card>
+          <Card title="Como as convocações estão terminando" secao="cre.desfechos">
+            <p className="text-sm muted" style={{ marginBottom: 12 }}>
+              Cada convocação gerada está em uma destas quatro situações. Clique no nome para abrir a lista.
+            </p>
+            <Breakdown segmentos={desfechos} ariaLabel="Convocações por desfecho" />
+            <div className="metricas-rodape">
+              <div className="metrica">
+                <span className="stat-label">Tempo até o desfecho</span>
+                <span className="metrica-valor">{r.tempo_medio_ate_desfecho_h == null ? "—" : fmtHoras(r.tempo_medio_ate_desfecho_h)}</span>
+                <span className="stat-hint">média de {fmtInt(r.n_desfechos ?? 0)} desfecho(s)</span>
               </div>
-            </Card>
-          </div>
+              <div className="metrica">
+                <span className="stat-label">Liberadas hoje</span>
+                <span className="metrica-valor">{fmtInt(r.vagas_liberadas_hoje ?? 0)}</span>
+                <span className="stat-hint">voltaram para a fila</span>
+              </div>
+              <div className="metrica">
+                <span className="stat-label">Reservas por criança</span>
+                <span className="metrica-valor">
+                  {r.vagas_presas_por_crianca == null ? "—" : r.vagas_presas_por_crianca.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
+                </span>
+                <span className="stat-hint">média, de no máximo 3</span>
+                <Meter share={r.vagas_presas_por_crianca != null ? r.vagas_presas_por_crianca / 3 : 0} tone="neutral" label="média de reservas, de 1 a 3" />
+              </div>
+              {r.inconsistencias > 0 && (
+                <div className="metrica">
+                  <span className="stat-label">Inconsistências</span>
+                  <span className="metrica-valor danger">{fmtInt(r.inconsistencias)}</span>
+                  <span className="stat-hint">matriculada e ainda com reserva aberta</span>
+                </div>
+              )}
+            </div>
+          </Card>
 
           {maisVencidas.length > 0 && (
             <Card title="Unidades com mais convocações vencidas" secao="cre.unidades_vencidas">

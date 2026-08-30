@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 PIP := .venv/bin/pip
 
-.PHONY: venv audit load seed api test up down logs db migrate
+.PHONY: venv audit load seed api mensageria test test-mensageria up down logs db migrate
 
 venv:            ## cria o venv e instala o backend em modo editável
 	python3 -m venv .venv && $(PIP) install -e "backend[dev]"
@@ -18,8 +18,14 @@ seed:            ## dados de demonstração: classifica, convoca e simula 5 dias
 api:             ## API em modo dev
 	cd backend && ../$(PY) -m uvicorn app.main:app --reload --port 8000
 
+mensageria:      ## serviço de mensageria em modo dev (porta 8100)
+	cd mensageria && ../$(PY) -m uvicorn app.main:app --reload --port 8100
+
 test:            ## testes do motor
 	cd backend && ../$(PY) -m pytest -q
+
+test-mensageria: ## testes do serviço de mensageria (não tocam a rede: tudo no provedor mock)
+	cd mensageria && ../$(PY) -m pytest -q
 
 db:              ## só o Postgres, para desenvolvimento local
 	docker compose up -d db

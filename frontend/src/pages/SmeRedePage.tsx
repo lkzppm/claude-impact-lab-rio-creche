@@ -12,6 +12,7 @@ import {
   EmptyState,
   Pill,
   StackedBar,
+  Breakdown,
   BarList,
   Legenda,
   Hero,
@@ -20,6 +21,7 @@ import {
   fmtHoras,
 } from "../design-system";
 import type { Segmento } from "../design-system";
+import MotorCard from "../components/MotorCard";
 
 export const LEGENDA_CRE = [
   { label: "Matrículas confirmadas", tone: "ok" as const, hint: "a família compareceu e a matrícula foi efetivada" },
@@ -44,8 +46,8 @@ export default function SmeRedePage() {
     : [];
   const desfechos: Segmento[] = r
     ? [
-        { label: "Ainda abertas", value: abertas, tone: "info" },
-        { label: "Matrículas confirmadas", value: r.confirmadas ?? 0, tone: "ok" },
+        { label: "Matrículas confirmadas", value: r.confirmadas ?? 0, tone: "ok", hint: "a família compareceu e a vaga foi ocupada" },
+        { label: "Ainda abertas", value: abertas, tone: "info", hint: "sem desfecho — a família ainda pode responder" },
         { label: "Recusadas", value: r.recusadas ?? 0, tone: "warn", hint: "a vaga voltou para a fila" },
         { label: "Prazo vencido registrado", value: r.expiradas ?? 0, tone: "danger", hint: "a vaga voltou para a fila" },
       ]
@@ -59,29 +61,31 @@ export default function SmeRedePage() {
       title="Visão da rede"
       subtitle="As 11 CREs em uma tela: onde a convocação está andando e onde está parada. Clique numa CRE para abrir o painel dela."
     >
+      <MotorCard base="/sme" />
       {resumo.isLoading && <Spinner label="Calculando o resumo…" />}
       {resumo.isError && <ErrorBox error={resumo.error} />}
       {r && (
         <>
-          <div className="grid-2">
-            <Card title="Há quanto tempo as convocações estão paradas" secao="sme.tempo_paradas">
-              <Hero value={fmtInt(abertas)} label="convocações abertas na rede" hint={r.atualizado_em ? `atualizado ${fmtDateTime(r.atualizado_em)}` : undefined} />
-              <StackedBar segmentos={faixas} ariaLabel="Convocações abertas por tempo na situação atual" />
-            </Card>
-            <Card title="Como as convocações estão terminando" secao="sme.desfechos">
-              <p className="text-sm muted" style={{ marginBottom: 12 }}>
-                Cada barra é uma convocação gerada nesta rodada. Quanto maior a parte verde, mais matrículas fecharam; a vermelha é o que
-                venceu sem resposta.
-              </p>
-              <StackedBar segmentos={desfechos} ariaLabel="Convocações por desfecho" />
-              {r.tempo_medio_ate_desfecho_h != null && (
-                <p className="text-sm muted" style={{ marginTop: 12 }}>
-                  Da seleção à resposta: <strong>{fmtHoras(r.tempo_medio_ate_desfecho_h)}</strong> em média ({fmtInt(r.n_desfechos ?? 0)} desfechos) — dado que hoje
-                  não existe na SME.
-                </p>
-              )}
-            </Card>
-          </div>
+          <Card title="Há quanto tempo as convocações estão paradas" secao="sme.tempo_paradas">
+            <Hero value={fmtInt(abertas)} label="convocações abertas na rede" hint={r.atualizado_em ? `atualizado ${fmtDateTime(r.atualizado_em)}` : undefined} />
+            <StackedBar segmentos={faixas} ariaLabel="Convocações abertas por tempo na situação atual" />
+          </Card>
+          <Card title="Como as convocações estão terminando" secao="sme.desfechos">
+            <p className="text-sm muted" style={{ marginBottom: 12 }}>
+              Cada convocação gerada nesta rodada está em uma destas quatro situações. Verde é matrícula fechada; laranja e vermelho
+              devolveram a vaga para a fila.
+            </p>
+            <Breakdown segmentos={desfechos} ariaLabel="Convocações por desfecho" />
+            {r.tempo_medio_ate_desfecho_h != null && (
+              <div className="metricas-rodape">
+                <div className="metrica">
+                  <span className="stat-label">Da seleção à resposta</span>
+                  <span className="metrica-valor">{fmtHoras(r.tempo_medio_ate_desfecho_h)}</span>
+                  <span className="stat-hint">média de {fmtInt(r.n_desfechos ?? 0)} desfechos — dado que hoje não existe na SME</span>
+                </div>
+              </div>
+            )}
+          </Card>
 
           <div className="grid-tiles" data-secao="sme.indicadores">
             <StatTile label="Vencidas" value={fmtInt(r.vencidas ?? 0)} tone="danger" hint="prazo passou sem resposta" share={abertas ? (r.vencidas ?? 0) / abertas : 0} />
@@ -105,7 +109,8 @@ export default function SmeRedePage() {
         {cres.data && cres.data.length === 0 && (
           <EmptyState title="Ainda sem dados por CRE">
             <p>
-              Rode uma classificação e gere convocações em <Link to="/sme/classificacao">Classificação</Link>.
+              O motor classifica e convoca sozinho — se nada aparecer aqui, confira o cartão do motor no topo da página
+              (ele diz o que fez no último ciclo) e se as bases foram carregadas.
             </p>
           </EmptyState>
         )}

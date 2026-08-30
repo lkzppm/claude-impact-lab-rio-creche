@@ -19,12 +19,14 @@ const NAV_POR_AREA: Record<string, { to: string; label: string; end?: boolean }[
   cre: [
     { to: "/cre", label: "Painel", end: true },
     { to: "/cre/convocacoes", label: "Convocações" },
+    { to: "/cre/mapa", label: "Mapa" },
     { to: "/cre/multireserva", label: "Várias reservas" },
     { to: "/cre/unidades", label: "Unidades" },
   ],
+  // Sem aba "Classificação": o motor classifica sozinho, 24/7 (app/motor.py). O estado dele fica na Rede.
   sme: [
     { to: "/sme", label: "Rede", end: true },
-    { to: "/sme/classificacao", label: "Classificação" },
+    { to: "/sme/mapa", label: "Mapa" },
     { to: "/sme/inscricoes", label: "Inscrições" },
     { to: "/sme/unidades", label: "Unidades" },
     { to: "/sme/regua", label: "Régua" },

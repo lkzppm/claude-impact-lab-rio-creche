@@ -8,7 +8,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.schemas import MultiReservaItem, PainelCre, PainelResumo, PainelUnidade, SelecionadasAguardando
+from app.schemas import (MapaCre, MapaOut, MapaUnidade, MultiReservaItem, PainelCre, PainelResumo, PainelUnidade,
+                         SelecionadasAguardando)
 
 router = APIRouter(prefix="/painel", tags=["painel"])
 
@@ -215,3 +216,118 @@ def cres(ano: int | None = None, db: Session = Depends(get_db)):
                       alocadas=int(r.alocadas), convocadas=int(r.convocadas), abertas=int(r.abertas),
                       confirmadas=int(r.confirmadas), em_atraso=int(r.em_atraso), lista_espera=int(r.lista_espera))
             for r in linhas]
+
+
+# --- mapa com drill-down: rede → CRE → unidade ------------------------------------------------------
+
+# CTEs comuns aos dois níveis. `alvo` é o universo do mapa: as unidades que participam do processo de
+# creche — a base da SME tem 2 mil escolas, mas só as que têm vaga, inscrição ou convocação entram aqui.
+# `:cre` NULL = rede inteira.
+_MAPA_CTES = f"""
+    WITH ult AS (SELECT MAX(id) AS id FROM rodada),
+    alvo AS (
+      SELECT u.codigo, u.cre FROM unidade u
+      WHERE u.cre IS NOT NULL
+        AND (CAST(:cre AS text) IS NULL OR u.cre = CAST(:cre AS text))
+        AND (EXISTS (SELECT 1 FROM capacidade c WHERE c.unidade_codigo = u.codigo AND c.ano = :ano)
+          OR EXISTS (SELECT 1 FROM convocacao cv WHERE cv.unidade_codigo = u.codigo)
+          OR EXISTS (SELECT 1 FROM opcao o JOIN inscricao i ON i.id = o.inscricao_id
+                     WHERE o.unidade_codigo = u.codigo AND i.ano = :ano))
+    ),
+    insc AS (
+      SELECT o.unidade_codigo, COUNT(DISTINCT o.inscricao_id) AS inscricoes
+      FROM opcao o JOIN inscricao i ON i.id = o.inscricao_id JOIN alvo ON alvo.codigo = o.unidade_codigo
+      WHERE i.ano = :ano AND o.ordem = 1 GROUP BY o.unidade_codigo
+    ),
+    cap AS (
+      SELECT c.unidade_codigo, SUM(c.vagas) AS vagas FROM capacidade c JOIN alvo ON alvo.codigo = c.unidade_codigo
+      WHERE c.ano = :ano GROUP BY c.unidade_codigo
+    ),
+    aloc AS (
+      SELECT a.unidade_codigo,
+             COUNT(*) FILTER (WHERE a.status = 'alocada' AND a.tipo = 'presa') AS alocadas,
+             COUNT(DISTINCT a.inscricao_id) FILTER (WHERE a.status = 'lista_espera') AS lista_espera
+      FROM alocacao a JOIN alvo ON alvo.codigo = a.unidade_codigo
+      WHERE a.rodada_id = (SELECT id FROM ult)
+      GROUP BY a.unidade_codigo
+    ),
+    conv AS (
+      SELECT c.unidade_codigo, COUNT(*) AS convocadas,
+             COUNT(*) FILTER (WHERE c.status IN {ABERTAS_SQL}) AS abertas,
+             COUNT(*) FILTER (WHERE c.status = 'confirmada') AS confirmadas,
+             COUNT(*) FILTER (WHERE c.status IN {ABERTAS_SQL} AND c.prazo_fim < now()) AS em_atraso
+      FROM convocacao c JOIN alvo ON alvo.codigo = c.unidade_codigo GROUP BY c.unidade_codigo
+    )
+"""
+
+
+@router.get("/mapa", response_model=MapaOut)
+def mapa(cre: str | None = None, ano: int | None = None, db: Session = Depends(get_db)):
+    """Mapa com drill-down. Sem `cre`: uma bolha por CRE (centroide das unidades com coordenada).
+    Com `cre`: **todas** as unidades daquela CRE, inclusive as que ainda não têm convocação — é a lista
+    de creches disponíveis no território, com vagas, fila e convocações vencidas."""
+    ano = ano or db.execute(text("SELECT MAX(ano) FROM processo")).scalar()
+    agora = datetime.now(timezone.utc)
+    cres = [
+        MapaCre(cre=str(r.cre), lat=float(r.lat) if r.lat is not None else None,
+                lon=float(r.lon) if r.lon is not None else None, unidades=int(r.unidades),
+                unidades_no_mapa=int(r.no_mapa), vagas=int(r.vagas), inscricoes=int(r.inscricoes),
+                alocadas=int(r.alocadas), lista_espera=int(r.lista_espera), convocadas=int(r.convocadas),
+                abertas=int(r.abertas), confirmadas=int(r.confirmadas), em_atraso=int(r.em_atraso))
+        for r in db.execute(text(f"""
+            {_MAPA_CTES},
+            le AS (
+              SELECT alvo.cre, COUNT(DISTINCT a.inscricao_id) AS lista_espera
+              FROM alocacao a JOIN alvo ON alvo.codigo = a.unidade_codigo
+              WHERE a.rodada_id = (SELECT id FROM ult) AND a.status = 'lista_espera' GROUP BY alvo.cre
+            )
+            SELECT u.cre,
+                   AVG(u.lat) AS lat, AVG(u.lon) AS lon,
+                   COUNT(*) AS unidades,
+                   COUNT(*) FILTER (WHERE u.lat IS NOT NULL AND u.lon IS NOT NULL) AS no_mapa,
+                   COALESCE(SUM(cap.vagas), 0) AS vagas,
+                   COALESCE(SUM(insc.inscricoes), 0) AS inscricoes,
+                   COALESCE(SUM(aloc.alocadas), 0) AS alocadas,
+                   COALESCE(MAX(le.lista_espera), 0) AS lista_espera,
+                   COALESCE(SUM(conv.convocadas), 0) AS convocadas,
+                   COALESCE(SUM(conv.abertas), 0) AS abertas,
+                   COALESCE(SUM(conv.confirmadas), 0) AS confirmadas,
+                   COALESCE(SUM(conv.em_atraso), 0) AS em_atraso
+            FROM unidade u
+            JOIN alvo ON alvo.codigo = u.codigo
+            LEFT JOIN cap ON cap.unidade_codigo = u.codigo
+            LEFT JOIN insc ON insc.unidade_codigo = u.codigo
+            LEFT JOIN aloc ON aloc.unidade_codigo = u.codigo
+            LEFT JOIN conv ON conv.unidade_codigo = u.codigo
+            LEFT JOIN le ON le.cre = u.cre
+            GROUP BY u.cre
+            ORDER BY CASE WHEN u.cre ~ '^[0-9]+$' THEN u.cre::int ELSE 99 END, u.cre
+        """), {"ano": ano, "cre": None}).all()
+    ]
+    unidades: list[MapaUnidade] = []
+    if cre:
+        unidades = [
+            MapaUnidade(codigo=r.codigo, nome=r.nome, cre=r.cre, tipo=r.tipo, bairro=r.bairro,
+                        lat=float(r.lat) if r.lat is not None else None,
+                        lon=float(r.lon) if r.lon is not None else None,
+                        vagas=int(r.vagas), inscricoes=int(r.inscricoes), alocadas=int(r.alocadas),
+                        lista_espera=int(r.lista_espera), convocadas=int(r.convocadas), abertas=int(r.abertas),
+                        confirmadas=int(r.confirmadas), em_atraso=int(r.em_atraso))
+            for r in db.execute(text(f"""
+                {_MAPA_CTES}
+                SELECT u.codigo, u.nome, u.cre, u.tipo, u.bairro, u.lat, u.lon,
+                       COALESCE(cap.vagas, 0) AS vagas, COALESCE(insc.inscricoes, 0) AS inscricoes,
+                       COALESCE(aloc.alocadas, 0) AS alocadas, COALESCE(aloc.lista_espera, 0) AS lista_espera,
+                       COALESCE(conv.convocadas, 0) AS convocadas, COALESCE(conv.abertas, 0) AS abertas,
+                       COALESCE(conv.confirmadas, 0) AS confirmadas, COALESCE(conv.em_atraso, 0) AS em_atraso
+                FROM unidade u
+                JOIN alvo ON alvo.codigo = u.codigo
+                LEFT JOIN cap ON cap.unidade_codigo = u.codigo
+                LEFT JOIN insc ON insc.unidade_codigo = u.codigo
+                LEFT JOIN aloc ON aloc.unidade_codigo = u.codigo
+                LEFT JOIN conv ON conv.unidade_codigo = u.codigo
+                ORDER BY u.nome
+            """), {"ano": ano, "cre": cre}).all()
+        ]
+    return MapaOut(ano=ano, nivel="cre" if cre else "rede", cre=cre, atualizado_em=agora,
+                   cres=cres, unidades=unidades)

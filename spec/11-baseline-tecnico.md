@@ -98,6 +98,27 @@ Invariantes testadas: nenhuma inscrição alocada em mais de uma unidade; nenhum
 capacidade; estabilidade (nenhum par inscrição–unidade prefere trocar); determinismo (mesma entrada →
 mesmo `hash_entrada` → mesma saída).
 
+### Motor contínuo (`backend/app/motor.py`) — roda 24/7, sem botão
+
+A classificação não é um evento de calendário: sobe com a API (`lifespan`) e executa um ciclo a cada
+`MOTOR_INTERVALO_SEGUNDOS` (padrão 60; `0` desliga a rotina e deixa só `POST /motor/ciclo`). Cada ciclo:
+
+1. **classifica** se ainda não há rodada do processo vigente (bootstrap) ou se a entrada mudou — a
+   assinatura `(nº de inscrições, nº de opções, soma das vagas)` do ano; a rodada nova repete o recorte e
+   os parâmetros da anterior;
+2. **convoca** as vagas presas da rodada nova (`convocacoes.gerar_convocacoes`), sem duplicar o que já
+   está na rua: pula quem confirmou matrícula, quem já foi convocado para aquela unidade e o que passaria
+   da cota de reservas abertas;
+3. **expira** as convocações vencidas, se `MOTOR_EXPIRAR_VENCIDAS=1` (desligado na demonstração — o polo
+   registra em lote e as vencidas ficam visíveis no painel);
+4. **cascateia**: cada vaga liberada (recusa, prazo vencido, confirmação em outra unidade) ainda sem
+   repasse vai para o próximo da lista de espera daquela unidade, por `proximo_da_fila` — a mesma ordem
+   que o polo vê na tela —, com evento `selecionada_da_lista` e ator `motor`. Teto de
+   `MOTOR_MAX_REPASSES_POR_CICLO` (padrão 200) por ciclo.
+
+Sem LLM em nenhum passo. Erro em um ciclo não derruba a API: fica em `ultimo_erro` e o próximo ciclo tenta
+de novo. Ciclos que mudam alguma coisa viram `evento` (`tipo = motor_ciclo`) no log append-only.
+
 ## API (prefixo `/api/v1`)
 
 | Método | Rota | Devolve |
@@ -111,20 +132,24 @@ mesmo `hash_entrada` → mesma saída).
 | PUT | `/unidades/{codigo}/capacidade` `{ano, grupamento, horario, vagas, ator?}` | capacidade informada pela unidade (`fonte = informada`) + evento `capacidade_informada` |
 | GET | `/inscricoes?ano=&unidade=&situacao=&page=` | paginado |
 | GET | `/inscricoes/{id}` | inscrição + opções + respostas + pontuação |
-| POST | `/classificacao/rodadas` `{ano, grupamento?, horario?, tipo}` | executa o motor, grava `rodada` + `alocacao`, devolve resumo |
+| GET | `/motor` | **estado do motor contínuo**: ligado, intervalo, última/próxima passada, totais (rodadas, convocações, expiradas, vagas repassadas), `ultimo_ciclo`, rodada vigente e vagas liberadas ainda sem repasse |
+| POST | `/motor/ciclo` | força um ciclo agora (mesma função da rotina de fundo); devolve o estado |
+| GET | `/motor/eventos?limit=` | últimos ciclos que mudaram alguma coisa, do log append-only (`evento.tipo = motor_ciclo`) |
+| POST | `/classificacao/rodadas` `{ano, grupamento?, horario?, tipo}` | executa o motor, grava `rodada` + `alocacao`, devolve resumo (o motor contínuo chama a mesma função) |
 | GET | `/classificacao/rodadas` · `/classificacao/rodadas/{id}` | lista / detalhe com resumo |
 | GET | `/classificacao/rodadas/{id}/alocacoes?unidade=&status=` | alocações |
 | GET | `/classificacao/rodadas/{id}/explicacao/{inscricao_id}` | texto + `motivo` estruturado |
-| POST | `/convocacoes/gerar` `{rodada_id}` | cria uma `convocacao` (status `selecionada`) por alocação + evento |
+| POST | `/convocacoes/gerar` `{rodada_id}` | cria uma `convocacao` (status `selecionada`) por vaga presa + evento; pula quem já confirmou matrícula, quem já foi convocado para aquela unidade e o que passaria da cota de reservas abertas (idempotente entre rodadas) |
 | GET | `/convocacoes?cre=&unidade=&status=&fila=` | lista com `horas_no_status`, `atrasada` e `proxima_acao`; `fila` = `vencidas` · `vencem_24h` · `sem_aviso` · `aguardando` · `abertas` · `trabalho` · `encerradas`, ordenada por urgência |
 | GET | `/convocacoes/{id}` | detalhe + eventos + irmãs; se a vaga foi liberada, `proximo_da_fila` ou `repassada_para` |
 | POST | `/convocacoes/{id}/eventos` `{tipo, payload{observacao?, canal?}, ator?}` | registra transição; devolve novo status |
 | POST | `/convocacoes/{id}/convocar-proximo` `{ator?}` | vaga liberada → convoca o próximo da lista de espera da unidade (evento `selecionada_da_lista`); 409 se ainda aberta ou já repassada |
-| POST | `/convocacoes/expirar-vencidas` `{cre?, unidade?, ator?}` | registra `expirada` em lote nas abertas com prazo vencido; a mesma função roda como rotina se `EXPIRACAO_AUTOMATICA_MINUTOS > 0` |
+| POST | `/convocacoes/expirar-vencidas` `{cre?, unidade?, ator?}` | registra `expirada` em lote nas abertas com prazo vencido; a mesma função roda dentro do motor se `MOTOR_EXPIRAR_VENCIDAS=1` |
 | GET | `/painel/resumo?cre=&unidade=` | KPIs: selecionadas aguardando (por faixa 0–24h, 24–48h, 48–72h, >72h), vagas em risco, sem aviso, aguardando a família, vencidas, vencem em 24 h, crianças com várias reservas, inconsistências, tempo médio até o desfecho |
 | GET | `/painel/multireserva?cre=&unidade=` | crianças com mais de uma reserva aberta: nº de reservas, unidades, há quanto tempo |
 | GET | `/painel/unidades?cre=` | uma linha por unidade: vagas, alocadas, convocadas, confirmadas, em atraso |
 | GET | `/painel/cres?ano=` | **Nível Central**: uma linha por CRE — unidades, vagas, inscrições, alocadas, convocadas, abertas, confirmadas, em atraso, lista de espera |
+| GET | `/painel/mapa?cre=&ano=` | **mapa com drill-down**: sem `cre`, uma linha por CRE com centroide (lat/lon médios das unidades); com `cre`, **todas** as unidades daquela CRE que participam do processo de creche (têm vaga, inscrição ou convocação), com lat/lon, vagas, inscrições de 1ª opção, reservadas, lista de espera, convocadas, abertas, confirmadas e vencidas |
 | GET | `/familia/inscricao?codigo=&ano=` | **Família**: situação em linguagem de responsável — `situacao_resumo`, opções com `resultado` (reservada/fila/sem_vaga) e posição, reservas abertas com prazo, pontuação por critério com comprovação, explicação |
 | POST | `/familia/convocacoes/{id}/responder` `{resposta: confirmar\|recusar}` | a família responde na hora; confirmar libera as outras reservas (`ator = familia` no log) |
 | POST | `/chat` `{area: cre\|sme, cre?, ator?, mensagens: [{role, content}]}` | **Assistente** (áreas CRE e Nível Central): `{resposta, ferramentas: [{nome, argumentos, resumo, erro?}], modelo, tokens_entrada, tokens_saida, log_id}`. Só leitura; na área `cre` toda ferramenta é restrita à CRE informada (no servidor); 503 sem `ANTHROPIC_API_KEY` |
@@ -133,6 +158,8 @@ mesmo `hash_entrada` → mesma saída).
 | POST | `/familia/sugestoes` `{cep\|lat,lon, grupamento, horario, respostas}` | **tempo real**: pontuação pelo motor + até 15 unidades com distância, vagas e `chance` (= % das crianças com até a sua pontuação que escolheram a unidade e conseguiram vaga no ano da régua); as 5 primeiras são o top 5 |
 | POST | `/familia/pre-cadastro` | grava pré-cadastro (jul–ago): criança, CEP(s), respostas, **≥3 contatos (pessoas/canais distintos) com parentesco e canal**, até 5 escolhas em ordem, consentimento; CPF só como hash; devolve `protocolo` |
 | GET | `/familia/pre-cadastro/{protocolo}` | consulta do pré-cadastro |
+| GET | `/mensagens/saude` · `/mensagens/templates` | provedor ativo por canal (sem expor credencial) e catálogo de mensagens com os dados obrigatórios de cada uma |
+| POST | `/mensagens/enviar` `{canal, destino, template, dados, referencia?, chave_idem?, ator?}` | pede um envio ao serviço de mensageria; **sempre 200** — o desfecho vem em `resultado` (`enviado` · `simulado` · `pendente` · `falha`) |
 
 Erros em JSON `{detail}`; paginação `{items, total, page, size}`.
 
@@ -161,6 +188,40 @@ Chat com ferramentas sobre o mesmo banco, para o servidor perguntar em portuguê
 - Configuração: `ANTHROPIC_API_KEY`, `CHAT_MODEL` (padrão `claude-opus-5`), `CHAT_MAX_TOOLS` (8). Sem chave, a
   rota responde 503 e o painel segue normal.
 
+## Mensageria (`mensageria/`, container à parte, porta 8100)
+
+Serviço de envio para o Eixo 3. A norma manda **1 tentativa por dia, 3 dias consecutivos, em horários
+diferentes, por telefone, e-mail, WhatsApp ou SMS** ([02](02-case-oficial.md)) — isso é trabalho manual
+do polo hoje, e é o que este serviço automatiza sem tocar em classificação.
+
+Container separado do backend por três razões: credencial da Twilio/Resend isolada em um processo que não
+fala com o banco; provedor fora do ar não derruba o painel nem o motor; trocar sandbox → WhatsApp Business
+é variável de ambiente, sem redeploy do backend.
+
+| Método | Rota (`/api/v1`) | Devolve |
+|---|---|---|
+| GET | `/saude` | provedor e credencial por canal, sem expor chave |
+| GET | `/templates` | catálogo com `obrigatorios` e `opcionais` de cada mensagem |
+| POST | `/enviar` | um envio |
+| POST | `/enviar-lote` | vários em paralelo (teto de concorrência); devolve `invalidos` com a posição de cada pedido recusado |
+
+- **Provedores por canal, padrão `mock`** (mesma convenção de `COMPROVACAO_PROVIDER`): `MENSAGERIA_WHATSAPP`
+  (`mock`|`twilio`), `MENSAGERIA_EMAIL` (`mock`|`resend`|`smtp`), `MENSAGERIA_SMS` (`mock`|`twilio`). Subir o
+  repositório limpo não manda mensagem para ninguém; sem credencial o resultado é `pendente`, nunca erro.
+- **O texto mora aqui, não no backend** (`app/templates.py`): o backend manda `template` + `dados`. Assim a
+  redação fica versionada em um lugar revisável pela SME, e a migração para template aprovado pela Meta
+  (obrigatório no WhatsApp fora da janela de 24 h) é local a um arquivo.
+- **Erro de programação falha alto, erro de mundo falha baixo**: template inexistente, dado faltando ou destino
+  malformado → 422 antes de a mensagem existir; provedor recusando ou fora do ar → 200 com `resultado='falha'`.
+- **Idempotência** por `chave_idem` (24 h): reprocessar uma convocação não manda dois avisos à mesma família.
+  Memória do processo — em produção, Redis com a mesma interface (`app/idempotencia.py`).
+- **LGPD art. 14**: o log é uma linha JSON por envio com destino **mascarado**, impressão digital (sha256
+  truncado) e resultado — nunca assunto, texto, dados do template ou destino em claro. Mesmo princípio do
+  `consulta_agente` do assistente.
+- Cliente no backend: `backend/app/integracoes/mensageria.py` (`urllib` da stdlib, sem dependência nova, nunca
+  levanta exceção). `enviar_para_contatos()` avisa em **todos** os canais cadastrados do pré-cadastro — contato
+  desatualizado é a causa nº 1 de vaga que vence sem ninguém atender ([PRD](PRD.md), seção 3).
+
 ## ETL e auditoria (`backend/app/etl/`)
 
 - `audit.py` — lê `data/` com DuckDB e escreve `out/auditoria-dados.md` + `.json`. Verifica as armadilhas
@@ -178,16 +239,18 @@ Chat com ferramentas sobre o mesmo banco, para o servidor perguntar em portuguê
 | `/cre` | **CRE / polo** | escolhe a CRE no primeiro acesso (lembrada); painel "Para hoje" com filas de trabalho clicáveis; convocações por fila com próxima ação; ficha com relógio, canal, histórico e "convocar próximo da fila"; crianças com várias reservas; unidade com fila de espera e capacidade informada; expiração em lote; "Registrando como" vira o `ator` do log |
 | `/familia/pre-cadastro` | **Família sem inscrição** | pré-cadastro (jul–ago): pontuação e top 5 em tempo real, mapa com a casa e as creches, contatos múltiplos, até 5 escolhas |
 | `/cre` | **CRE / polo** | painel e convocações do seu território (CRE selecionada e lembrada), registra contatos e desfechos |
-| `/sme` | **Nível Central SME** | visão da rede por CRE, roda classificação e compara regimes, gera convocações, régua do ano |
+| `/cre/mapa` · `/sme/mapa` | **CRE / polo** e **Nível Central** | mapa do território com drill-down: no Nível Central, uma bolha por CRE → clique abre **todas as creches da CRE** → clique numa creche mostra os números dela; na CRE, entra direto no nível da CRE escolhida. Quatro métricas (pressão da fila, convocações vencidas, lista de espera, vagas e matrículas), lista buscável e tabela completa |
+| `/sme` | **Nível Central SME** | visão da rede por CRE, estado do motor contínuo (última passada, vagas repassadas, classificação vigente), régua do ano. **Não há aba "Classificação"**: o motor roda sozinho; `/sme/classificacao/{id}` continua abrindo o detalhe de uma rodada |
 
 Header em todas: faixa branca com os logos Prefeitura Rio · Educação e Matrícula Carioca (`frontend/public/`), barra azul `#005E96` com a navegação do perfil.
 
 ## Estrutura
 
 ```
-backend/   app/{main,config,db,models,schemas}.py · app/routers/ · app/engine/ · app/etl/ · app/agente/ · tests/ · Dockerfile
-frontend/  src/{design-system,api,pages,components}/ · Dockerfile (nginx)
-db/        init/*.sql (schema versionado, aplicado pelo Postgres na subida)
-out/       relatórios de auditoria (commitados; não vão para data/)
+backend/     app/{main,config,db,models,schemas,motor}.py · app/routers/ · app/engine/ · app/etl/ · app/agente/ · app/integracoes/ · tests/ · Dockerfile
+mensageria/  app/{main,config,schemas,servico,templates,destinos,idempotencia,registro}.py · app/provedores/ · tests/ · Dockerfile
+frontend/    src/{design-system,api,pages,components}/ · Dockerfile (nginx)
+db/          init/*.sql (schema versionado, aplicado pelo Postgres na subida)
+out/         relatórios de auditoria (commitados; não vão para data/)
 docker-compose.yml · .env.example · Makefile
 ```
