@@ -28,7 +28,7 @@ export default function UnidadesPage() {
         </label>
         {area !== "cre" && <CreSelect value={cre} onChange={setCre} />}
       </div>
-      <Card flush>
+      <Card flush secao={area === "cre" ? "cre.unidades" : "sme.unidades"}>
         {query.isLoading && <Spinner label="Carregando unidades…" />}
         {query.isError && (
           <div style={{ padding: 16 }}>

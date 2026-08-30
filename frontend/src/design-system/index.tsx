@@ -202,15 +202,18 @@ export function Card({
   flush,
   children,
   className = "",
+  secao,
 }: {
   title?: ReactNode;
   actions?: ReactNode;
   flush?: boolean;
   children: ReactNode;
   className?: string;
+  /** id da seção para o assistente "me leva até lá" (backend/app/agente/secoes.py) */
+  secao?: string;
 }) {
   return (
-    <section className={`card ${flush ? "card-flush" : ""} ${className}`.trim()}>
+    <section className={`card ${flush ? "card-flush" : ""} ${className}`.trim()} data-secao={secao}>
       {(title || actions) && (
         <div className="card-head" style={flush ? { padding: "16px 24px 0" } : undefined}>
           {title && <h2 className="card-title" style={{ marginBottom: 0 }}>{title}</h2>}

@@ -207,7 +207,7 @@ export default function ClassificacaoPage() {
       </Card>
 
       {comparacoes.length > 0 && (
-        <Card title="Comparar regimes">
+        <Card title="Comparar regimes" secao="sme.classificacao_comparar">
           <p className="text-sm muted" style={{ marginBottom: 12 }}>
             Mesmo ano, grupamento e turno, classificados com números diferentes de vagas reservadas por criança. Quanto mais
             reservas simultâneas, menos crianças distintas recebem oferta na primeira rodada.
@@ -281,7 +281,7 @@ export default function ClassificacaoPage() {
         </Card>
       )}
 
-      <Card title="Classificações já feitas" flush>
+      <Card title="Classificações já feitas" flush secao="sme.classificacao_rodadas">
         {rodadas.isLoading && <Spinner label="Carregando…" />}
         {rodadas.isError && (
           <div style={{ padding: 16 }}>

@@ -16,12 +16,13 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.agente import secoes
 from app.agente import sql as sql_livre
 from app.agente.escopo import Escopo, ForaDoEscopo
 from app.config import get_settings
 from app.models import Base, Convocacao, Inscricao, Opcao, Unidade
 from app.routers import classificacao, convocacoes, familia, painel, processos, unidades
-from app.routers.convocacoes import ABERTAS, _agora, _enriquecer
+from app.routers.convocacoes import ABERTAS, FILAS, _agora, _enriquecer
 from app.schemas import CapacidadeOut, RodadaOut
 
 # objetos ORM devolvidos por routers chamados diretamente (fora do FastAPI, o response_model não converte)
@@ -296,6 +297,12 @@ def consulta_sql(db: Session, escopo: Escopo, args: dict) -> Resultado:
 
 # ----------------------------------------------------------------------------- catálogo
 
+def apontar_no_painel(db: Session, escopo: Escopo, args: dict) -> Resultado:
+    """A resposta já está num card: registra a seção + resumo; a rota vira `navegacao` na resposta (secoes.py)."""
+    dados, linha = secoes.apontar(db, escopo, args)
+    return Resultado(dados, linha)
+
+
 _CRE = {"type": "string", "description": "Número da CRE (\"1\" a \"11\"). Na área CRE é ignorado: vale sempre a CRE do usuário."}
 _UNIDADE = {"type": "string", "description": "Código da unidade (esc_codigo), ex.: \"01001\"."}
 _LIMIT = {"type": "integer", "description": "Máximo de itens devolvidos."}
@@ -386,6 +393,19 @@ FERRAMENTAS: tuple[Ferramenta, ...] = (
         "Régua de pontuação de um processo (perguntas, pontos, critérios de desempate). É norma: só para explicar, "
         "nunca para propor mudança.",
         regua, {"ano": {"type": "integer", "description": "Ano do processo; padrão: o mais recente carregado."}}),
+    Ferramenta(
+        secoes.FERRAMENTA,
+        "Use quando a resposta à pergunta JÁ ESTÁ num card do painel (ver 'Quando a resposta já está na tela' no "
+        "prompt). Registra a seção e um resumo com os números; o painel então pergunta ao servidor se quer ser levado "
+        "até o card. Chame DEPOIS de consultar os números, no máximo uma vez por resposta, e não repita os números no "
+        "texto final.",
+        apontar_no_painel,
+        {"secao": {"type": "string", "description": "Id da seção, ex.: \"cre.para_hoje\" ou \"sme.tabela_cre\"."},
+         "resumo": {"type": "string", "description": "1 a 3 frases, em português, com a resposta em números (vindos das "
+                    "ferramentas). É o que o servidor lê no chat depois de aceitar ou recusar ir ao card."},
+         "fila": {"type": "string", "enum": list(FILAS), "description": "Só para cre.convocacoes: qual fila abrir."},
+         "unidade": _UNIDADE},
+        ("secao", "resumo")),
     Ferramenta(
         "consulta_sql",
         "Consulta SQL livre, SOMENTE SELECT, para perguntas que as outras ferramentas não cobrem. Limite de 200 "

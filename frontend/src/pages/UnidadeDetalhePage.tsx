@@ -71,7 +71,7 @@ export default function UnidadeDetalhePage() {
       {q.isError && <ErrorBox error={q.error} />}
       {u && (
         <>
-          <Card title="Fila de espera" flush>
+          <Card title="Fila de espera" flush secao="cre.unidade_fila">
             <div style={{ padding: "12px 24px 0" }}>
               {fila.isLoading && <Spinner label="Carregando a fila…" />}
               {fila.isError && <ErrorBox error={fila.error} />}
@@ -169,7 +169,7 @@ export default function UnidadeDetalhePage() {
               </dl>
             </Card>
 
-            <Card title="Capacidade por grupamento e turno" flush>
+            <Card title="Capacidade por grupamento e turno" flush secao={base === "/sme" ? "sme.unidade_capacidade" : "cre.unidade_capacidade"}>
               {u.capacidade.length === 0 ? (
                 <EmptyState title="Sem capacidade registrada">
                   <p>Rode a carga inicial dos dados para estimar a capacidade a partir das confirmações históricas.</p>

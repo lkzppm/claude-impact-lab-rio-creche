@@ -151,6 +151,7 @@ export default function PainelPage() {
 
       {r && (
         <Card
+          secao="cre.para_hoje"
           title={`Para hoje${unidade ? " · nesta unidade" : ""}`}
           actions={
             vencidas > 0 && (
@@ -183,7 +184,7 @@ export default function PainelPage() {
             </div>
           </div>
 
-          <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 16 }} data-secao="cre.fila_trabalho">
             <div className="stat-label" style={{ marginBottom: 8 }}>
               Fila de trabalho · da mais urgente para a menos
             </div>
@@ -230,14 +231,14 @@ export default function PainelPage() {
       {r && (
         <>
           <div className="grid-2">
-            <Card title="Há quanto tempo as convocações estão paradas">
+            <Card title="Há quanto tempo as convocações estão paradas" secao="cre.tempo_paradas">
               <Hero value={fmtInt(abertas)} label="convocações abertas" hint="cada barra é uma parte do total; passe o mouse para ver o detalhe" />
               <StackedBar segmentos={faixas} ariaLabel="Convocações abertas por tempo na situação atual" />
               <p className="text-sm" style={{ marginTop: 12 }}>
                 <Link to={lista("abertas")}>Ver todas as abertas →</Link>
               </p>
             </Card>
-            <Card title="Como as convocações estão terminando">
+            <Card title="Como as convocações estão terminando" secao="cre.desfechos">
               <StackedBar segmentos={desfechos} ariaLabel="Convocações por desfecho" />
               <div className="grid-tiles" style={{ marginTop: 16, gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
                 <div>
@@ -270,7 +271,7 @@ export default function PainelPage() {
           </div>
 
           {maisVencidas.length > 0 && (
-            <Card title="Unidades com mais convocações vencidas">
+            <Card title="Unidades com mais convocações vencidas" secao="cre.unidades_vencidas">
               <p className="text-sm muted" style={{ marginBottom: 12 }}>
                 Comece por aqui: são as vagas que podem ficar ociosas. Clique na unidade para abrir a fila dela.
               </p>
@@ -288,7 +289,7 @@ export default function PainelPage() {
         </>
       )}
 
-      <Card title="Por unidade" flush>
+      <Card title="Por unidade" flush secao="cre.por_unidade">
         {unidades.isLoading && <Spinner label="Carregando unidades…" />}
         {unidades.isError && (
           <div style={{ padding: 16 }}>

@@ -454,9 +454,19 @@ class ChatFerramenta(BaseModel):
     erro: str | None = None
 
 
+class ChatNavegacao(BaseModel):
+    """A resposta já está num card: o frontend pergunta se leva o servidor até lá (rola e destaca) e mostra o resumo."""
+    secao: str                             # casa com o data-secao do frontend, ex.: "cre.para_hoje"
+    pagina: str
+    titulo: str
+    rota: str                              # ex.: "/cre/convocacoes?fila=vencidas"
+    resumo: str
+
+
 class ChatResposta(BaseModel):
     resposta: str
     ferramentas: list[ChatFerramenta]
+    navegacao: ChatNavegacao | None = None
     modelo: str
     tokens_entrada: int = 0
     tokens_saida: int = 0

@@ -8,6 +8,7 @@ from __future__ import annotations
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from app.agente import secoes
 from app.agente.escopo import Escopo
 
 TZ_RIO = ZoneInfo("America/Sao_Paulo")
@@ -52,7 +53,7 @@ Você atende o Nível Central: rede inteira, todas as CREs. Compare CREs e rodad
 def sistema(escopo: Escopo, agora: datetime | None = None) -> list[dict]:
     """Blocos do `system`: o estável leva cache_control; o volátil (data, área, CRE, ator) fica por último."""
     agora = (agora or datetime.now(TZ_RIO)).astimezone(TZ_RIO)
-    estavel = BASE + "\n\n" + POR_AREA[escopo.area].format(cre=escopo.cre or "?")
+    estavel = BASE + "\n\n" + POR_AREA[escopo.area].format(cre=escopo.cre or "?") + "\n\n" + secoes.descrever(escopo.area)
     volatil = (f"Agora: {DIAS[agora.weekday()]}, {agora:%d/%m/%Y %H:%M} (horário de Brasília). "
                f"Área: {'CRE / polo' if escopo.area == 'cre' else 'Nível Central SME'}."
                + (f" CRE: {escopo.cre}ª." if escopo.cre else "")

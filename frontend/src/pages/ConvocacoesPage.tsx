@@ -143,7 +143,7 @@ export default function ConvocacoesPage() {
         </label>
       </div>
 
-      <Card flush>
+      <Card flush secao="cre.convocacoes">
         {q.isLoading && <Spinner label="Buscando convocações…" />}
         {q.isError && (
           <div style={{ padding: 16 }}>

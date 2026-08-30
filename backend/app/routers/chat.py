@@ -5,12 +5,13 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.agente import secoes
 from app.agente.cliente import AssistenteIndisponivel, chamador
 from app.agente.escopo import Escopo
 from app.agente.loop import ErroModelo
 from app.agente.servico import responder
 from app.db import get_db
-from app.schemas import ChatFerramenta, ChatPedido, ChatResposta
+from app.schemas import ChatFerramenta, ChatNavegacao, ChatPedido, ChatResposta
 
 router = APIRouter(prefix="/chat", tags=["assistente"])
 
@@ -31,8 +32,10 @@ def perguntar(body: ChatPedido, db: Session = Depends(get_db)):
         raise HTTPException(422, str(e)) from e
     except ErroModelo as e:
         raise HTTPException(e.status, e.detail) from e
+    nav = secoes.navegacao(escopo, turno.ferramentas)
     return ChatResposta(
         resposta=turno.resposta,
+        navegacao=ChatNavegacao(**nav) if nav else None,
         ferramentas=[ChatFerramenta(nome=c.nome, argumentos=c.argumentos, resumo=c.resumo, erro=c.erro) for c in turno.ferramentas],
         modelo=turno.modelo, tokens_entrada=turno.tokens_entrada, tokens_saida=turno.tokens_saida, log_id=log_id,
     )

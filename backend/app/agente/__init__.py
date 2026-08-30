@@ -6,6 +6,7 @@ Módulos:
 - escopo.py       — quem pergunta (área, CRE) e a regra "a CRE só vê a própria CRE", aplicada no servidor
 - ferramentas.py  — as tools (só leitura), reaproveitando as funções dos routers
 - sql.py          — consulta_sql do Nível Central: SELECT-only, transação READ ONLY, timeout, LIMIT
+- secoes.py       — o que cada card do painel mostra; `apontar_no_painel` → o chat oferece levar o servidor até o card
 - prompts.py      — prompt de sistema por área
 - loop.py         — laço de tool use (independente do SDK: recebe um `chamar(params)`)
 - cliente.py      — cliente Anthropic e tradução de erros
