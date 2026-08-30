@@ -41,10 +41,14 @@ export default function MapaCreches({ casa, unidades, escolhidas, onSelecionar, 
   useEffect(() => {
     if (!ref.current || mapRef.current) return;
     const map = L.map(ref.current, { scrollWheelZoom: false, dragging: true, tap: true, zoomControl: true, attributionControl: true } as L.MapOptions);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    // Provedor de tiles configurável: por padrão CARTO Positron (sem chave). Para um provedor com chave
+    // (MapTiler, Stadia, Mapbox…), defina VITE_MAP_TILES_URL (com a chave na URL) e VITE_MAP_ATTRIBUTION no .env.
+    const tilesUrl = import.meta.env.VITE_MAP_TILES_URL || "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+    const attribution = import.meta.env.VITE_MAP_ATTRIBUTION || "© OpenStreetMap © CARTO";
+    L.tileLayer(tilesUrl, {
       maxZoom: 19,
-      subdomains: "abcd",
-      attribution: "© OpenStreetMap © CARTO",
+      subdomains: tilesUrl.includes("{s}") ? (import.meta.env.VITE_MAP_SUBDOMAINS || "abcd") : "",
+      attribution,
     }).addTo(map);
     map.setView([-22.91, -43.35], 11);
     camadaRef.current = L.layerGroup().addTo(map);
