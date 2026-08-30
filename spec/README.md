@@ -28,7 +28,7 @@ Desafio proposto pela **Secretaria Municipal de Educação do Rio (SME-Rio)**: m
 
 | Repo | O que tem |
 |---|---|
-| [`CIT-SME-RJ/dadoscreche`](https://github.com/CIT-SME-RJ/dadoscreche) | **As bases de dados** (2021–2025), dicionário de dados, nascidos vivos, microáreas, lat/long das unidades → detalhado em [03](03-dados-disponiveis.md) |
+| [`CIT-SME-RJ/dadoscreche`](https://github.com/CIT-SME-RJ/dadoscreche) | **As bases de dados** (2021–2025), dicionário, nascidos vivos, microáreas, lat/long das unidades → copiadas para [`data/`](../data/), detalhadas em [03](03-dados-disponiveis.md) |
 | [`taicor-ai/claude-impact-lab-rio-2`](https://github.com/taicor-ai/claude-impact-lab-rio-2) | **Regras do evento**, agenda, critérios de julgamento, formato da entrega → detalhado em [10](10-regras-e-entrega.md) |
 
 ## `fontes/` — material recebido da SME

@@ -14,7 +14,7 @@ Projeto do time para o desafio da **Secretaria Municipal de Educação do Rio**:
 |---|---|
 | Entender o problema / escrever pitch | `spec/02-case-oficial.md`, `spec/04-analise-tecnica.md` |
 | Mexer em pontuação, prazos ou regra de negócio | `spec/01-contexto-e-legislacao.md` (**a norma manda**) |
-| Escrever código que lê a base da SME | `spec/03-dados-disponiveis.md` (**leia as armadilhas antes de abrir o CSV**) |
+| Escrever código que lê a base da SME | `spec/03-dados-disponiveis.md` (**leia as armadilhas antes de abrir o CSV**); os arquivos estão em `data/` |
 | Citar um número sobre a fila, a rede ou a base | `spec/09-achados-dos-dados.md` |
 | Decidir escopo, priorizar, ou preparar o pitch | `spec/10-regras-e-entrega.md` (Impacto Real vale 40 de 100) |
 | Decidir onde usar LLM e onde não usar | `spec/05-arquitetura-e-riscos.md` |
@@ -68,10 +68,15 @@ Projeto do time para o desafio da **Secretaria Municipal de Educação do Rio**:
 ```
 spec/            base de conhecimento (comece aqui)
 spec/fontes/     material original da SME — não editar
+data/            bases da SME, cópia byte a byte do repo oficial — não editar
 ```
 
-Pastas de código (`engine/`, `data/`, `app/`) são criadas conforme o projeto avança; ao criar uma,
-registre-a aqui em uma linha.
+Pastas de código (`engine/`, `app/`) são criadas conforme o projeto avança; ao criar uma, registre-a aqui
+em uma linha.
+
+**`data/` é imutável.** É a cópia da fonte oficial, com checksums registrados em `data/README.md`. Saída
+de análise nunca vai para lá — crie a pasta que fizer sentido (`engine/`, `notebooks/`, `out/`) e escreva
+nela. Se descompactar os `.csv.gz`, os `.csv` já estão no `.gitignore`.
 
 ## Entrega (regras do evento)
 
