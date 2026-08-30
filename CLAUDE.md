@@ -82,10 +82,13 @@ frontend/        React + Vite + TS; design system espelhando o matricula.rio em 
 db/              schema SQL versionado, aplicado pelo Postgres na subida
 out/             relatórios gerados (auditoria dos dados) — commitados
 docker-compose.yml  db (Postgres 16) + mensageria + backend + frontend
+.github/         CI (workflows/ci.yml: ruff, testes, integração no Postgres, frontend, auditoria, guard-rails, docker)
+                 e template de PR; `make ci` roda o mesmo localmente. Lint: `ruff.toml` na raiz
 ```
 
 Ambiente Python local: `.venv/` na raiz (`python3 -m venv .venv && .venv/bin/pip install -e backend[dev]`).
 Auditoria dos dados: `cd backend && ../.venv/bin/python -m app.etl.audit` → `out/auditoria-dados.md`.
+O CI compara a auditoria com `out/` — se mudar o leitor, rode `make audit` e commite o relatório junto.
 Dados de demonstração (depois de `make load`): `make seed` (`backend/app/etl/seed_demo.py`) — eventos simulados
 com carimbo de tempo, pelas mesmas funções da API; `--limpar` zera as tabelas de operação.
 
