@@ -140,10 +140,20 @@ credenciais, planejamento por coorte (SINASC × capacidade). Todos descritos em
 |---|---|
 | Contrato técnico (`spec/11`) | pronto |
 | Leitores robustos das bases (`backend/app/etl/readers.py`) | pronto, testado sobre as 4,3 M linhas |
-| Auditoria (`backend/app/etl/audit.py` → `out/auditoria-dados.md`) | em construção |
-| Carga Postgres (`backend/app/etl/load.py`) | a fazer |
-| Motor DA com `vagas_presas` (`backend/app/engine/`) | em construção |
-| API FastAPI (`backend/app/routers/`) | em construção |
-| Adaptadores de comprovação (`backend/app/integracoes/`) | em construção (mock + contrato real) |
-| Frontend React com design system do matricula.rio (`frontend/`) | em construção |
-| `docker-compose` (db + backend + frontend) | em construção |
+| Auditoria (`backend/app/etl/audit.py` → `out/auditoria-dados.md`) | pronto — 3 erros / 24 alertas / 17 infos em 8 s |
+| Carga Postgres (`backend/app/etl/load.py`, `make load [--anos]`) | pronto — 2025 carrega em 14 s |
+| Motor DA com `vagas_presas` (`backend/app/engine/`) | pronto — 18 testes; 2025 Berçário Integral (30.141 inscrições) em ~4 s |
+| API FastAPI (`backend/app/routers/`) | pronto — fluxo rodada → convocações → eventos → painel validado |
+| Adaptadores de comprovação (`backend/app/integracoes/`) | mock pronto; Conecta (CadÚnico, Bolsa Família, CPF Light) e RMI com contrato real, `pendente` sem credencial |
+| Frontend React com design system do matricula.rio (`frontend/`) | pronto (build/tsc limpos); falta validação visual contra a API |
+| `docker-compose` (db + backend + frontend) | escrito; build em validação |
+
+### Primeiro resultado sobre dados reais (2025, Berçário Integral, capacidade estimada)
+
+| Regime | Crianças com oferta na 1ª rodada | Média de vagas presas | Lista de espera |
+|---|---:|---:|---:|
+| 3 presas + 2 alternativas | 11.788 | 1,61 | 18.314 |
+| 1 vaga por criança | 18.912 | 1,00 | 11.190 |
+
+Com 3 reservas simultâneas, 7.124 crianças a menos recebem oferta na primeira rodada. O número entra na
+decisão de produto (seção 9) e no pitch; o motor mantém os dois regimes por parâmetro.

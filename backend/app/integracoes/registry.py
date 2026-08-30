@@ -8,12 +8,15 @@ from __future__ import annotations
 import os
 
 from app.integracoes.base import ProvedorComprovacao
+from app.integracoes.conecta import PROVEDORES_CONECTA
 from app.integracoes.mock import PROVEDORES_MOCK
+from app.integracoes.rmi import PROVEDORES_RMI
 
 _FABRICAS: dict[str, callable] = {
     "mock": lambda: list(PROVEDORES_MOCK),
-    # "conecta": lambda: [ConectaCadUnico(), ConectaBolsaFamilia(), ReceitaCPF()],
-    # "rmi": lambda: [RMIEducacaoEspecial()],
+    # Reais: sem credencial (CONECTA_* / GOOGLE_APPLICATION_CREDENTIALS) devolvem `pendente`, nunca falham.
+    "conecta": lambda: [cls() for cls in PROVEDORES_CONECTA],
+    "rmi": lambda: [cls() for cls in PROVEDORES_RMI],
 }
 
 
