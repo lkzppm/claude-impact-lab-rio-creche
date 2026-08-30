@@ -41,12 +41,22 @@ export default function MapaCreches({ casa, unidades, escolhidas, onSelecionar, 
   useEffect(() => {
     if (!ref.current || mapRef.current) return;
     const map = L.map(ref.current, { scrollWheelZoom: false, dragging: true, tap: true, zoomControl: true, attributionControl: true } as L.MapOptions);
-    // OpenStreetMap padrão: sem chave de API (o basemap claro da CARTO passou a exigir uma)
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      opacity: 0.55,
-      attribution: "© OpenStreetMap",
-    }).addTo(map);
+    // Provedor de tiles configurável. Padrão: Esri Light Gray Canvas (base + rótulos) — claro, minimalista, sem
+    // chave e sem marca d'água (o CARTO Positron passou a carimbar "API KEY REQUIRED" nos tiles sem chave).
+    // Para outro provedor, defina VITE_MAP_TILES_URL (com a chave na URL, se houver) e VITE_MAP_ATTRIBUTION no .env.
+    const tilesUrl = import.meta.env.VITE_MAP_TILES_URL;
+    if (tilesUrl) {
+      L.tileLayer(tilesUrl, {
+        maxZoom: 19,
+        subdomains: tilesUrl.includes("{s}") ? (import.meta.env.VITE_MAP_SUBDOMAINS || "abcd") : "",
+        attribution: import.meta.env.VITE_MAP_ATTRIBUTION || "",
+      }).addTo(map);
+    } else {
+      const esri = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/";
+      const opts = { maxNativeZoom: 16, maxZoom: 18, attribution: "Tiles © Esri — Esri, HERE, Garmin, © OpenStreetMap contributors" };
+      L.tileLayer(`${esri}World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`, opts).addTo(map);
+      L.tileLayer(`${esri}World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { ...opts, attribution: "", pane: "overlayPane" }).addTo(map);
+    }
     map.setView([-22.91, -43.35], 11);
     camadaRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;

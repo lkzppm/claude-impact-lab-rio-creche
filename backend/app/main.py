@@ -7,8 +7,8 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import (chat, classificacao, convocacoes, familia, geo, health, inscricoes, motor, painel,
-                         processos, unidades)
+from app.routers import (chat, classificacao, convocacoes, familia, geo, health, inscricoes, mensagens, motor,
+                         painel, processos, unidades)
 
 log = logging.getLogger("creche")
 settings = get_settings()
@@ -45,6 +45,7 @@ app.add_middleware(
 )
 
 api = APIRouter(prefix="/api/v1")
-for r in (health, processos, unidades, inscricoes, classificacao, convocacoes, painel, familia, chat, geo, motor):
+for r in (health, processos, unidades, inscricoes, classificacao, convocacoes, painel, familia, chat, geo,
+          mensagens, motor):
     api.include_router(r.router)
 app.include_router(api)

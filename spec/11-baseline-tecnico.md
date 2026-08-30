@@ -158,6 +158,8 @@ de novo. Ciclos que mudam alguma coisa viram `evento` (`tipo = motor_ciclo`) no 
 | POST | `/familia/sugestoes` `{cep\|lat,lon, grupamento, horario, respostas}` | **tempo real**: pontuação pelo motor + até 15 unidades com distância, vagas e `chance` (= % das crianças com até a sua pontuação que escolheram a unidade e conseguiram vaga no ano da régua); as 5 primeiras são o top 5 |
 | POST | `/familia/pre-cadastro` | grava pré-cadastro (jul–ago): criança, CEP(s), respostas, **≥3 contatos (pessoas/canais distintos) com parentesco e canal**, até 5 escolhas em ordem, consentimento; CPF só como hash; devolve `protocolo` |
 | GET | `/familia/pre-cadastro/{protocolo}` | consulta do pré-cadastro |
+| GET | `/mensagens/saude` · `/mensagens/templates` | provedor ativo por canal (sem expor credencial) e catálogo de mensagens com os dados obrigatórios de cada uma |
+| POST | `/mensagens/enviar` `{canal, destino, template, dados, referencia?, chave_idem?, ator?}` | pede um envio ao serviço de mensageria; **sempre 200** — o desfecho vem em `resultado` (`enviado` · `simulado` · `pendente` · `falha`) |
 
 Erros em JSON `{detail}`; paginação `{items, total, page, size}`.
 
@@ -178,6 +180,40 @@ Chat com ferramentas sobre o mesmo banco, para o servidor perguntar em portuguê
   guarda o texto da pergunta nem da resposta.
 - Configuração: `ANTHROPIC_API_KEY`, `CHAT_MODEL` (padrão `claude-opus-5`), `CHAT_MAX_TOOLS` (8). Sem chave, a
   rota responde 503 e o painel segue normal.
+
+## Mensageria (`mensageria/`, container à parte, porta 8100)
+
+Serviço de envio para o Eixo 3. A norma manda **1 tentativa por dia, 3 dias consecutivos, em horários
+diferentes, por telefone, e-mail, WhatsApp ou SMS** ([02](02-case-oficial.md)) — isso é trabalho manual
+do polo hoje, e é o que este serviço automatiza sem tocar em classificação.
+
+Container separado do backend por três razões: credencial da Twilio/Resend isolada em um processo que não
+fala com o banco; provedor fora do ar não derruba o painel nem o motor; trocar sandbox → WhatsApp Business
+é variável de ambiente, sem redeploy do backend.
+
+| Método | Rota (`/api/v1`) | Devolve |
+|---|---|---|
+| GET | `/saude` | provedor e credencial por canal, sem expor chave |
+| GET | `/templates` | catálogo com `obrigatorios` e `opcionais` de cada mensagem |
+| POST | `/enviar` | um envio |
+| POST | `/enviar-lote` | vários em paralelo (teto de concorrência); devolve `invalidos` com a posição de cada pedido recusado |
+
+- **Provedores por canal, padrão `mock`** (mesma convenção de `COMPROVACAO_PROVIDER`): `MENSAGERIA_WHATSAPP`
+  (`mock`|`twilio`), `MENSAGERIA_EMAIL` (`mock`|`resend`|`smtp`), `MENSAGERIA_SMS` (`mock`|`twilio`). Subir o
+  repositório limpo não manda mensagem para ninguém; sem credencial o resultado é `pendente`, nunca erro.
+- **O texto mora aqui, não no backend** (`app/templates.py`): o backend manda `template` + `dados`. Assim a
+  redação fica versionada em um lugar revisável pela SME, e a migração para template aprovado pela Meta
+  (obrigatório no WhatsApp fora da janela de 24 h) é local a um arquivo.
+- **Erro de programação falha alto, erro de mundo falha baixo**: template inexistente, dado faltando ou destino
+  malformado → 422 antes de a mensagem existir; provedor recusando ou fora do ar → 200 com `resultado='falha'`.
+- **Idempotência** por `chave_idem` (24 h): reprocessar uma convocação não manda dois avisos à mesma família.
+  Memória do processo — em produção, Redis com a mesma interface (`app/idempotencia.py`).
+- **LGPD art. 14**: o log é uma linha JSON por envio com destino **mascarado**, impressão digital (sha256
+  truncado) e resultado — nunca assunto, texto, dados do template ou destino em claro. Mesmo princípio do
+  `consulta_agente` do assistente.
+- Cliente no backend: `backend/app/integracoes/mensageria.py` (`urllib` da stdlib, sem dependência nova, nunca
+  levanta exceção). `enviar_para_contatos()` avisa em **todos** os canais cadastrados do pré-cadastro — contato
+  desatualizado é a causa nº 1 de vaga que vence sem ninguém atender ([PRD](PRD.md), seção 3).
 
 ## ETL e auditoria (`backend/app/etl/`)
 
@@ -204,9 +240,10 @@ Header em todas: faixa branca com os logos Prefeitura Rio · Educação e Matrí
 ## Estrutura
 
 ```
-backend/   app/{main,config,db,models,schemas,motor}.py · app/routers/ · app/engine/ · app/etl/ · app/agente/ · tests/ · Dockerfile
-frontend/  src/{design-system,api,pages,components}/ · Dockerfile (nginx)
-db/        init/*.sql (schema versionado, aplicado pelo Postgres na subida)
-out/       relatórios de auditoria (commitados; não vão para data/)
+backend/     app/{main,config,db,models,schemas,motor}.py · app/routers/ · app/engine/ · app/etl/ · app/agente/ · app/integracoes/ · tests/ · Dockerfile
+mensageria/  app/{main,config,schemas,servico,templates,destinos,idempotencia,registro}.py · app/provedores/ · tests/ · Dockerfile
+frontend/    src/{design-system,api,pages,components}/ · Dockerfile (nginx)
+db/          init/*.sql (schema versionado, aplicado pelo Postgres na subida)
+out/         relatórios de auditoria (commitados; não vão para data/)
 docker-compose.yml · .env.example · Makefile
 ```

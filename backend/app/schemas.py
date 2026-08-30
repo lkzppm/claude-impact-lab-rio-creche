@@ -711,3 +711,14 @@ class CriterioVerificado(BaseModel):
 class VerificacaoOut(BaseModel):
     verificados: list[CriterioVerificado]
     respostas_automaticas: dict[str, bool]
+
+
+class MensagemIn(BaseModel):
+    """Pedido de envio repassado ao serviço de mensageria (`mensageria/`)."""
+    canal: Literal["whatsapp", "email", "sms"]
+    destino: str = Field(min_length=3, description="celular (E.164 ou DDD+número) ou e-mail")
+    template: str = Field(description="nome no catálogo — GET /mensagens/templates")
+    dados: dict[str, Any] = Field(default_factory=dict)
+    referencia: str | None = Field(default=None, max_length=64, description="ex.: 'convocacao:1234'")
+    chave_idem: str | None = Field(default=None, max_length=128)
+    ator: str = "painel"
