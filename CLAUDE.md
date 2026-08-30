@@ -71,7 +71,8 @@ Projeto do time para o desafio da **Secretaria Municipal de Educação do Rio**:
 spec/            base de conhecimento (comece aqui)
 spec/fontes/     material original da SME — não editar
 data/            bases da SME, cópia byte a byte do repo oficial — não editar
-backend/         FastAPI + SQLAlchemy; app/engine (motor DA), app/etl (leitura, auditoria, carga), app/integracoes (comprovação)
+backend/         FastAPI + SQLAlchemy; app/engine (motor DA), app/etl (leitura, auditoria, carga), app/integracoes (comprovação),
+                 app/agente (assistente do painel: chat com tools só leitura, escopo por CRE, log de acesso)
 frontend/        React + Vite + TS; design system espelhando o matricula.rio em src/design-system
 db/              schema SQL versionado, aplicado pelo Postgres na subida
 out/             relatórios gerados (auditoria dos dados) — commitados
@@ -80,6 +81,8 @@ docker-compose.yml  db (Postgres 16) + backend + frontend
 
 Ambiente Python local: `.venv/` na raiz (`python3 -m venv .venv && .venv/bin/pip install -e backend[dev]`).
 Auditoria dos dados: `cd backend && ../.venv/bin/python -m app.etl.audit` → `out/auditoria-dados.md`.
+Dados de demonstração (depois de `make load`): `make seed` (`backend/app/etl/seed_demo.py`) — eventos simulados
+com carimbo de tempo, pelas mesmas funções da API; `--limpar` zera as tabelas de operação.
 
 Pastas de código (`engine/`, `app/`) são criadas conforme o projeto avança; ao criar uma, registre-a aqui
 em uma linha.

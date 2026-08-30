@@ -186,6 +186,35 @@ class Comprovacao(Base):
     payload: Mapped[dict[str, Any] | None] = mapped_column(Json)
 
 
+class ConsultaAgente(Base):
+    """Log de acesso do assistente (app/agente) — uma linha por turno de conversa. APPEND-ONLY: o banco
+    proíbe UPDATE/DELETE (trigger em db/init/002_agente.sql), como em `evento`.
+
+    O que É guardado: quando, área (cre|sme), CRE e ator declarados, modelo que respondeu, hash SHA-256 da
+    pergunta (permite provar que uma pergunta foi feita sem guardar o texto), tamanho da pergunta, a lista de
+    ferramentas chamadas com os argumentos (é isso que diz QUAIS dados foram lidos: id de convocação, código
+    de inscrição, filtros, SQL da consulta livre), tokens e duração.
+
+    O que NÃO é guardado: o texto da pergunta, o texto da resposta e o conteúdo que as ferramentas devolveram
+    (minimização — LGPD art. 6º, III, e art. 14). O log responde "quem consultou o quê e quando", não "o que
+    foi dito".
+    """
+    __tablename__ = "consulta_agente"
+    id: Mapped[int] = mapped_column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True)
+    ocorrido_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
+    area: Mapped[str] = mapped_column(String(8), nullable=False)          # cre | sme
+    cre: Mapped[str | None] = mapped_column(String(16))
+    ator: Mapped[str | None] = mapped_column(Text)
+    modelo: Mapped[str] = mapped_column(Text, nullable=False)
+    pergunta_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    pergunta_chars: Mapped[int | None] = mapped_column(Integer)
+    ferramentas: Mapped[list[Any] | None] = mapped_column(Json)           # [{nome, argumentos, erro?}]
+    tokens_entrada: Mapped[int | None] = mapped_column(Integer)
+    tokens_saida: Mapped[int | None] = mapped_column(Integer)
+    duracao_ms: Mapped[int | None] = mapped_column(Integer)
+    resultado: Mapped[str] = mapped_column(String(16), nullable=False, default="ok")  # ok | erro | recusa
+
+
 class PreCadastro(Base):
     """Pré-cadastro da família (jul–ago): mede demanda antes da inscrição e captura contatos múltiplos.
     Espelho de db/init/002_pre_cadastro.sql."""

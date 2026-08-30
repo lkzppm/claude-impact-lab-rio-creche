@@ -16,8 +16,9 @@
 | Container | `docker-compose`: `db`, `backend`, `frontend` | Sobe com um comando |
 
 Regra: **o motor de matching é código puro Python, sem I/O**, testado com casos pequenos. O LLM não entra
-nesta fase (a explicação do resultado é gerada a partir do log de decisão, em texto templado; o Claude
-entra depois, sobre esse mesmo log).
+no núcleo: a explicação do resultado é gerada a partir do log de decisão, em texto templado. O Claude entra
+**na borda**, como assistente de consulta dos painéis da CRE e do Nível Central (`POST /chat`, seção abaixo):
+só lê o banco por ferramentas, não decide alocação e não altera nada.
 
 ## Design system (espelho do matricula.rio)
 
@@ -66,10 +67,16 @@ pre_cadastro  id PK · protocolo UNIQUE · cpf_hash · nome_responsavel · nome_
 contato       id PK · pre_cadastro_id FK · nome · parentesco · canal ('celular'|'whatsapp'|'email') · valor · principal · verificado_em
 evento        id PK · ocorrido_em timestamptz · tipo · convocacao_id FK nullable · inscricao_id FK nullable
               unidade_codigo nullable · ator · payload jsonb          -- APPEND-ONLY: sem UPDATE/DELETE
+consulta_agente  id PK · ocorrido_em · area ('cre'|'sme') · cre · ator · modelo · pergunta_hash (sha256, não o texto)
+              pergunta_chars · ferramentas jsonb [{nome, argumentos, erro?}] · tokens_entrada · tokens_saida
+              duracao_ms · resultado ('ok'|'erro'|'recusa')          -- APPEND-ONLY: log de acesso do assistente (LGPD)
 ```
 
 - `evento` é o **dado que hoje não existe** (gap nº 1 da SME). Toda transição de `convocacao.status` gera
-  um `evento`; o status é derivável do log.
+  um `evento`; o status é derivável do log. Tipos gravados: `selecionada`, `selecionada_da_lista`,
+  `contato_tentado`, `contato_confirmado`, `confirmada`, `recusada`, `expirada`, `liberada_por_confirmacao`,
+  `capacidade_informada`. `ator` é quem registrou (`sistema`, `familia` ou o nome informado pelo servidor);
+  `payload.canal` guarda o canal do contato.
 - `capacidade` é **estimada** na carga inicial (nº de `Confirmado` por unidade/grupamento/turno/ano) e
   marcada como tal — a base traz ocupação, não oferta ([09 §7](09-achados-dos-dados.md#7-o-que-os-dados-não-permitem)).
 - `situacao_origem` guarda o desfecho real da SME para comparação com o resultado do motor.
@@ -100,6 +107,8 @@ mesmo `hash_entrada` → mesma saída).
 | GET | `/processos/{ano}/regua` | perguntas + pontuação do ano |
 | GET | `/unidades?cre=&q=&limit=` | lista com lat/lon |
 | GET | `/unidades/{codigo}` | ficha + capacidade por grupamento/turno |
+| GET | `/unidades/{codigo}/fila?grupamento=&horario=` | **CRE**: lista de espera da unidade na última rodada, na ordem do motor, com a situação de cada criança (`aguardando` · `convocada_aqui` · `confirmada_em_outra` · `reservas_cheias`) |
+| PUT | `/unidades/{codigo}/capacidade` `{ano, grupamento, horario, vagas, ator?}` | capacidade informada pela unidade (`fonte = informada`) + evento `capacidade_informada` |
 | GET | `/inscricoes?ano=&unidade=&situacao=&page=` | paginado |
 | GET | `/inscricoes/{id}` | inscrição + opções + respostas + pontuação |
 | POST | `/classificacao/rodadas` `{ano, grupamento?, horario?, tipo}` | executa o motor, grava `rodada` + `alocacao`, devolve resumo |
@@ -107,14 +116,18 @@ mesmo `hash_entrada` → mesma saída).
 | GET | `/classificacao/rodadas/{id}/alocacoes?unidade=&status=` | alocações |
 | GET | `/classificacao/rodadas/{id}/explicacao/{inscricao_id}` | texto + `motivo` estruturado |
 | POST | `/convocacoes/gerar` `{rodada_id}` | cria uma `convocacao` (status `selecionada`) por alocação + evento |
-| GET | `/convocacoes?cre=&unidade=&status=&atrasadas=` | lista com `horas_no_status` |
-| GET | `/convocacoes/{id}` | detalhe + eventos |
-| POST | `/convocacoes/{id}/eventos` `{tipo, payload}` | registra transição; devolve novo status |
-| GET | `/painel/resumo?cre=&unidade=` | KPIs: selecionadas aguardando (por faixa 0–24h, 24–48h, 48–72h, >72h), vagas em risco, sem contato, inconsistências |
+| GET | `/convocacoes?cre=&unidade=&status=&fila=` | lista com `horas_no_status`, `atrasada` e `proxima_acao`; `fila` = `vencidas` · `vencem_24h` · `sem_aviso` · `aguardando` · `abertas` · `trabalho` · `encerradas`, ordenada por urgência |
+| GET | `/convocacoes/{id}` | detalhe + eventos + irmãs; se a vaga foi liberada, `proximo_da_fila` ou `repassada_para` |
+| POST | `/convocacoes/{id}/eventos` `{tipo, payload{observacao?, canal?}, ator?}` | registra transição; devolve novo status |
+| POST | `/convocacoes/{id}/convocar-proximo` `{ator?}` | vaga liberada → convoca o próximo da lista de espera da unidade (evento `selecionada_da_lista`); 409 se ainda aberta ou já repassada |
+| POST | `/convocacoes/expirar-vencidas` `{cre?, unidade?, ator?}` | registra `expirada` em lote nas abertas com prazo vencido; a mesma função roda como rotina se `EXPIRACAO_AUTOMATICA_MINUTOS > 0` |
+| GET | `/painel/resumo?cre=&unidade=` | KPIs: selecionadas aguardando (por faixa 0–24h, 24–48h, 48–72h, >72h), vagas em risco, sem aviso, aguardando a família, vencidas, vencem em 24 h, crianças com várias reservas, inconsistências, tempo médio até o desfecho |
+| GET | `/painel/multireserva?cre=&unidade=` | crianças com mais de uma reserva aberta: nº de reservas, unidades, há quanto tempo |
 | GET | `/painel/unidades?cre=` | uma linha por unidade: vagas, alocadas, convocadas, confirmadas, em atraso |
 | GET | `/painel/cres?ano=` | **Nível Central**: uma linha por CRE — unidades, vagas, inscrições, alocadas, convocadas, abertas, confirmadas, em atraso, lista de espera |
 | GET | `/familia/inscricao?codigo=&ano=` | **Família**: situação em linguagem de responsável — `situacao_resumo`, opções com `resultado` (reservada/fila/sem_vaga) e posição, reservas abertas com prazo, pontuação por critério com comprovação, explicação |
 | POST | `/familia/convocacoes/{id}/responder` `{resposta: confirmar\|recusar}` | a família responde na hora; confirmar libera as outras reservas (`ator = familia` no log) |
+| POST | `/chat` `{area: cre\|sme, cre?, ator?, mensagens: [{role, content}]}` | **Assistente** (áreas CRE e Nível Central): `{resposta, ferramentas: [{nome, argumentos, resumo, erro?}], modelo, tokens_entrada, tokens_saida, log_id}`. Só leitura; na área `cre` toda ferramenta é restrita à CRE informada (no servidor); 503 sem `ANTHROPIC_API_KEY` |
 | GET | `/familia/regua?ano=` | critérios do questionário com pontos (norma, só leitura) para o pré-cadastro |
 | GET | `/geo/cep/{cep}` | endereço (BrasilAPI) + coordenada (Nominatim → centroide do bairro na base); `fonte` declara a precisão |
 | POST | `/familia/sugestoes` `{cep\|lat,lon, grupamento, horario, respostas}` | **tempo real**: pontuação pelo motor + até 15 unidades com distância, vagas e `chance` (= % das crianças com até a sua pontuação que escolheram a unidade e conseguiram vaga no ano da régua); as 5 primeiras são o top 5 |
@@ -122,6 +135,24 @@ mesmo `hash_entrada` → mesma saída).
 | GET | `/familia/pre-cadastro/{protocolo}` | consulta do pré-cadastro |
 
 Erros em JSON `{detail}`; paginação `{items, total, page, size}`.
+
+## Assistente (`backend/app/agente/`)
+
+Chat com ferramentas sobre o mesmo banco, para o servidor perguntar em português o que o painel mostra.
+**IA na borda, algoritmo determinístico no núcleo** ([05](05-arquitetura-e-riscos.md)):
+
+- Ferramentas só leitura (`resumo_painel`, `painel_unidades`, `listar_convocacoes`, `detalhe_convocacao`,
+  `ficha_inscricao`, `explicacao_resultado`, `buscar_unidades`, `capacidade_unidade`, `resumo_cres`, `rodadas`,
+  `regua` e, só no Nível Central, `consulta_sql` SELECT-only em transação `READ ONLY`), reaproveitando as
+  funções dos routers — uma só implementação das regras.
+- Escopo por área aplicado no servidor: na área `cre`, a CRE do usuário é forçada em toda consulta e dados de
+  outra CRE são recusados; na `sme`, rede inteira.
+- O prompt de sistema diz que a pontuação é norma (Res. SME 542/2025), que a alocação é do motor e que o
+  assistente não altera nada; dados de criança são anonimizados e devolvidos agregados por padrão.
+- Log de acesso `consulta_agente` (append-only): hash da pergunta, ferramentas com argumentos, tokens — não
+  guarda o texto da pergunta nem da resposta.
+- Configuração: `ANTHROPIC_API_KEY`, `CHAT_MODEL` (padrão `claude-opus-5`), `CHAT_MAX_TOOLS` (8). Sem chave, a
+  rota responde 503 e o painel segue normal.
 
 ## ETL e auditoria (`backend/app/etl/`)
 
@@ -137,6 +168,7 @@ Erros em JSON `{detail}`; paginação `{items, total, page, size}`.
 |---|---|---|
 | `/` | — | escolha de perfil, sem login |
 | `/familia` | **Família** (mobile-first) | consulta por código, vê opções/reservas/pontuação, confirma ou recusa uma reserva |
+| `/cre` | **CRE / polo** | escolhe a CRE no primeiro acesso (lembrada); painel "Para hoje" com filas de trabalho clicáveis; convocações por fila com próxima ação; ficha com relógio, canal, histórico e "convocar próximo da fila"; crianças com várias reservas; unidade com fila de espera e capacidade informada; expiração em lote; "Registrando como" vira o `ator` do log |
 | `/familia/pre-cadastro` | **Família sem inscrição** | pré-cadastro (jul–ago): pontuação e top 5 em tempo real, mapa com a casa e as creches, contatos múltiplos, até 5 escolhas |
 | `/cre` | **CRE / polo** | painel e convocações do seu território (CRE selecionada e lembrada), registra contatos e desfechos |
 | `/sme` | **Nível Central SME** | visão da rede por CRE, roda classificação e compara regimes, gera convocações, régua do ano |
@@ -146,7 +178,7 @@ Header em todas: faixa branca com os logos Prefeitura Rio · Educação e Matrí
 ## Estrutura
 
 ```
-backend/   app/{main,config,db,models,schemas}.py · app/routers/ · app/engine/ · app/etl/ · tests/ · Dockerfile
+backend/   app/{main,config,db,models,schemas}.py · app/routers/ · app/engine/ · app/etl/ · app/agente/ · tests/ · Dockerfile
 frontend/  src/{design-system,api,pages,components}/ · Dockerfile (nginx)
 db/        init/*.sql (schema versionado, aplicado pelo Postgres na subida)
 out/       relatórios de auditoria (commitados; não vão para data/)

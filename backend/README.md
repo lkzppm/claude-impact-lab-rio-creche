@@ -11,6 +11,7 @@ make venv        # cria .venv e instala backend[dev]
 make db          # sobe só o Postgres (aplica db/init/001_schema.sql)
 make audit       # relatório das bases em out/
 make load        # carrega data/ no Postgres
+make seed        # dados de demonstração: classifica, convoca e simula 5 dias de convocação (SEED_ARGS="--limpar --todos")
 make api         # http://localhost:8000/docs
 make test
 
@@ -27,9 +28,12 @@ make up          # db + backend (:8000) + frontend (:5173)
 | `app/engine/scoring.py` | Pontuação a partir das respostas × régua do ano (só `Sim` pontua; desempates viram flags) |
 | `app/routers/classificacao.py` | Executa rodadas (`inicial` / `rematch`), persiste `rodada` + `alocacao`, explica o resultado a partir do log de decisão |
 | `app/routers/convocacoes.py` | Máquina de estados da convocação; cada transição gera um `evento` (append-only) |
-| `app/routers/painel.py` | KPIs da CRE/polo em SQL |
-| `app/etl/` | Auditoria e carga das bases da SME (DuckDB → Postgres) |
-| `tests/` | Invariantes do motor |
+| `app/routers/painel.py` | KPIs da CRE/polo em SQL: faixas de tempo, vencidas, vencem em 24 h, sem aviso, crianças com várias reservas, tempo até o desfecho |
+| `app/routers/unidades.py` | Ficha, **fila de espera da unidade** (ordem do motor) e **capacidade informada** pela unidade (`fonte = informada`, com evento) |
+| `app/etl/` | Auditoria, carga das bases da SME (DuckDB → Postgres) e `seed_demo.py` (eventos simulados com carimbo de tempo, pelas mesmas funções da API) |
+| `app/agente/` | **Assistente do painel** (chat com ferramentas de consulta, só leitura) — ver seção abaixo |
+| `app/routers/chat.py` | `POST /chat`: um turno do assistente; 503 sem `ANTHROPIC_API_KEY` |
+| `tests/` | Invariantes do motor (`test_matching.py`), assistente sem rede (`test_agente.py`), integração com Postgres (`test_api_integracao.py`, só com `TEST_DATABASE_URL`) |
 
 ## Rotas (`/api/v1`)
 
@@ -37,8 +41,11 @@ make up          # db + backend (:8000) + frontend (:5173)
 `GET /inscricoes` · `GET /inscricoes/{id}` · `POST /classificacao/rodadas` · `GET /classificacao/rodadas[/{id}]` ·
 `GET /classificacao/rodadas/{id}/alocacoes` · `GET /classificacao/rodadas/{id}/explicacao/{inscricao_id}` ·
 `POST /inscricoes/{id}/comprovar` · `GET /inscricoes/{id}/comprovacoes` ·
-`POST /convocacoes/gerar` · `GET /convocacoes[/{id}]` · `POST /convocacoes/{id}/eventos` ·
-`GET /painel/resumo` · `GET /painel/unidades`
+`POST /convocacoes/gerar` · `GET /convocacoes?fila=` · `GET /convocacoes/{id}` · `POST /convocacoes/{id}/eventos` ·
+`POST /convocacoes/{id}/convocar-proximo` · `POST /convocacoes/expirar-vencidas` ·
+`GET /unidades/{codigo}/fila` · `PUT /unidades/{codigo}/capacidade` ·
+`GET /painel/resumo` · `GET /painel/unidades` · `GET /painel/multireserva` · `GET /painel/cres` ·
+`GET /familia/inscricao` · `POST /familia/convocacoes/{id}/responder` · `POST /chat`
 
 ### Rodada: "3 vagas presas + 2 alternativas"
 
@@ -60,6 +67,37 @@ automaticamente a `liberada` (evento `liberada_por_confirmacao`) — a vaga volt
 `recusada`/`expirada` liberam só aquela vaga. Toda liberação marca `alocacao.vaga_liberada = true`; a próxima rodada
 `rematch` exclui quem já confirmou, desconta as confirmadas da capacidade e redistribui.
 Ao registrar `contato_confirmado`, `prazo_fim` é recalculado: o relógio conta do contato, não do envio.
+
+### Ferramentas do polo (CRE)
+
+- **Filas de trabalho** — `GET /convocacoes?fila=vencidas|vencem_24h|sem_aviso|aguardando|abertas|trabalho|encerradas`,
+  ordenadas por urgência (prazo mais próximo primeiro). Cada convocação aberta traz `proxima_acao`, uma frase
+  derivada de status + prazo ("Avisar a família", "Tentar contato de novo", "Prazo venceu: registrar desfecho…").
+- **Convocar o próximo da fila** — `POST /convocacoes/{id}/convocar-proximo` só quando a vaga daquela convocação
+  foi liberada (`recusada`, `expirada` ou `liberada`). Pega a 1ª alocação `lista_espera` da mesma rodada/unidade/
+  grupamento/turno, na `posicao_fila` do motor, pulando quem já confirmou matrícula, quem já teve convocação
+  naquela unidade e quem já segura `vagas_presas` reservas. Evento `selecionada_da_lista` (o nome que a SME
+  já usa: "Selecionado da lista"). Uma vaga liberada só é repassada uma vez (`repassada_para` no detalhe).
+- **Expirar em lote** — `POST /convocacoes/expirar-vencidas {cre?, unidade?, ator?}` registra `expirada` em
+  todas as abertas com `prazo_fim` passado. A mesma função roda como rotina se `EXPIRACAO_AUTOMATICA_MINUTOS > 0`
+  (ator `sistema`); por padrão fica desligada para a demonstração mostrar as vencidas no painel.
+- **Fila de espera da unidade** — `GET /unidades/{codigo}/fila?grupamento=&horario=`: quem é o próximo, com a
+  situação de cada criança (`aguardando`, `convocada_aqui`, `confirmada_em_outra`, `reservas_cheias`).
+- **Capacidade informada** — `PUT /unidades/{codigo}/capacidade {ano, grupamento, horario, vagas, ator?}` grava
+  `fonte = informada` e um evento `capacidade_informada` com o valor anterior.
+- **Quem registra** — todo corpo de ação aceita `ator` (nome/matrícula do servidor); o frontend guarda no
+  navegador e envia sempre. Sem login nesta fase; o log de eventos já fica nominal.
+- **`payload.canal`** nas tentativas/avisos/recusas: `whatsapp | ligacao | sms | email | visita` (a família grava
+  `painel_familia`). É a escalada multicanal rastreada da spec/04.
+
+### Dados de demonstração
+
+`make seed` (`app/etl/seed_demo.py`) roda a classificação de 1 vaga e a de 3 reservas para Berçário · Integral
+do último ano carregado, cria as convocações espalhadas pelos últimos 5 dias e sorteia, por criança, o que
+aconteceu (nada · tentativas · avisada e depois confirmou/recusou/aguarda · recusa direta · parte das vencidas
+já expirada). Tudo passa por `_criar_convocacao`/`_aplicar_transicao` — as mesmas funções da API — com
+`ocorrido_em` no passado (`evento` é append-only, mas aceita a data no INSERT). `--todos` cobre todos os
+grupamentos/turnos; `--limpar` zera as tabelas de operação antes. O PRD §9 registra que a banca vê dados simulados. · `POST /chat`
 
 ### Decisões
 

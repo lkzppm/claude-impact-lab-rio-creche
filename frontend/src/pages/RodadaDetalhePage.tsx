@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { gerarConvocacoes, getAlocacoes, getExplicacao, getRodada } from "../api/client";
-import type { Alocacao, Proposta } from "../api/types";
+import type { Alocacao, Motivo, Proposta, VagaMotivo } from "../api/types";
 import {
   Page,
   Card,
@@ -32,12 +32,12 @@ const STATUS_ALOC: Record<string, { label: string; tone: "ok" | "warn" | "danger
 
 function resultadoTexto(p: Proposta): string {
   switch (p.resultado) {
-    case "aceita":
-      return "Ficou com a vaga";
-    case "retida":
+    case "retida_provisoriamente":
       return "Reservada provisoriamente";
     case "rejeitada":
-      return "Não entrou";
+      return "Não entrou: as vagas foram para pontuação maior";
+    case "desbancada":
+      return "Perdeu a vaga para uma criança com prioridade maior";
     default:
       return p.resultado;
   }
@@ -66,36 +66,36 @@ function ListaPropostas({ itens }: { itens: Proposta[] }) {
   );
 }
 
-function PropostasAgrupadas({ propostas }: { propostas: Proposta[] }) {
-  if (propostas.length === 0) {
+function PropostasAgrupadas({ motivo }: { motivo: Motivo }) {
+  const propostas = motivo.propostas ?? [];
+  const presas = motivo.presas ?? [];
+  const selecionaveis = motivo.selecionaveis ?? [];
+  if (propostas.length === 0 && presas.length === 0) {
     return <p className="muted text-sm">A inscrição não tinha opções válidas neste recorte.</p>;
   }
-  const temTipo = propostas.some((p) => p.tipo);
-  if (!temTipo) {
-    return (
+  const vaga = (v: VagaMotivo) => (
+    <li key={`${v.unidade}-${v.ordem}`} className="step retida_provisoriamente">
+      <span className="step-n">{v.ordem}ª</span>
       <div>
-        <div className="stat-label" style={{ marginBottom: 8 }}>Passo a passo do motor</div>
-        <ListaPropostas itens={propostas} />
+        <strong>{v.unidade_nome ?? v.unidade}</strong>
+        <div className="text-sm">posição {v.posicao} na fila da unidade</div>
       </div>
-    );
-  }
-  const presas = propostas.filter((p) => p.tipo === "presa");
-  const selecionaveis = propostas.filter((p) => p.tipo === "selecionavel");
-  const outras = propostas.filter((p) => !p.tipo);
+    </li>
+  );
   return (
     <div className="stack">
       <div>
-        <div className="stat-label" style={{ marginBottom: 8 }}>Vagas reservadas (até 3)</div>
-        {presas.length === 0 ? <p className="muted text-sm">Nenhuma vaga reservada.</p> : <ListaPropostas itens={presas} />}
+        <div className="stat-label" style={{ marginBottom: 8 }}>Vagas reservadas</div>
+        {presas.length === 0 ? <p className="muted text-sm">Nenhuma vaga reservada.</p> : <ol className="steps">{presas.map(vaga)}</ol>}
       </div>
       <div>
-        <div className="stat-label" style={{ marginBottom: 8 }}>Alternativas na fila (até 2)</div>
-        {selecionaveis.length === 0 ? <p className="muted text-sm">Nenhuma alternativa na fila.</p> : <ListaPropostas itens={selecionaveis} />}
+        <div className="stat-label" style={{ marginBottom: 8 }}>Alternativas na fila</div>
+        {selecionaveis.length === 0 ? <p className="muted text-sm">Nenhuma alternativa na fila.</p> : <ol className="steps">{selecionaveis.map(vaga)}</ol>}
       </div>
-      {outras.length > 0 && (
+      {propostas.length > 0 && (
         <div>
-          <div className="stat-label" style={{ marginBottom: 8 }}>Opções não atendidas</div>
-          <ListaPropostas itens={outras} />
+          <div className="stat-label" style={{ marginBottom: 8 }}>Passo a passo do motor</div>
+          <ListaPropostas itens={propostas} />
         </div>
       )}
     </div>
@@ -132,7 +132,7 @@ export default function RodadaDetalhePage() {
       qc.invalidateQueries({ queryKey: ["convocacoes"] });
       qc.invalidateQueries({ queryKey: ["painel-resumo"] });
       qc.invalidateQueries({ queryKey: ["painel-unidades"] });
-      toast.show(`${fmtInt(res.n_convocacoes)} convocações geradas.`);
+      toast.show(`${fmtInt(res.convocacoes_criadas)} convocações geradas${res.ja_existentes ? ` (${fmtInt(res.ja_existentes)} já existiam)` : ""}.`);
     },
     onError: (e) => toast.show(`Não deu para gerar: ${e instanceof Error ? e.message : String(e)}`),
   });
@@ -276,7 +276,7 @@ export default function RodadaDetalhePage() {
             {explic.data && (
               <div className="stack">
                 <p>{explic.data.texto}</p>
-                <PropostasAgrupadas propostas={explic.data.motivo.propostas} />
+                <PropostasAgrupadas motivo={explic.data.motivo} />
                 {explic.data.motivo.final && (
                   <div className="alert alert-ok">
                     Ficou em <strong>{explic.data.motivo.final.unidade_nome ?? explic.data.motivo.final.unidade}</strong> ({explic.data.motivo.final.ordem}ª opção), posição{" "}

@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 PIP := .venv/bin/pip
 
-.PHONY: venv audit load api test up down logs db migrate
+.PHONY: venv audit load seed api test up down logs db migrate
 
 venv:            ## cria o venv e instala o backend em modo editável
 	python3 -m venv .venv && $(PIP) install -e "backend[dev]"
@@ -11,6 +11,9 @@ audit:           ## auditoria das bases da SME (DuckDB) -> out/
 
 load:            ## carrega o Postgres a partir de data/ (idempotente)
 	cd backend && ../$(PY) -m app.etl.load
+
+seed:            ## dados de demonstração: classifica, convoca e simula 5 dias de convocação (SEED_ARGS="--limpar --todos")
+	cd backend && ../$(PY) -m app.etl.seed_demo $(SEED_ARGS)
 
 api:             ## API em modo dev
 	cd backend && ../$(PY) -m uvicorn app.main:app --reload --port 8000

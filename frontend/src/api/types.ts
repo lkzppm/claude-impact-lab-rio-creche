@@ -48,7 +48,7 @@ export interface Unidade {
 
 export interface Capacidade {
   ano: number;
-  unidade_codigo: string;
+  unidade_codigo?: string;
   grupamento: string;
   horario: string;
   vagas: number;
@@ -57,6 +57,39 @@ export interface Capacidade {
 
 export interface UnidadeDetalhe extends Unidade {
   capacidade: Capacidade[];
+}
+
+export interface NovaCapacidade {
+  ano: number;
+  grupamento: string;
+  horario: string;
+  vagas: number;
+  ator?: string | null;
+}
+
+export type FilaSituacao = "aguardando" | "convocada_aqui" | "confirmada_em_outra" | "reservas_cheias";
+
+export interface FilaUnidadeItem {
+  alocacao_id: number;
+  inscricao_id: number;
+  aluno_anon?: string | null;
+  pontuacao: number;
+  posicao_fila?: number | null;
+  ordem?: number | null;
+  situacao: FilaSituacao | string;
+  reservas_abertas: number;
+}
+
+export interface FilaUnidade {
+  unidade_codigo: string;
+  rodada_id?: number | null;
+  grupamento?: string | null;
+  horario?: string | null;
+  grupos: { grupamento: string; horario: string; n_fila: number; n_reservadas: number }[];
+  n_fila: number;
+  n_reservadas: number;
+  n_convocadas_abertas: number;
+  itens: FilaUnidadeItem[];
 }
 
 export interface Opcao {
@@ -144,7 +177,7 @@ export interface Proposta {
   unidade: string;
   unidade_nome?: string | null;
   ordem: number;
-  resultado: "aceita" | "rejeitada" | "retida" | string;
+  resultado: "retida_provisoriamente" | "rejeitada" | "desbancada" | string;
   corte?: number | null;
   vagas?: number | null;
   /** presa = vaga reservada; selecionavel = só posição na fila */
@@ -152,9 +185,19 @@ export interface Proposta {
   posicao?: number | null;
 }
 
+export interface VagaMotivo {
+  unidade: string;
+  unidade_nome?: string | null;
+  ordem: number;
+  posicao: number;
+  tipo: AlocacaoTipo | string;
+}
+
 export interface Motivo {
   propostas: Proposta[];
-  final?: { unidade: string; unidade_nome?: string | null; ordem: number; posicao: number } | null;
+  presas?: VagaMotivo[];
+  selecionaveis?: VagaMotivo[];
+  final?: { unidade: string; unidade_nome?: string | null; ordem: number; posicao: number; tipo?: string } | null;
 }
 
 export interface Alocacao {
@@ -210,6 +253,10 @@ export interface Convocacao {
   atualizada_em: string;
   horas_no_status: number;
   n_tentativas?: number;
+  pontuacao?: number | null;
+  atrasada?: boolean;
+  /** frase curta para o polo: o que fazer agora */
+  proxima_acao?: string | null;
 }
 
 export interface ConvocacaoIrma {
@@ -219,11 +266,30 @@ export interface ConvocacaoIrma {
   status: string;
 }
 
+export interface ProximoDaFila {
+  alocacao_id: number;
+  inscricao_id: number;
+  aluno_anon?: string | null;
+  pontuacao: number;
+  posicao_fila?: number | null;
+  ordem?: number | null;
+  reservas_abertas: number;
+}
+
 export interface ConvocacaoDetalhe extends Convocacao {
   eventos: Evento[];
   /** outras convocações da mesma criança (mesma inscricao_id); pode não vir */
   irmas?: ConvocacaoIrma[] | null;
+  /** só quando a vaga desta convocação foi liberada e ainda não foi repassada */
+  proximo_da_fila?: ProximoDaFila | null;
+  /** id da convocação criada a partir desta vaga liberada */
+  repassada_para?: number | null;
 }
+
+/** recortes de trabalho do polo (GET /convocacoes?fila=) */
+export type FilaConvocacao = "vencidas" | "vencem_24h" | "sem_aviso" | "aguardando" | "abertas" | "trabalho" | "encerradas";
+
+export type CanalContato = "whatsapp" | "ligacao" | "sms" | "email" | "visita";
 
 export type EventoTipo =
   | "tentativa_contato"
@@ -235,6 +301,23 @@ export type EventoTipo =
 export interface NovoEvento {
   tipo: EventoTipo | string;
   payload?: Record<string, unknown>;
+  /** quem registra (nome/matrícula do servidor); vai para o log de eventos */
+  ator?: string | null;
+}
+
+export interface ExpirarVencidasResposta {
+  expiradas: number;
+  ids: number[];
+}
+
+export interface MultiReservaItem {
+  inscricao_id: number;
+  aluno_anon?: string | null;
+  pontuacao: number;
+  n_abertas: number;
+  unidades: string[];
+  mais_antiga_em: string;
+  horas_mais_antiga: number;
 }
 
 export interface PainelResumo {
@@ -249,9 +332,19 @@ export interface PainelResumo {
   sem_contato: number;
   inconsistencias: number;
   confirmadas?: number;
+  recusadas?: number;
+  expiradas?: number;
   vagas_presas_por_crianca?: number | null;
   vagas_liberadas_hoje?: number | null;
   atualizado_em?: string;
+  /* filas de trabalho do polo */
+  vencidas?: number;
+  vencem_24h?: number;
+  sem_aviso?: number;
+  aguardando_familia?: number;
+  criancas_multireserva?: number;
+  tempo_medio_ate_desfecho_h?: number | null;
+  n_desfechos?: number;
 }
 
 export interface PainelUnidade {
@@ -263,12 +356,15 @@ export interface PainelUnidade {
   convocadas: number;
   confirmadas: number;
   em_atraso: number;
+  liberadas?: number;
   aguardando?: number;
 }
 
 export interface GerarConvocacoesResposta {
   rodada_id: number;
-  n_convocacoes: number;
+  convocacoes_criadas: number;
+  ja_existentes: number;
+  prazo_fim?: string | null;
 }
 
 /* ---------- comprovações via bases oficiais ---------- */
@@ -473,4 +569,34 @@ export interface PreCadastro {
   respostas: Record<string, boolean>;
   contatos: Contato[];
   escolhas: { ordem: number; codigo: string; nome: string | null; bairro: string | null; distancia_km: number | null }[];
+}
+
+/* ---------- assistente (chat com tools) — POST /chat ---------- */
+export interface ChatMensagem {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ChatPedido {
+  area: "cre" | "sme";
+  cre?: string;
+  ator?: string;
+  mensagens: ChatMensagem[];
+}
+
+export interface ChatFerramenta {
+  nome: string;
+  argumentos: Record<string, unknown>;
+  /** linha mostrada ao servidor: "resumo do painel · 4ª CRE" */
+  resumo: string;
+  erro?: string | null;
+}
+
+export interface ChatResposta {
+  resposta: string;
+  ferramentas: ChatFerramenta[];
+  modelo: string;
+  tokens_entrada?: number;
+  tokens_saida?: number;
+  log_id?: number | null;
 }

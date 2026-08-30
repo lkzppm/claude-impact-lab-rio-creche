@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import "./tokens.css";
 import "./components.css";
@@ -6,6 +6,10 @@ import "./components.css";
 /* ---------- AppHeader — faixa branca com logos + barra azul (matricula.rio) ---------- */
 import { AREA_LABEL, useArea } from "../areas/AreaContext";
 import { CRES } from "../components/Filters";
+import { Meter } from "./viz";
+import type { VizTone } from "./viz";
+
+export * from "./viz";
 
 const NAV_POR_AREA: Record<string, { to: string; label: string; end?: boolean }[]> = {
   familia: [
@@ -14,6 +18,7 @@ const NAV_POR_AREA: Record<string, { to: string; label: string; end?: boolean }[
   cre: [
     { to: "/cre", label: "Painel", end: true },
     { to: "/cre/convocacoes", label: "Convocações" },
+    { to: "/cre/multireserva", label: "Várias reservas" },
     { to: "/cre/unidades", label: "Unidades" },
   ],
   sme: [
@@ -24,6 +29,28 @@ const NAV_POR_AREA: Record<string, { to: string; label: string; end?: boolean }[
     { to: "/sme/regua", label: "Régua" },
   ],
 };
+
+function CampoAtor() {
+  const { ator, setAtor } = useArea();
+  const [v, setV] = useState(ator);
+  useEffect(() => setV(ator), [ator]);
+  return (
+    <label className="app-ator" title="Seu nome ou matrícula: fica registrado em cada ação, com data e hora">
+      <span>Você</span>
+      <input
+        value={v}
+        onChange={(e) => setV(e.target.value)}
+        onBlur={() => setAtor(v)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+        placeholder="seu nome"
+        aria-label="Quem está registrando"
+        maxLength={80}
+      />
+    </label>
+  );
+}
 
 export function AppHeader() {
   const { area, cre, setCre } = useArea();
@@ -55,17 +82,20 @@ export function AppHeader() {
                 </ul>
               </nav>
               {area === "cre" && (
-                <label className="app-cre">
-                  <span>CRE</span>
-                  <select value={cre} onChange={(e) => setCre(e.target.value)} aria-label="Escolher a CRE">
-                    <option value="">Escolha…</option>
-                    {CRES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}ª CRE
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <>
+                  <label className="app-cre">
+                    <span>CRE</span>
+                    <select value={cre} onChange={(e) => setCre(e.target.value)} aria-label="Escolher a CRE">
+                      <option value="">Escolha…</option>
+                      {CRES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}ª CRE
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <CampoAtor />
+                </>
               )}
               <Link to="/" className="app-trocar">
                 Trocar de perfil
@@ -199,19 +229,39 @@ export function StatTile({
   value,
   hint,
   tone = "info",
+  to,
+  share,
 }: {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
   tone?: Tone;
+  /** quando informado, o tile vira link para a lista já filtrada */
+  to?: string;
+  /** razão 0–1 mostrada como medidor sob o número (ex.: parte das convocações abertas) */
+  share?: number;
 }) {
-  return (
-    <div className={`stat-tile tone-${tone}`}>
+  const corpo = (
+    <>
       <span className="stat-label">{label}</span>
       <span className="stat-value">{value}</span>
-      {hint && <span className="stat-hint">{hint}</span>}
-    </div>
+      {share != null && <Meter share={share} tone={tone as VizTone} label={`${label} — parte do total`} />}
+      {(hint || to) && (
+        <span className="stat-hint">
+          {hint}
+          {to && <span className="stat-cta"> ver lista →</span>}
+        </span>
+      )}
+    </>
   );
+  if (to) {
+    return (
+      <Link to={to} className={`stat-tile stat-tile-link tone-${tone}`}>
+        {corpo}
+      </Link>
+    );
+  }
+  return <div className={`stat-tile tone-${tone}`}>{corpo}</div>;
 }
 
 /* ---------- StatusPill ---------- */
@@ -246,6 +296,49 @@ const STATUS_TONE: Record<ConvocacaoStatus, Tone> = {
 
 /** convocações que não pedem mais ação */
 export const STATUS_ENCERRADOS: string[] = ["confirmada", "recusada", "expirada", "liberada"];
+
+/** rótulos dos tipos de evento gravados no log (nomes exatamente como o backend grava) */
+export const EVENTO_LABEL: Record<string, string> = {
+  selecionada: "Vaga selecionada para a criança",
+  selecionada_da_lista: "Convocada da lista de espera — vaga liberada por outra criança",
+  contato_tentado: "Tentativa de contato",
+  contato_confirmado: "Família avisada",
+  confirmada: "Matrícula confirmada",
+  recusada: "Família recusou a vaga",
+  expirada: "Prazo vencido",
+  liberada_por_confirmacao: "Vaga liberada — a família confirmou em outra unidade",
+  capacidade_informada: "Capacidade informada pela unidade",
+};
+
+export const CANAIS: { id: string; label: string }[] = [
+  { id: "whatsapp", label: "WhatsApp" },
+  { id: "ligacao", label: "Ligação" },
+  { id: "sms", label: "SMS" },
+  { id: "email", label: "E-mail" },
+  { id: "visita", label: "Visita / agente" },
+];
+export const CANAL_LABEL: Record<string, string> = Object.fromEntries(CANAIS.map((c) => [c.id, c.label]));
+CANAL_LABEL.painel_familia = "pelo painel da família";
+
+/* ---------- PrazoBar — relógio da convocação (0–72 h) ---------- */
+export function PrazoBar({ prazoFim, status }: { prazoFim: string | null | undefined; status: string }) {
+  if (!prazoFim || STATUS_ENCERRADOS.includes(status)) return null;
+  const fim = new Date(prazoFim).getTime();
+  if (Number.isNaN(fim)) return null;
+  const inicio = fim - 72 * 36e5;
+  const pct = Math.max(0, Math.min(1, (Date.now() - inicio) / (fim - inicio)));
+  const tone: Tone = pct >= 1 ? "danger" : pct >= 0.66 ? "warn" : "ok";
+  return (
+    <div className="prazo">
+      <div className={`prazo-bar tone-${tone}`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct * 100)}>
+        <div className="prazo-fill" style={{ width: `${Math.round(pct * 100)}%` }} />
+      </div>
+      <div className="prazo-legenda">
+        {prazoTexto(prazoFim)} · {fmtQuando(prazoFim)}
+      </div>
+    </div>
+  );
+}
 
 /* ---------- comprovações ---------- */
 const COMPROVACAO: Record<string, { label: string; tone: Tone }> = {
@@ -403,6 +496,7 @@ export function ConfirmDialog({
   confirmLabel = "Confirmar",
   danger,
   withNote,
+  withCanal,
   busy,
   onConfirm,
   onCancel,
@@ -413,11 +507,20 @@ export function ConfirmDialog({
   confirmLabel?: string;
   danger?: boolean;
   withNote?: boolean;
+  /** pede por qual canal o contato foi feito (WhatsApp, ligação…) */
+  withCanal?: boolean;
   busy?: boolean;
-  onConfirm: (note: string) => void;
+  onConfirm: (note: string, canal?: string) => void;
   onCancel: () => void;
 }) {
   const [note, setNote] = useState("");
+  const [canal, setCanal] = useState<string>("");
+  useEffect(() => {
+    if (!open) {
+      setNote("");
+      setCanal("");
+    }
+  }, [open]);
   if (!open) return null;
   return (
     <div className="dialog-backdrop" role="presentation" onClick={onCancel}>
@@ -432,6 +535,25 @@ export function ConfirmDialog({
           {title}
         </h2>
         {description && <p className="text-sm muted">{description}</p>}
+        {withCanal && (
+          <div className="field">
+            <span>Por qual canal?</span>
+            <div className="chips" role="radiogroup" aria-label="Canal do contato">
+              {CANAIS.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={canal === c.id}
+                  className={`chip ${canal === c.id ? "active" : ""}`}
+                  onClick={() => setCanal(canal === c.id ? "" : c.id)}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {withNote && (
           <label className="field">
             <span>Observação (opcional)</span>
@@ -442,7 +564,7 @@ export function ConfirmDialog({
           <Button variant="ghost" onClick={onCancel} disabled={busy}>
             Cancelar
           </Button>
-          <Button variant={danger ? "danger" : "primary"} onClick={() => onConfirm(note)} disabled={busy}>
+          <Button variant={danger ? "danger" : "primary"} onClick={() => onConfirm(note, canal || undefined)} disabled={busy}>
             {busy ? "Registrando…" : confirmLabel}
           </Button>
         </div>
@@ -472,6 +594,14 @@ export function fmtDateTime(iso: string | null | undefined): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+/** "sáb., 30/08 14:00" — para prazos, na linguagem do polo */
+export function fmtQuando(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 export function fmtHoras(h: number | null | undefined): string {

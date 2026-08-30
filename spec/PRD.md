@@ -81,15 +81,18 @@ Duas peças, uma só base de dados:
 
 - A **tabela de pontuação** (Res. SME 542/2025) e os critérios de desempate. Norma, não parâmetro.
 - O portal de inscrição (`matricula.rio`) e a unidade como lugar da confirmação de matrícula.
-- Nenhum LLM decide alocação. Nesta fase não há LLM em lugar nenhum; ele entra depois, sobre o log de
-  decisão (explicação à família) e sobre o log de eventos (interrogação do gestor).
+- Nenhum LLM decide alocação. O único LLM da aplicação é o **assistente de consulta** dos painéis da CRE e do
+  Nível Central ("Perguntar ao painel"): ele só lê o banco por ferramentas, mostra o que consultou, não
+  registra contato, não confirma matrícula, não muda status nem pontuação — e é restrito, no servidor, ao
+  território de quem pergunta. A explicação do resultado à família continua sendo texto templado do log de
+  decisão.
 
 ## 4. Usuários — três painéis, uma base
 
 | Painel | Usuário | O que faz |
 |---|---|---|
 | **Família** (`/familia`, celular) | responsável pela criança | consulta a inscrição pelo código (em produção, CPF via gov.br); vê as 5 opções com resultado e posição; **confirma ou recusa uma reserva na hora**; vê a pontuação critério a critério com a comprovação automática; lê a explicação do resultado |
-| **CRE / polo** (`/cre`) | servidor do polo (usuário principal) | painel do território: reservas por faixa de tempo, vagas em risco, famílias sem contato; registra tentativas e desfechos; ficha da inscrição |
+| **CRE / polo** (`/cre`) | servidor do polo (usuário principal) | painel do território como **fila de trabalho**: vencidas, vencem em 24 h, sem aviso, crianças com várias reservas (cada número abre a lista, da mais urgente para a menos, com a próxima ação); registra tentativas e desfechos com canal e nome de quem registrou; vaga recusada/vencida mostra **o próximo da fila** e o convoca; fila de espera e capacidade informada por unidade; expiração em lote; ficha da inscrição |
 | **Nível Central SME** (`/sme`) | equipe central | visão da rede por CRE; executa rodadas, compara 1 vaga × 3 reservas, gera convocações; régua do ano (norma, só leitura) |
 
 ## 5. Fluxos
@@ -105,7 +108,14 @@ reservada e o evento correspondente. O servidor registra `contato_tentado` (repe
 as outras reservas da mesma criança viram `liberada` automaticamente, com evento.
 
 **Rematch.** Vagas liberadas/recusadas/expiradas voltam ao pool → rodada `tipo = rematch` restrita às
-unidades com vaga e às crianças em lista de espera, mesma régua.
+unidades com vaga e às crianças em lista de espera, mesma régua. **No polo**, o gesto unitário é
+"convocar o próximo da fila": a vaga liberada vai para a 1ª criança da lista de espera daquela
+unidade/grupamento/turno, na `posicao_fila` do motor, pulando quem já confirmou ou já segura 3 reservas —
+evento `selecionada_da_lista`, o mesmo nome que a SME usa hoje. Uma vaga liberada só é repassada uma vez.
+
+**Expiração.** O polo registra "prazo vencido" uma a uma ou em lote (todas as vencidas do recorte). Como
+rotina automática (`EXPIRACAO_AUTOMATICA_MINUTOS`, ator `sistema`) fica desligada na demonstração, para as
+vencidas aparecerem no painel.
 
 **Comprovação.** `POST /inscricoes/{id}/comprovar` consulta os provedores configurados
 (`COMPROVACAO_PROVIDER=mock` nesta fase) e grava uma linha por critério com fonte, resultado, protocolo e
@@ -147,6 +157,11 @@ credenciais, planejamento por coorte (SINASC × capacidade). Todos descritos em
   dito na banca.
 - **APIs de governo exigem adesão institucional** — o mock reproduz o contrato para que a troca seja de
   configuração, não de código.
+- **Assistente com LLM sobre dado de criança.** Mitigação: só leitura (ferramentas de consulta; a `consulta_sql`
+  do Nível Central roda SELECT-only em transação `READ ONLY` com timeout), escopo por CRE aplicado no servidor,
+  agregados por padrão e códigos anônimos só quando pedidos, log de acesso append-only (`consulta_agente`) com
+  hash da pergunta e sem texto, e o prompt de sistema afirma que a pontuação é norma e a alocação é do motor.
+  O assistente é opcional: sem `ANTHROPIC_API_KEY` os painéis funcionam sem ele.
 
 ## 10. Status
 
@@ -159,8 +174,11 @@ credenciais, planejamento por coorte (SINASC × capacidade). Todos descritos em
 | Motor DA com `vagas_presas` (`backend/app/engine/`) | pronto — 18 testes; 2025 Berçário Integral (30.141 inscrições) em ~4 s |
 | API FastAPI (`backend/app/routers/`) | pronto — fluxo rodada → convocações → eventos → painel validado |
 | Adaptadores de comprovação (`backend/app/integracoes/`) | mock pronto; Conecta (CadÚnico, Bolsa Família, CPF Light) e RMI com contrato real, `pendente` sem credencial |
-| Frontend React com design system do matricula.rio (`frontend/`) | reestruturado em 3 painéis (Família / CRE / Nível Central) com os logos oficiais no header |
+| Frontend React com design system do matricula.rio (`frontend/`) | 3 painéis (Família / CRE / Nível Central) com os logos oficiais no header; painel da CRE reescrito como fila de trabalho (30/08 13h) |
+| Ferramentas do polo (`fila=`, próxima ação, convocar próximo da fila, fila da unidade, capacidade informada, expirar em lote, várias reservas, tempo até desfecho) | pronto — cobertas pelo teste de integração e validadas sobre 2025 Berçário Integral |
+| Seed de demonstração (`make seed`) | pronto — 18.967 convocações de 11.788 crianças em 5 dias simulados, 37 s |
 | `docker-compose` (db + backend + frontend) | pronto — `make up` sobe os três; validado em 30/08 12h40 |
+| Assistente "Perguntar ao painel" (`backend/app/agente/`, `POST /chat`, `frontend/src/components/ChatAssistente.tsx`) | pronto — 12 ferramentas só leitura, escopo por CRE no servidor, log de acesso `consulta_agente`; testes sem rede com cliente falso |
 
 ### Primeiro resultado sobre dados reais (2025, Berçário Integral, capacidade estimada)
 

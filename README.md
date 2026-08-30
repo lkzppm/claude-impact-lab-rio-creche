@@ -53,15 +53,33 @@ auditoria das bases em [`out/auditoria-dados.md`](out/auditoria-dados.md).
 cp .env.example .env
 make up                      # Postgres 16 + API FastAPI (:8000/docs) + frontend React (:5173)
 make venv && make load       # carrega as bases da SME no Postgres (todos os anos; --anos 2025 para só um)
+make seed                    # dados de demonstração: classificação + 5 dias de convocação simulados (SEED_ARGS="--limpar")
 make audit                   # regera out/auditoria-dados.md
 make test                    # invariantes do motor
 ```
 
 | Pasta | O que é |
 |---|---|
-| [`backend/`](backend/) | FastAPI · motor DA em `app/engine` · ETL (DuckDB) em `app/etl` · comprovação via APIs de governo em `app/integracoes` |
+| [`backend/`](backend/) | FastAPI · motor DA em `app/engine` · ETL (DuckDB) em `app/etl` · comprovação via APIs de governo em `app/integracoes` · assistente de consulta em `app/agente` |
 | [`frontend/`](frontend/) | React + Vite + TS, design system espelhando o `matricula.rio` |
-| [`db/`](db/) | schema SQL (log de eventos append-only) |
+| [`db/`](db/) | schema SQL (log de eventos append-only; log de acesso do assistente) |
+
+### Como o Claude atua dentro da aplicação
+
+**IA na borda, algoritmo determinístico no núcleo.** Quem decide vaga é o motor de aceitação diferida sobre a
+pontuação da Res. SME 542/2025 — sem LLM. O Claude entra como **assistente de consulta** nos painéis da CRE/polo e do
+Nível Central (botão "Perguntar ao painel"): o servidor pergunta em português ("quais convocações vencem hoje na
+minha CRE?", "qual CRE tem mais atraso?") e o Claude responde chamando **ferramentas só de leitura** sobre o mesmo
+banco que alimenta as telas (resumo do painel, convocações, ficha da inscrição, capacidade, rodadas, régua e, só no
+Nível Central, um SELECT livre em transação `READ ONLY`). Cada consulta feita aparece na conversa ("consultou: resumo
+do painel · 4ª CRE"); na área da CRE o servidor força o território de quem pergunta; dado de criança é anonimizado e
+devolvido agregado por padrão; cada turno grava um log de acesso append-only (`consulta_agente`) sem o texto da
+pergunta. O assistente não registra contato, não confirma matrícula e não altera pontuação — e é opcional: sem
+`ANTHROPIC_API_KEY`, os painéis funcionam sem ele. Detalhes em [`backend/README.md`](backend/README.md#assistente-chat-com-tools--appagente).
+
+**Como o Claude foi usado para construir.** O repositório foi desenvolvido com Claude Code a partir da base de
+conhecimento em `spec/` (o `CLAUDE.md` define a precedência: fonte da SME > documento curado > conhecimento do
+modelo): leitura e auditoria das bases da SME, motor DA e seus invariantes, API, painéis e este assistente.
 
 ## Tese central
 
