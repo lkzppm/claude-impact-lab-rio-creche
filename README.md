@@ -20,6 +20,8 @@ melhorar o processo de **Inscrição Creche** (`matricula.rio`) em três eixos �
 |---|---|
 | Lucas Pacheco | [@lkzppm](https://github.com/lkzppm) |
 | Fausto Santos | — |
+| Pedro Brasil | — |
+| Nay Borges | — |
 
 ### Resumo
 
