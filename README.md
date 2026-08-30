@@ -24,8 +24,12 @@ Todo o contexto do desafio está em **[`spec/`](spec/)** — comece pelo
 | 06 | [Glossário](spec/06-glossario.md) | CRE, EDI, ICH, RMI, DA, CadÚnico… |
 | 07 | [Perguntas para a SME](spec/07-perguntas-para-a-sme.md) | O que perguntar na abertura |
 | 08 | [Fontes](spec/08-fontes.md) | Links de tudo que foi usado |
+| 09 | [Achados dos dados](spec/09-achados-dos-dados.md) | O que as bases 2021–2025 mostram — e o que não permitem |
+| 10 | [Regras e entrega](spec/10-regras-e-entrega.md) | Agenda, regras, critérios de julgamento |
 
 O material original recebido da SME (briefing + deck) está em [`spec/fontes/`](spec/fontes/).
+As bases de dados vivem em [`CIT-SME-RJ/dadoscreche`](https://github.com/CIT-SME-RJ/dadoscreche);
+as regras do evento, em [`taicor-ai/claude-impact-lab-rio-2`](https://github.com/taicor-ai/claude-impact-lab-rio-2).
 
 ## Tese central
 

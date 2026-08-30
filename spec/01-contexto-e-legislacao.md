@@ -96,6 +96,11 @@ comprovante de endereço, identificação do responsável, declaração escolar 
 > Comparar a posição de uma criança entre dois anos exige olhar a tabela de pesos **daquele ano**
 > (dataset "Perguntas por processo"), nunca uma tabela única.
 
+> ⚠️ **A tabela acima (Res. 542/2025) rege o processo de 2026 e não está no dataset.** A base vai até o
+> processo 195 (2025), cuja régua é parecida mas **não igual** — educação especial vale 25 lá e 15 aqui,
+> e a Res. 542 traz o Programa Pequenos Cariocas, que não aparece na base. As réguas ano a ano efetivamente
+> praticadas estão em [09](09-achados-dos-dados.md#5-a-régua-mudou-duas-vezes).
+
 ### O ponto de falha mais explorável
 
 > **"Caso os critérios classificatórios não sejam comprovados, deixarão de ser computadas as respectivas

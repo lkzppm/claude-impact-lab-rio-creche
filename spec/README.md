@@ -21,6 +21,15 @@ Desafio proposto pela **Secretaria Municipal de Educação do Rio (SME-Rio)**: m
 | 06 | [Glossário](06-glossario.md) | CRE, EDI, ICH, RMI, DA, CadÚnico, SINASC… |
 | 07 | [Perguntas para a SME](07-perguntas-para-a-sme.md) | O que perguntar na abertura — respostas mudam o projeto |
 | 08 | [Fontes](08-fontes.md) | Links de tudo que foi usado |
+| 09 | [Achados dos dados](09-achados-dos-dados.md) | O que as bases 2021–2025 mostram — e o que elas não permitem |
+| 10 | [Regras e entrega](10-regras-e-entrega.md) | Agenda, regras do hackathon, critérios de julgamento |
+
+## Repositórios oficiais
+
+| Repo | O que tem |
+|---|---|
+| [`CIT-SME-RJ/dadoscreche`](https://github.com/CIT-SME-RJ/dadoscreche) | **As bases de dados** (2021–2025), dicionário de dados, nascidos vivos, microáreas, lat/long das unidades → detalhado em [03](03-dados-disponiveis.md) |
+| [`taicor-ai/claude-impact-lab-rio-2`](https://github.com/taicor-ai/claude-impact-lab-rio-2) | **Regras do evento**, agenda, critérios de julgamento, formato da entrega → detalhado em [10](10-regras-e-entrega.md) |
 
 ## `fontes/` — material recebido da SME
 
