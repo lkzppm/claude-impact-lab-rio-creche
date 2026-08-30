@@ -6,7 +6,7 @@ melhorar o processo de **Inscrição Creche** (`matricula.rio`) em três eixos �
 
 📅 30/08/2026 · VTEX, Botafogo · Rio de Janeiro
 
-**🔗 Aplicação publicada:** <https://creche-frontend-three.vercel.app/> · **🎥 Vídeo demo (60 s):** [`video/demo.mp4`](video/demo.mp4)
+**🔗 Aplicação publicada:** <https://creche-frontend-three.vercel.app/> · **🎥 Vídeo demo (60 s):** [`video/demo.mov`](video/demo.mov)
 
 ---
 
@@ -49,7 +49,7 @@ nos canais que a prefeitura já opera.
 | 🔗 **Aplicação (frontend)** | <https://creche-frontend-three.vercel.app/> |
 | ⚙️ **API (backend)** | <https://creche-backend-qu63.onrender.com/docs> |
 | 📨 **Mensageria** | <https://creche-mensageria.onrender.com/docs> |
-| 🎥 **Vídeo demo (60 s)** | [`video/demo.mp4`](video/demo.mp4) |
+| 🎥 **Vídeo demo (60 s)** | [`video/demo.mov`](video/demo.mov) |
 | 📦 **Repositório** | <https://github.com/lkzppm/claude-impact-lab-rio-creche> |
 | 📄 **Produto (PRD)** | [`spec/PRD.md`](spec/PRD.md) |
 | 🏗️ **Contrato técnico** | [`spec/11-baseline-tecnico.md`](spec/11-baseline-tecnico.md) |
@@ -130,7 +130,7 @@ make test                    # invariantes do motor
 | [`frontend/`](frontend/) | React + Vite + TS, design system espelhando o `matricula.rio` |
 | [`mensageria/`](mensageria/) | FastAPI à parte: WhatsApp/e-mail/SMS com catálogo versionado, idempotência e log sem conteúdo (padrão `mock`) |
 | [`db/`](db/) | schema SQL (log de eventos append-only; log de acesso do assistente) |
-| [`video/`](video/) | vídeo demo de 60 s (`demo.mp4`) — ver [`video/README.md`](video/README.md) |
+| [`video/`](video/) | vídeo demo de 60 s (`demo.mov`) — ver [`video/README.md`](video/README.md) |
 
 ### Como o Claude atua dentro da aplicação
 
