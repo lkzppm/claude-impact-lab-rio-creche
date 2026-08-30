@@ -207,6 +207,7 @@ class PreCadastro(Base):
     respostas: Mapped[dict[str, Any]] = mapped_column(Json, nullable=False)
     pontuacao: Mapped[int] = mapped_column(Integer, nullable=False)
     escolhas: Mapped[list[dict[str, Any]]] = mapped_column(Json, nullable=False)
+    verificacoes: Mapped[list[dict[str, Any]] | None] = mapped_column(Json)
     consentimento_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     contatos: Mapped[list["Contato"]] = relationship(back_populates="pre_cadastro", cascade="all, delete-orphan",

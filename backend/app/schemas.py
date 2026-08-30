@@ -362,6 +362,8 @@ class ReguaPergunta(BaseModel):
     texto: str
     pontos: int
     desempate: bool
+    automatico: bool = False                 # verificado por API oficial a partir do CPF
+    fonte_automatica: str | None = None
 
 
 class ReguaFamilia(BaseModel):
@@ -459,6 +461,7 @@ class PreCadastroIn(BaseModel):
     respostas: dict[str, bool] = Field(default_factory=dict)
     contatos: list[ContatoIn] = Field(min_length=1)
     escolhas: list[str] = Field(min_length=1, max_length=5)
+    verificacoes: list[dict[str, Any]] | None = None
     consentimento: bool
 
 
@@ -494,5 +497,27 @@ class PreCadastroOut(BaseModel):
     regua_ano: int
     pontuacao: int
     respostas: dict[str, bool]
+    verificacoes: list[dict[str, Any]] | None = None
     contatos: list[ContatoOut]
     escolhas: list[EscolhaOut]
+
+
+class VerificarIn(BaseModel):
+    cpf: str = Field(min_length=11)
+    nascimento_anomes: str | None = None
+
+
+class CriterioVerificado(BaseModel):
+    criterio: str
+    fonte: str
+    resultado: str                           # confirmado | nao_encontrado | erro | pendente
+    protocolo: str | None
+    ich_perg_id: int | None
+    texto: str | None
+    pontos: int
+    bloqueia_manual: bool                    # True: a resposta é a da API; False: família ainda pode marcar (ex.: laudo)
+
+
+class VerificacaoOut(BaseModel):
+    verificados: list[CriterioVerificado]
+    respostas_automaticas: dict[str, bool]

@@ -23,8 +23,14 @@ router = APIRouter(prefix="/familia", tags=["familia"])
 # critério da régua → critério do provedor de comprovação
 CRITERIO_COMPROVACAO = {
     "cadúnico": "cadunico", "cadunico": "cadunico", "cadastro único": "cadunico",
-    "bolsa família": "bolsa_familia", "bolsa familia": "bolsa_familia",
-    "deficiência": "educacao_especial", "educação especial": "educacao_especial",
+    "bolsa família": "bolsa_familia", "bolsa familia": "bolsa_familia", "cartão carioca": "bolsa_familia",
+    "educação especial": "educacao_especial",
+}
+# critérios com verificação automática: fonte e se a resposta da API substitui a declaração da família
+AUTOMATICOS = {
+    "cadunico": ("conecta_cadunico", True),
+    "bolsa_familia": ("conecta_bolsa_familia", True),
+    "educacao_especial": ("rmi", False),   # RMI só dá indício; laudo continua valendo → família pode marcar
 }
 
 
@@ -196,9 +202,9 @@ from app import geo as _geo
 from app.engine.scoring import ItemRegua, pontuar
 from app.models import Capacidade, Contato, PreCadastro
 from app.routers.geo import centroide_bairro_factory
-from app.schemas import (CasaOut, ContatoOut, EscolhaOut, PontuacaoEstimada, PontuacaoItem, PreCadastroCriado,
-                         PreCadastroIn, PreCadastroOut, ReguaFamilia, ReguaPergunta, SugestoesIn, SugestoesOut,
-                         UnidadeSugerida)
+from app.schemas import (CasaOut, ContatoOut, CriterioVerificado, EscolhaOut, PontuacaoEstimada, PontuacaoItem,
+                         PreCadastroCriado, PreCadastroIn, PreCadastroOut, ReguaFamilia, ReguaPergunta, SugestoesIn,
+                         SugestoesOut, UnidadeSugerida, VerificacaoOut, VerificarIn)
 
 RAIO_KM = 5.0
 N_SUGESTOES = 15
@@ -221,8 +227,10 @@ def regua_familia(ano: int | None = None, db: Session = Depends(get_db)):
     itens = _regua(db, ano)
     return ReguaFamilia(ano=ano, maxima=sum(p.pontuacao for p in itens if p.pontuacao > 0 and not p.criterio_desempate),
                         perguntas=[ReguaPergunta(ich_perg_id=p.ich_perg_id, texto=p.texto, pontos=p.pontuacao,
-                                                 desempate=p.criterio_desempate) for p in itens
-                                   if p.pontuacao > 0 or p.criterio_desempate])
+                                                 desempate=p.criterio_desempate,
+                                                 automatico=_criterio_comprovacao(p.texto) in AUTOMATICOS,
+                                                 fonte_automatica=AUTOMATICOS.get(_criterio_comprovacao(p.texto) or "", (None,))[0])
+                                   for p in itens if p.pontuacao > 0 or p.criterio_desempate])
 
 
 def _pontuar(itens: list[Pergunta], respostas: dict[str, bool]) -> PontuacaoEstimada:
@@ -361,7 +369,7 @@ def criar_pre_cadastro(body: PreCadastroIn, db: Session = Depends(get_db)):
                      bairro=bairro, lat=lat, lon=lon, regua_ano=ano,
                      respostas={str(k): bool(v) for k, v in body.respostas.items()}, pontuacao=pont.total,
                      escolhas=[{"ordem": i, "codigo": c} for i, c in enumerate(body.escolhas, start=1)],
-                     consentimento_em=_agora())
+                     verificacoes=body.verificacoes, consentimento_em=_agora())
     for c in body.contatos:
         pc.contatos.append(Contato(nome=c.nome.strip(), parentesco=c.parentesco, canal=c.canal,
                                    valor=c.valor.strip(), principal=c.principal))
@@ -388,7 +396,45 @@ def ver_pre_cadastro(protocolo: str, db: Session = Depends(get_db)):
     return PreCadastroOut(protocolo=pc.protocolo, criado_em=pc.criado_em, nome_responsavel=pc.nome_responsavel,
                           nome_crianca=pc.nome_crianca, nascimento_anomes=pc.nascimento_anomes, grupamento=pc.grupamento,
                           horario=pc.horario, cep=pc.cep, bairro=pc.bairro, lat=pc.lat, lon=pc.lon, regua_ano=pc.regua_ano,
-                          pontuacao=pc.pontuacao, respostas=pc.respostas,
+                          pontuacao=pc.pontuacao, respostas=pc.respostas, verificacoes=pc.verificacoes,
                           contatos=[ContatoOut(id=c.id, nome=c.nome, parentesco=c.parentesco, canal=c.canal, valor=c.valor,
                                                principal=c.principal, verificado_em=c.verificado_em) for c in pc.contatos],
                           escolhas=escolhas)
+
+
+@router.post("/verificar", response_model=VerificacaoOut)
+def verificar(body: VerificarIn, db: Session = Depends(get_db)):
+    """Verificação automática pelo CPF (Conecta CadÚnico / Bolsa Família; RMI para indício de laudo).
+    O CPF nunca sai daqui em claro: o provedor recebe só o hash (nesta fase os provedores são mock)."""
+    from app.integracoes.base import DadosInscricao
+    from app.integracoes.registry import provedores
+
+    cpf = "".join(ch for ch in body.cpf if ch.isdigit())
+    if len(cpf) != 11:
+        raise HTTPException(422, "CPF deve ter 11 dígitos.")
+    chave = _cpf_hash(cpf)[:16]
+    ano = _ano_regua(db, None)
+    itens = _regua(db, ano)
+    por_criterio: dict[str, Pergunta] = {}
+    for p in itens:
+        c = _criterio_comprovacao(p.texto)
+        if c and c in AUTOMATICOS:
+            por_criterio.setdefault(c, p)
+    dados = DadosInscricao(inscricao_id=0, ano=ano, aluno_anon=f"pc_{chave}", responsavel_anon=f"pc_{chave}",
+                           nascimento_anomes=body.nascimento_anomes, cep=None)
+    verificados, automaticas = [], {}
+    for prov in provedores():
+        if prov.criterio not in AUTOMATICOS:
+            continue
+        r = prov.consultar(dados)
+        p = por_criterio.get(prov.criterio)
+        fonte, bloqueia = AUTOMATICOS[prov.criterio]
+        verificados.append(CriterioVerificado(criterio=r.criterio, fonte=r.fonte, resultado=r.resultado, protocolo=r.protocolo,
+                                              ich_perg_id=p.ich_perg_id if p else None, texto=p.texto if p else None,
+                                              pontos=p.pontuacao if p else 0,
+                                              bloqueia_manual=bloqueia and r.resultado in ("confirmado", "nao_encontrado")))
+        if p and r.resultado == "confirmado":
+            automaticas[str(p.ich_perg_id)] = True
+        elif p and r.resultado == "nao_encontrado" and bloqueia:
+            automaticas[str(p.ich_perg_id)] = False
+    return VerificacaoOut(verificados=verificados, respostas_automaticas=automaticas)
