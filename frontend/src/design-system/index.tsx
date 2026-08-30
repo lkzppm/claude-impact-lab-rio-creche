@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import "./tokens.css";
 import "./components.css";
@@ -430,7 +431,7 @@ export function DataTable<T>({
                 aria-sort={sort?.key === c.key ? (sort.dir === 1 ? "ascending" : "descending") : undefined}
               >
                 {c.header}
-                {sort?.key === c.key && (sort.dir === 1 ? " ▲" : " ▼")}
+                {sort?.key === c.key && (sort.dir === 1 ? <ArrowUp size={12} aria-hidden="true" /> : <ArrowDown size={12} aria-hidden="true" />)}
               </th>
             ))}
           </tr>

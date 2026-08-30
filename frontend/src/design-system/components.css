@@ -177,7 +177,14 @@
   border-top-color: var(--mr-blue-700);
 }
 .perfil-icone {
-  font-size: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--mr-grey-100);
+  color: var(--mr-blue-700);
   line-height: 1;
 }
 .perfil-titulo {
@@ -1077,13 +1084,21 @@
   pointer-events: none;
 }
 .mapa-casa-pino {
-  width: 16px;
-  height: 16px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: var(--mr-blue-700);
-  border: 3px solid #fff;
-  box-shadow: 0 0 0 2px var(--mr-blue-700);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: none;
+}
+.mapa-casa-pino svg {
+  width: 17px;
+  height: 17px;
 }
 .mapa-casa-rotulo {
   font: 600 11px var(--font);
@@ -2096,3 +2111,6 @@
     max-width: 100%;
   }
 }
+
+.pc-crit-fonte svg, .fam-ajuda svg, .btn svg, .chat-fab svg, th svg { vertical-align: -3px; }
+.pc-escolha-acoes button svg { display: block; }

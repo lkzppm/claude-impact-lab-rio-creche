@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown, ChevronUp, Circle, Home, X } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { ApiError, criarPreCadastro, getGeoCep, getReguaFamilia, getSugestoes, verificarCpf } from "../api/client";
@@ -512,7 +513,7 @@ export default function PreCadastroPage() {
                       <li key={k}>
                         <div className={`pc-crit pc-crit-auto ${v?.resultado === "confirmado" ? "on" : ""}`}>
                           <span className="pc-crit-fonte" aria-hidden="true">
-                            {v?.resultado === "confirmado" ? "✓" : "•"}
+                            {v?.resultado === "confirmado" ? <Check size={16} /> : <Circle size={10} />}
                           </span>
                           <span className="pc-crit-texto">{p.texto}</span>
                           <span className="pc-crit-pontos">
@@ -725,7 +726,7 @@ export default function PreCadastroPage() {
           {unidades.length > 0 && (
             <>
               <MapaCreches casa={casa} unidades={unidades} escolhidas={r.escolhas} onSelecionar={focarUnidade} casaAproximada={casaAproximada} />
-              {casaAproximada && <p className="fam-ajuda">🏠 Localização aproximada pelo bairro.</p>}
+              {casaAproximada && <p className="fam-ajuda"><Home size={16} aria-hidden="true" /> Localização aproximada pelo bairro.</p>}
               {sug.isFetching && <p className="fam-ajuda">Atualizando…</p>}
 
               {r.escolhas.length > 0 && (
@@ -738,13 +739,13 @@ export default function PreCadastroPage() {
                         <span className="pc-escolha-nome">{nomeUnidade(c)}</span>
                         <span className="pc-escolha-acoes">
                           <button type="button" aria-label="Subir" onClick={() => mover(i, -1)} disabled={i === 0}>
-                            ▲
+                            <ChevronUp size={18} aria-hidden="true" />
                           </button>
                           <button type="button" aria-label="Descer" onClick={() => mover(i, 1)} disabled={i === r.escolhas.length - 1}>
-                            ▼
+                            <ChevronDown size={18} aria-hidden="true" />
                           </button>
                           <button type="button" aria-label="Remover" onClick={() => remover(c)}>
-                            ✕
+                            <X size={18} aria-hidden="true" />
                           </button>
                         </span>
                       </li>
@@ -902,7 +903,7 @@ function CardUnidade({
       <p className="pc-unidade-frase">{fraseChance(u, pontos, ano)}</p>
       {escolhida ? (
         <button type="button" className="btn btn-secondary pc-unidade-btn" onClick={() => onRemover(u.codigo)}>
-          ✓ Escolhida — remover
+          <Check size={16} aria-hidden="true" /> Escolhida — remover
         </button>
       ) : (
         <button type="button" className="btn btn-primary pc-unidade-btn" onClick={() => onEscolher(u.codigo)} disabled={cheio || u.chance === "sem_vaga"}>

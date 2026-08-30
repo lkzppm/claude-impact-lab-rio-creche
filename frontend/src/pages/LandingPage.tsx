@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Landmark, School, Users } from "lucide-react";
 
 const PERFIS = [
   {
@@ -6,21 +7,21 @@ const PERFIS = [
     titulo: "Sou família",
     chamada: "Acompanhar minha inscrição",
     texto: "Veja se sua criança tem vaga reservada, sua posição na fila e responda à convocação pelo celular.",
-    icone: "👨‍👩‍👧",
+    Icone: Users,
   },
   {
     to: "/cre",
     titulo: "Sou da CRE / polo",
     chamada: "Convocações do meu território",
     texto: "Veja o que está parado, registre contatos e desfechos de cada vaga. Nada se perde: tudo fica com data e hora.",
-    icone: "🏫",
+    Icone: School,
   },
   {
     to: "/sme",
     titulo: "Sou do Nível Central SME",
     chamada: "Classificação e rede",
     texto: "Rode a classificação por criança, compare regimes, acompanhe as 11 CREs e consulte a régua de pontuação.",
-    icone: "🏛️",
+    Icone: Landmark,
   },
 ];
 
@@ -39,7 +40,7 @@ export default function LandingPage() {
             <li key={p.to}>
               <Link to={p.to} className="perfil-card">
                 <span className="perfil-icone" aria-hidden="true">
-                  {p.icone}
+                  <p.Icone size={40} strokeWidth={1.75} />
                 </span>
                 <span className="perfil-titulo">{p.titulo}</span>
                 <span className="perfil-chamada">{p.chamada}</span>

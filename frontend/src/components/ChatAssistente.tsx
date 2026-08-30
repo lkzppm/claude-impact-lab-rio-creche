@@ -1,4 +1,5 @@
 import { KeyboardEvent, ReactNode, useEffect, useRef, useState } from "react";
+import { MessageCircle } from "lucide-react";
 import { ApiError, perguntarAssistente } from "../api/client";
 import type { ChatFerramenta } from "../api/types";
 import { useArea } from "../areas/AreaContext";
@@ -144,7 +145,7 @@ export default function ChatAssistente() {
   if (!aberto) {
     return (
       <button type="button" className="btn btn-primary chat-fab" onClick={() => setAberto(true)} aria-haspopup="dialog">
-        <span aria-hidden="true">💬</span> Perguntar ao painel
+        <MessageCircle size={18} aria-hidden="true" /> Perguntar ao painel
       </button>
     );
   }
