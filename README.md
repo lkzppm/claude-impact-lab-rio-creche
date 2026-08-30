@@ -47,16 +47,20 @@ nos canais que a prefeitura já opera.
 | | |
 |---|---|
 | 🔗 **Aplicação (frontend)** | <https://creche-frontend-three.vercel.app/> |
+| ⚙️ **API (backend)** | <https://creche-backend-qu63.onrender.com/docs> |
+| 📨 **Mensageria** | <https://creche-mensageria.onrender.com/docs> |
 | 🎥 **Vídeo demo (60 s)** | [`video/demo.mp4`](video/demo.mp4) |
 | 📦 **Repositório** | <https://github.com/lkzppm/claude-impact-lab-rio-creche> |
 | 📄 **Produto (PRD)** | [`spec/PRD.md`](spec/PRD.md) |
 | 🏗️ **Contrato técnico** | [`spec/11-baseline-tecnico.md`](spec/11-baseline-tecnico.md) |
 | 🔍 **Auditoria das bases** | [`out/auditoria-dados.md`](out/auditoria-dados.md) |
 
-> **Honestidade sobre o que está publicado:** o link acima serve o **frontend**. O backend, o Postgres e a
-> mensageria **não estão publicados** — o `render.yaml` está pronto, mas subir banco e carga das bases da
-> SME não cabia no tempo do evento. Por isso o **vídeo de 60 s é a demonstração oficial** do sistema
-> completo, e a stack inteira sobe localmente com um comando (`make up`, abaixo).
+> **Honestidade sobre o que está publicado:** a stack inteira está no ar — frontend na Vercel, backend e
+> mensageria no Render (plano free), Postgres gerenciado pelo Render. O motor roda 24/7 enquanto o serviço
+> está acordado; no **plano free do Render o serviço dorme após ociosidade** e a primeira requisição depois
+> disso leva ~30-60 s para acordar (e reinicia a contagem de ciclos do motor) — é limite do plano gratuito,
+> não do motor. O vídeo de 60 s cobre exatamente esse cenário, e a stack inteira também sobe localmente com
+> um comando (`make up`, abaixo).
 
 ---
 
@@ -98,10 +102,18 @@ resumidas em [`spec/10`](spec/10-regras-e-entrega.md).
 
 Escopo atual: **motor de classificação por criança** (Deferred Acceptance com 3 vagas reservadas + 2
 alternativas, comparável a 1 vaga), rodando **24/7** — reclassifica quando a entrada muda, convoca e
-repassa cada vaga liberada ao próximo da fila sozinho — e **painel de convocação da CRE/polo** com log de
-eventos, incluindo o **mapa do território com drill-down** (rede → CRE → creche).
-Produto em [`spec/PRD.md`](spec/PRD.md); contrato técnico em [`spec/11`](spec/11-baseline-tecnico.md);
-auditoria das bases em [`out/auditoria-dados.md`](out/auditoria-dados.md).
+repassa cada vaga liberada ao próximo da fila sozinho — e três frentes de tela em cima dele:
+
+- **Família** (`/familia`): pré-cadastro em linguagem simples (um passo por tela, sem mostrar pontuação —
+  a família vê *o que levar na creche*, não a conta interna da SME) e consulta da inscrição/convocação.
+- **CRE/polo** (`/cre`): fila com carimbo de tempo, vagas em risco, mapa do território com drill-down
+  (rede → CRE → creche) e busca por unidade ou por criança.
+- **Creche** (`/creche`): painel da unidade — vagas por grupamento, verificação de documento, fila de
+  convocados aguardando comparecimento — e **Nível Central** (`/sme`) com a rede inteira por CRE.
+
+Mensageria (WhatsApp/e-mail/SMS, `mock` por padrão) e o **assistente Claude** ("Perguntar ao painel")
+entram nas telas de CRE/polo e Nível Central. Produto em [`spec/PRD.md`](spec/PRD.md); contrato técnico
+em [`spec/11`](spec/11-baseline-tecnico.md); auditoria das bases em [`out/auditoria-dados.md`](out/auditoria-dados.md).
 
 ```bash
 cp .env.example .env
