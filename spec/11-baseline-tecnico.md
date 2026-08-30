@@ -109,6 +109,9 @@ mesmo `hash_entrada` → mesma saída).
 | POST | `/convocacoes/{id}/eventos` `{tipo, payload}` | registra transição; devolve novo status |
 | GET | `/painel/resumo?cre=&unidade=` | KPIs: selecionadas aguardando (por faixa 0–24h, 24–48h, 48–72h, >72h), vagas em risco, sem contato, inconsistências |
 | GET | `/painel/unidades?cre=` | uma linha por unidade: vagas, alocadas, convocadas, confirmadas, em atraso |
+| GET | `/painel/cres?ano=` | **Nível Central**: uma linha por CRE — unidades, vagas, inscrições, alocadas, convocadas, abertas, confirmadas, em atraso, lista de espera |
+| GET | `/familia/inscricao?codigo=&ano=` | **Família**: situação em linguagem de responsável — `situacao_resumo`, opções com `resultado` (reservada/fila/sem_vaga) e posição, reservas abertas com prazo, pontuação por critério com comprovação, explicação |
+| POST | `/familia/convocacoes/{id}/responder` `{resposta: confirmar\|recusar}` | a família responde na hora; confirmar libera as outras reservas (`ator = familia` no log) |
 
 Erros em JSON `{detail}`; paginação `{items, total, page, size}`.
 
@@ -119,6 +122,17 @@ Erros em JSON `{detail}`; paginação `{items, total, page, size}`.
   sem acento), integridade das junções, domínios, duplicatas, faixas de lat/lon, régua por ano.
 - `load.py` — carrega Postgres a partir do DuckDB já saneado. Idempotente (`TRUNCATE` + `COPY`).
 - Nunca escreve em `data/`.
+
+## Três painéis (frontend)
+
+| Rota | Perfil | O que faz |
+|---|---|---|
+| `/` | — | escolha de perfil, sem login |
+| `/familia` | **Família** (mobile-first) | consulta por código, vê opções/reservas/pontuação, confirma ou recusa uma reserva |
+| `/cre` | **CRE / polo** | painel e convocações do seu território (CRE selecionada e lembrada), registra contatos e desfechos |
+| `/sme` | **Nível Central SME** | visão da rede por CRE, roda classificação e compara regimes, gera convocações, régua do ano |
+
+Header em todas: faixa branca com os logos Prefeitura Rio · Educação e Matrícula Carioca (`frontend/public/`), barra azul `#005E96` com a navegação do perfil.
 
 ## Estrutura
 

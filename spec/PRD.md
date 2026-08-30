@@ -70,13 +70,13 @@ Duas peças, uma só base de dados:
 - Nenhum LLM decide alocação. Nesta fase não há LLM em lugar nenhum; ele entra depois, sobre o log de
   decisão (explicação à família) e sobre o log de eventos (interrogação do gestor).
 
-## 4. Usuários
+## 4. Usuários — três painéis, uma base
 
-| Usuário | O que faz no produto |
-|---|---|
-| **Servidor do polo/CRE** (usuário principal) | Abre o painel, vê o que está atrasado, registra tentativas de contato e o desfecho de cada convocação, roda rematch |
-| **Nível Central SME** | Executa a rodada inicial de classificação, compara regimes (1 vaga vs 3 presas), audita o log |
-| **Família** (indireta nesta fase) | Recebe a explicação do resultado gerada a partir do log; a conversa por WhatsApp é fase 2 |
+| Painel | Usuário | O que faz |
+|---|---|---|
+| **Família** (`/familia`, celular) | responsável pela criança | consulta a inscrição pelo código (em produção, CPF via gov.br); vê as 5 opções com resultado e posição; **confirma ou recusa uma reserva na hora**; vê a pontuação critério a critério com a comprovação automática; lê a explicação do resultado |
+| **CRE / polo** (`/cre`) | servidor do polo (usuário principal) | painel do território: reservas por faixa de tempo, vagas em risco, famílias sem contato; registra tentativas e desfechos; ficha da inscrição |
+| **Nível Central SME** (`/sme`) | equipe central | visão da rede por CRE; executa rodadas, compara 1 vaga × 3 reservas, gera convocações; régua do ano (norma, só leitura) |
 
 ## 5. Fluxos
 
@@ -145,7 +145,7 @@ credenciais, planejamento por coorte (SINASC × capacidade). Todos descritos em
 | Motor DA com `vagas_presas` (`backend/app/engine/`) | pronto — 18 testes; 2025 Berçário Integral (30.141 inscrições) em ~4 s |
 | API FastAPI (`backend/app/routers/`) | pronto — fluxo rodada → convocações → eventos → painel validado |
 | Adaptadores de comprovação (`backend/app/integracoes/`) | mock pronto; Conecta (CadÚnico, Bolsa Família, CPF Light) e RMI com contrato real, `pendente` sem credencial |
-| Frontend React com design system do matricula.rio (`frontend/`) | pronto (build/tsc limpos); falta validação visual contra a API |
+| Frontend React com design system do matricula.rio (`frontend/`) | reestruturado em 3 painéis (Família / CRE / Nível Central) com os logos oficiais no header |
 | `docker-compose` (db + backend + frontend) | pronto — `make up` sobe os três; validado em 30/08 12h40 |
 
 ### Primeiro resultado sobre dados reais (2025, Berçário Integral, capacidade estimada)
