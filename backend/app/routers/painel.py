@@ -14,6 +14,7 @@ from app.schemas import (
     MapaUnidade,
     MultiReservaItem,
     PainelCre,
+    PainelNumeros,
     PainelResumo,
     PainelUnidade,
     SelecionadasAguardando,
@@ -179,6 +180,58 @@ def unidades(cre: str | None = None, ano: int | None = None, db: Session = Depen
     return [PainelUnidade(unidade_codigo=r.codigo, unidade_nome=r.nome, cre=r.cre, vagas=int(r.vagas), alocadas=int(r.alocadas),
                           convocadas=int(r.convocadas), confirmadas=int(r.confirmadas), em_atraso=int(r.em_atraso),
                           liberadas=int(r.liberadas)) for r in linhas]
+
+
+@router.get("/numeros", response_model=PainelNumeros)
+def numeros(cre: str | None = None, ano: int | None = None, db: Session = Depends(get_db)):
+    """Quantas crianças e quantas vagas há no território. `cre` NULL = rede inteira.
+
+    Cada número sai de uma população diferente e o schema (`PainelNumeros`) diz qual — em especial,
+    pré-cadastro e inscrição não se somam nem se cruzam.
+    """
+    ano = ano or db.execute(text("SELECT MAX(ano) FROM processo")).scalar()
+    params = {"cre": cre, "ano": ano}
+    linha = db.execute(text("""
+        WITH alvo AS (
+          SELECT u.codigo FROM unidade u
+          WHERE CAST(:cre AS text) IS NULL OR u.cre = CAST(:cre AS text)
+        ),
+        cad AS (
+          SELECT COUNT(DISTINCT i.aluno_anon) AS criancas,
+                 COUNT(DISTINCT o.inscricao_id) FILTER (WHERE i.ano = :ano) AS inscritas
+          FROM opcao o JOIN alvo ON alvo.codigo = o.unidade_codigo JOIN inscricao i ON i.id = o.inscricao_id
+        ),
+        pre AS (
+          SELECT COUNT(*) AS n FROM pre_cadastro p
+          WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(p.escolhas) e
+                        JOIN alvo ON alvo.codigo = e->>'codigo')
+        ),
+        cap AS (
+          SELECT COUNT(DISTINCT c.unidade_codigo) AS unidades,
+                 COALESCE(SUM(c.vagas) FILTER (WHERE c.fonte = 'informada'), 0) AS informadas,
+                 COALESCE(SUM(c.vagas) FILTER (WHERE c.fonte <> 'informada'), 0) AS estimadas
+          FROM capacidade c JOIN alvo ON alvo.codigo = c.unidade_codigo WHERE c.ano = :ano
+        ),
+        aloc AS (
+          SELECT COUNT(*) FILTER (WHERE a.status = 'alocada' AND a.tipo = 'presa') AS reservadas,
+                 COUNT(DISTINCT a.inscricao_id) FILTER (WHERE a.status = 'lista_espera') AS lista_espera
+          FROM alocacao a JOIN alvo ON alvo.codigo = a.unidade_codigo
+          WHERE a.rodada_id = (SELECT MAX(id) FROM rodada)
+        )
+        SELECT cad.criancas, cad.inscritas, pre.n AS pre_cadastros, cap.unidades, cap.informadas, cap.estimadas,
+               aloc.reservadas, aloc.lista_espera
+        FROM cad, pre, cap, aloc
+    """), params).one()
+    expectativa = int(linha.informadas) + int(linha.estimadas)
+    return PainelNumeros(
+        cre=cre, ano=ano, unidades=int(linha.unidades or 0),
+        criancas_cadastradas=int(linha.criancas or 0), inscritas=int(linha.inscritas or 0),
+        pre_cadastros=int(linha.pre_cadastros or 0),
+        vagas_informadas=int(linha.informadas), vagas_estimadas=int(linha.estimadas),
+        expectativa_vagas=expectativa, reservadas=int(linha.reservadas or 0),
+        vagas_livres=max(0, expectativa - int(linha.reservadas or 0)),
+        lista_espera=int(linha.lista_espera or 0),
+    )
 
 
 @router.get("/cres", response_model=list[PainelCre])

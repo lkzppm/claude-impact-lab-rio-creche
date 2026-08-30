@@ -6,6 +6,62 @@ melhorar o processo de **Inscrição Creche** (`matricula.rio`) em três eixos �
 
 📅 30/08/2026 · VTEX, Botafogo · Rio de Janeiro
 
+**🔗 Aplicação publicada:** <https://creche-frontend-three.vercel.app/> · **🎥 Vídeo demo (60 s):** [`video/demo.mp4`](video/demo.mp4)
+
+---
+
+## A entrega
+
+### Equipe
+
+**Nome da equipe:** Equipe 42
+
+| Membro | GitHub |
+|---|---|
+| Lucas Pacheco | [@lkzppm](https://github.com/lkzppm) |
+| Fausto Santos | [@OFaustoRSantos](https://github.com/OFaustoRSantos) |
+| Pedro Brasil | [@brpedro13](https://github.com/brpedro13) |
+| Nay Borges | — |
+
+### Resumo
+
+A inscrição em creche do Rio trata **oferta e demanda como duas listas independentes**, reconciliadas por
+processo manual e sequencial: a família escolhe até 5 creches, a equipe do polo confere linha a linha, e a
+vaga que a família recusa volta para o fim de um processo humano. O resultado medido na base 2021–2025 é
+um vazamento de **milhares de crianças por ano com vaga ofertada e sem matrícula efetivada**
+([`spec/09`](spec/09-achados-dos-dados.md)).
+
+Construímos o que falta no meio: um **motor de classificação e convocação que roda 24/7**. Ele aplica a
+pontuação da **Res. SME 542/2025 sem alterar um único peso** — a norma é norma —, resolve o encontro entre
+criança e vaga com **aceitação diferida (Deferred Acceptance)** de forma determinística e auditável,
+reclassifica sozinho quando a entrada muda e **repassa cada vaga liberada ao próximo da fila** sem esperar
+uma nova rodada manual. Em cima dele, dois painéis que um servidor não técnico opera sem treino — CRE/polo
+e Nível Central — com **carimbo de tempo em cada evento** (o que hoje não existe), mapa do território com
+drill-down e um **assistente Claude só de leitura** para perguntar ao painel em português.
+
+Nada aqui pede app novo, mudança de norma ou sistema paralelo: encaixa no `matricula.rio`, no WhatsApp e
+nos canais que a prefeitura já opera.
+
+### Links
+
+| | |
+|---|---|
+| 🔗 **Aplicação (frontend)** | <https://creche-frontend-three.vercel.app/> |
+| ⚙️ **API (backend)** | <https://creche-backend-qu63.onrender.com/docs> |
+| 📨 **Mensageria** | <https://creche-mensageria.onrender.com/docs> |
+| 🎥 **Vídeo demo (60 s)** | [`video/demo.mp4`](video/demo.mp4) |
+| 📦 **Repositório** | <https://github.com/lkzppm/claude-impact-lab-rio-creche> |
+| 📄 **Produto (PRD)** | [`spec/PRD.md`](spec/PRD.md) |
+| 🏗️ **Contrato técnico** | [`spec/11-baseline-tecnico.md`](spec/11-baseline-tecnico.md) |
+| 🔍 **Auditoria das bases** | [`out/auditoria-dados.md`](out/auditoria-dados.md) |
+
+> **Honestidade sobre o que está publicado:** a stack inteira está no ar — frontend na Vercel, backend e
+> mensageria no Render (plano free), Postgres gerenciado pelo Render. O motor roda 24/7 enquanto o serviço
+> está acordado; no **plano free do Render o serviço dorme após ociosidade** e a primeira requisição depois
+> disso leva ~30-60 s para acordar (e reinicia a contagem de ciclos do motor) — é limite do plano gratuito,
+> não do motor. O vídeo de 60 s cobre exatamente esse cenário, e a stack inteira também sobe localmente com
+> um comando (`make up`, abaixo).
+
 ---
 
 ## Comece pela spec
@@ -46,10 +102,18 @@ resumidas em [`spec/10`](spec/10-regras-e-entrega.md).
 
 Escopo atual: **motor de classificação por criança** (Deferred Acceptance com 3 vagas reservadas + 2
 alternativas, comparável a 1 vaga), rodando **24/7** — reclassifica quando a entrada muda, convoca e
-repassa cada vaga liberada ao próximo da fila sozinho — e **painel de convocação da CRE/polo** com log de
-eventos, incluindo o **mapa do território com drill-down** (rede → CRE → creche).
-Produto em [`spec/PRD.md`](spec/PRD.md); contrato técnico em [`spec/11`](spec/11-baseline-tecnico.md);
-auditoria das bases em [`out/auditoria-dados.md`](out/auditoria-dados.md).
+repassa cada vaga liberada ao próximo da fila sozinho — e três frentes de tela em cima dele:
+
+- **Família** (`/familia`): pré-cadastro em linguagem simples (um passo por tela, sem mostrar pontuação —
+  a família vê *o que levar na creche*, não a conta interna da SME) e consulta da inscrição/convocação.
+- **CRE/polo** (`/cre`): fila com carimbo de tempo, vagas em risco, mapa do território com drill-down
+  (rede → CRE → creche) e busca por unidade ou por criança.
+- **Creche** (`/creche`): painel da unidade — vagas por grupamento, verificação de documento, fila de
+  convocados aguardando comparecimento — e **Nível Central** (`/sme`) com a rede inteira por CRE.
+
+Mensageria (WhatsApp/e-mail/SMS, `mock` por padrão) e o **assistente Claude** ("Perguntar ao painel")
+entram nas telas de CRE/polo e Nível Central. Produto em [`spec/PRD.md`](spec/PRD.md); contrato técnico
+em [`spec/11`](spec/11-baseline-tecnico.md); auditoria das bases em [`out/auditoria-dados.md`](out/auditoria-dados.md).
 
 ```bash
 cp .env.example .env
@@ -64,7 +128,9 @@ make test                    # invariantes do motor
 |---|---|
 | [`backend/`](backend/) | FastAPI · motor DA em `app/engine` · rotina contínua do motor em `app/motor.py` · ETL (DuckDB) em `app/etl` · comprovação via APIs de governo em `app/integracoes` · assistente de consulta em `app/agente` |
 | [`frontend/`](frontend/) | React + Vite + TS, design system espelhando o `matricula.rio` |
+| [`mensageria/`](mensageria/) | FastAPI à parte: WhatsApp/e-mail/SMS com catálogo versionado, idempotência e log sem conteúdo (padrão `mock`) |
 | [`db/`](db/) | schema SQL (log de eventos append-only; log de acesso do assistente) |
+| [`video/`](video/) | vídeo demo de 60 s (`demo.mp4`) — ver [`video/README.md`](video/README.md) |
 
 ### Como o Claude atua dentro da aplicação
 

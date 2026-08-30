@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
-import { expirarVencidas, getConvocacoes, getPainelResumo, getPainelUnidades } from "../api/client";
+import { expirarVencidas, getConvocacoes, getPainelNumeros, getPainelResumo, getPainelUnidades } from "../api/client";
 import type { Convocacao, PainelUnidade } from "../api/types";
 import {
   Page,
@@ -21,6 +21,7 @@ import {
   Meter,
   Hero,
   Donut,
+  StatTile,
   fmtInt,
   fmtDateTime,
   fmtHoras,
@@ -28,7 +29,7 @@ import {
   prazoTexto,
 } from "../design-system";
 import type { Fatia, Segmento } from "../design-system";
-import { UnidadeSelect, CRES } from "../components/Filters";
+import { BuscaCrianca, UnidadeSelect, CRES } from "../components/Filters";
 import MotorCard from "../components/MotorCard";
 import { useArea } from "../areas/AreaContext";
 import { useToast } from "../components/useToast";
@@ -77,6 +78,11 @@ export default function PainelPage() {
     refetchInterval: 60_000,
     enabled: !!cre,
   });
+  const numeros = useQuery({
+    queryKey: ["painel-numeros", { cre }],
+    queryFn: () => getPainelNumeros({ cre: cre || undefined }),
+    enabled: !!cre,
+  });
   const trabalho = useQuery({
     queryKey: ["convocacoes", { cre, unidade, fila: "trabalho", size: 8 }],
     queryFn: () => getConvocacoes({ cre: cre || undefined, unidade: unidade || undefined, fila: "trabalho", size: 8 }),
@@ -103,6 +109,7 @@ export default function PainelPage() {
   if (!cre) return <EscolherCre />;
 
   const r = resumo.data;
+  const n = numeros.data;
   const linhas = (unidades.data ?? []).filter((u) => !unidade || u.unidade_codigo === unidade);
   const lista = (fila: string) => `${base}/convocacoes?fila=${fila}${unidade ? `&unidade=${encodeURIComponent(unidade)}` : ""}`;
   const porStatus = (status: string) => `${base}/convocacoes?status=${status}${unidade ? `&unidade=${encodeURIComponent(unidade)}` : ""}`;
@@ -142,6 +149,7 @@ export default function PainelPage() {
     >
       <div className="filters">
         <UnidadeSelect value={unidade} onChange={setUnidade} cre={cre} />
+        <BuscaCrianca cre={cre} onEscolher={(i) => navigate(`${base}/inscricoes/${i.id}`)} />
         {r?.atualizado_em && (
           <span className="text-sm muted" style={{ alignSelf: "center" }}>
             Atualizado {fmtDateTime(r.atualizado_em)}
@@ -232,6 +240,61 @@ export default function PainelPage() {
           </div>
         </Card>
       )}
+
+      <Card title={`Os números da ${cre}ª CRE`} secao="cre.numeros">
+        {numeros.isLoading && <Spinner label="Somando o território…" />}
+        {numeros.isError && <ErrorBox error={numeros.error} />}
+        {n && (
+          <>
+            <div className="grid-tiles">
+              <StatTile
+                label="Crianças cadastradas"
+                value={fmtInt(n.criancas_cadastradas)}
+                tone="neutral"
+                hint={`crianças com alguma opção numa creche desta CRE, somando todos os processos da base${
+                  n.ano ? ` (até ${n.ano})` : ""
+                }`}
+              />
+              <StatTile
+                label={`Já inscritas${n.ano ? ` em ${n.ano}` : ""}`}
+                value={fmtInt(n.inscritas)}
+                tone="info"
+                hint="inscrições do processo atual com opção numa unidade daqui"
+              />
+              <StatTile
+                label="No pré-cadastro"
+                value={fmtInt(n.pre_cadastros)}
+                tone="warn"
+                hint="famílias que se pré-cadastraram escolhendo uma creche daqui — outra população: não se soma às inscritas"
+              />
+              <StatTile
+                label="Vagas informadas"
+                value={fmtInt(n.vagas_informadas)}
+                tone="ok"
+                hint={`declaradas pelas unidades; ${fmtInt(n.unidades)} unidade(s) com capacidade registrada`}
+              />
+              <StatTile
+                label="Expectativa de vagas"
+                value={fmtInt(n.expectativa_vagas)}
+                tone="info"
+                hint={`informadas + ${fmtInt(n.vagas_estimadas)} estimadas a partir das matrículas confirmadas`}
+              />
+              <StatTile
+                label="Vagas livres"
+                value={fmtInt(n.vagas_livres)}
+                tone={n.vagas_livres === 0 ? "danger" : "ok"}
+                share={n.expectativa_vagas ? n.vagas_livres / n.expectativa_vagas : 0}
+                hint={`expectativa menos ${fmtInt(n.reservadas)} já reservada(s) pelo motor`}
+              />
+            </div>
+            <p className="text-sm muted" style={{ marginTop: 12 }}>
+              <strong>{fmtInt(n.lista_espera)}</strong> criança(s) em lista de espera nesta CRE. A base da SME traz
+              ocupação, não oferta: as vagas estimadas vêm das matrículas confirmadas do processo anterior, então a
+              expectativa é projeção — o número firme é o que as unidades informarem.
+            </p>
+          </>
+        )}
+      </Card>
 
       {r && (
         <>

@@ -81,6 +81,7 @@ mensageria/      FastAPI; container à parte que envia WhatsApp/e-mail/SMS (Twil
 frontend/        React + Vite + TS; design system espelhando o matricula.rio em src/design-system
 db/              schema SQL versionado, aplicado pelo Postgres na subida
 out/             relatórios gerados (auditoria dos dados) — commitados
+video/           vídeo demo de 60s da entrega (`demo.mp4`); instruções em video/README.md
 docker-compose.yml  db (Postgres 16) + mensageria + backend + frontend
 .github/         CI (workflows/ci.yml: ruff, testes, integração no Postgres, frontend, auditoria, guard-rails, docker)
                  e template de PR; `make ci` roda o mesmo localmente. Lint: `ruff.toml` na raiz
