@@ -6,6 +6,10 @@ import "./components.css";
 /* ---------- AppHeader — faixa branca com logos + barra azul (matricula.rio) ---------- */
 import { AREA_LABEL, useArea } from "../areas/AreaContext";
 import { CRES } from "../components/Filters";
+import { Meter } from "./viz";
+import type { VizTone } from "./viz";
+
+export * from "./viz";
 
 const NAV_POR_AREA: Record<string, { to: string; label: string; end?: boolean }[]> = {
   familia: [
@@ -226,6 +230,7 @@ export function StatTile({
   hint,
   tone = "info",
   to,
+  share,
 }: {
   label: string;
   value: ReactNode;
@@ -233,11 +238,14 @@ export function StatTile({
   tone?: Tone;
   /** quando informado, o tile vira link para a lista já filtrada */
   to?: string;
+  /** razão 0–1 mostrada como medidor sob o número (ex.: parte das convocações abertas) */
+  share?: number;
 }) {
   const corpo = (
     <>
       <span className="stat-label">{label}</span>
       <span className="stat-value">{value}</span>
+      {share != null && <Meter share={share} tone={tone as VizTone} label={`${label} — parte do total`} />}
       {(hint || to) && (
         <span className="stat-hint">
           {hint}

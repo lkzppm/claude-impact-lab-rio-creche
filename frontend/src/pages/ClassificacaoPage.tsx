@@ -13,6 +13,7 @@ import {
   Button,
   Pill,
   Toast,
+  BarList,
   fmtDateTime,
   fmtInt,
 } from "../design-system";
@@ -218,6 +219,30 @@ export default function ClassificacaoPage() {
                 <div key={g.chave}>
                   <div className="stat-label" style={{ marginBottom: 6 }}>
                     {ano} · {grup} · {hor}
+                  </div>
+                  <div className="grid-2" style={{ marginBottom: 12 }}>
+                    <div>
+                      <div className="text-sm muted" style={{ marginBottom: 6 }}>Crianças com oferta na 1ª rodada</div>
+                      <BarList
+                        tone="ok"
+                        itens={g.rodadas.map((r) => ({
+                          label: `${r.parametros?.vagas_presas ?? 1} reserva(s)`,
+                          value: r.resumo?.n_criancas_com_alguma_presa ?? r.resumo?.n_alocadas ?? 0,
+                          to: `${base}/classificacao/${r.id}`,
+                        }))}
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm muted" style={{ marginBottom: 6 }}>Crianças em lista de espera</div>
+                      <BarList
+                        tone="warn"
+                        itens={g.rodadas.map((r) => ({
+                          label: `${r.parametros?.vagas_presas ?? 1} reserva(s)`,
+                          value: r.resumo?.n_lista_espera ?? 0,
+                          to: `${base}/classificacao/${r.id}`,
+                        }))}
+                      />
+                    </div>
                   </div>
                   <div className="table-wrap">
                     <table className="table">

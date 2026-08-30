@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { expirarVencidas, getConvocacoes, getPainelResumo, getPainelUnidades } from "../api/client";
 import type { Convocacao, PainelUnidade } from "../api/types";
 import {
   Page,
   Card,
-  StatTile,
   DataTable,
   Spinner,
   ErrorBox,
@@ -16,12 +15,18 @@ import {
   Toast,
   StatusPill,
   Pill,
+  StackedBar,
+  BarList,
+  Meter,
+  Hero,
+  Donut,
   fmtInt,
   fmtDateTime,
   fmtHoras,
   fmtQuando,
   prazoTexto,
 } from "../design-system";
+import type { Fatia, Segmento } from "../design-system";
 import { UnidadeSelect, CRES } from "../components/Filters";
 import { useArea } from "../areas/AreaContext";
 import { useToast } from "../components/useToast";
@@ -56,6 +61,7 @@ export default function PainelPage() {
   const [confirmarExpirar, setConfirmarExpirar] = useState(false);
   const qc = useQueryClient();
   const toast = useToast();
+  const navigate = useNavigate();
 
   const resumo = useQuery({
     queryKey: ["painel-resumo", { cre, unidade }],
@@ -98,6 +104,33 @@ export default function PainelPage() {
   const linhas = (unidades.data ?? []).filter((u) => !unidade || u.unidade_codigo === unidade);
   const lista = (fila: string) => `${base}/convocacoes?fila=${fila}${unidade ? `&unidade=${encodeURIComponent(unidade)}` : ""}`;
   const vencidas = r?.vencidas ?? 0;
+  const abertas = r?.selecionadas_aguardando.total ?? 0;
+  const faixas: Segmento[] = r
+    ? [
+        { label: "Menos de 1 dia", value: r.selecionadas_aguardando.faixa_0_24h, tone: "ok", hint: "dentro do esperado" },
+        { label: "1 a 2 dias", value: r.selecionadas_aguardando.faixa_24_48h, tone: "info", hint: "acompanhar" },
+        { label: "2 a 3 dias", value: r.selecionadas_aguardando.faixa_48_72h, tone: "warn", hint: "prazo perto de vencer" },
+        { label: "Mais de 3 dias", value: r.selecionadas_aguardando.faixa_mais_72h, tone: "danger", hint: "parada — agir agora" },
+      ]
+    : [];
+  const desfechos: Segmento[] = r
+    ? [
+        { label: "Ainda abertas", value: abertas, tone: "info" },
+        { label: "Matrículas confirmadas", value: r.confirmadas ?? 0, tone: "ok" },
+        { label: "Recusadas", value: r.recusadas ?? 0, tone: "warn", hint: "a vaga voltou para a fila" },
+        { label: "Prazo vencido registrado", value: r.expiradas ?? 0, tone: "danger", hint: "a vaga voltou para a fila" },
+      ]
+    : [];
+  const maisVencidas = [...linhas].filter((u) => u.em_atraso > 0).sort((a, b) => b.em_atraso - a.em_atraso).slice(0, 8);
+  // urgência das convocações abertas: fatias que não se sobrepõem (cada convocação está em uma só)
+  const noPrazo = Math.max(0, abertas - vencidas - (r?.vencem_24h ?? 0));
+  const urgencia: Fatia[] = r
+    ? [
+        { label: "Vencidas", value: vencidas, tone: "danger", hint: "prazo passou sem resposta — registrar desfecho ou avisar", to: lista("vencidas") },
+        { label: "Vencem em 24 h", value: r.vencem_24h ?? 0, tone: "warn", hint: "último dia para a família responder", to: lista("vencem_24h") },
+        { label: "No prazo", value: noPrazo, tone: "ok", hint: "a família ainda tem mais de um dia", to: lista("abertas") },
+      ]
+    : [];
 
   return (
     <Page
@@ -127,17 +160,27 @@ export default function PainelPage() {
             )
           }
         >
-          <div className="grid-tiles">
-            <StatTile label="Vencidas" value={fmtInt(vencidas)} tone={vencidas > 0 ? "danger" : "ok"} hint="prazo passou sem resposta" to={lista("vencidas")} />
-            <StatTile label="Vencem em 24 h" value={fmtInt(r.vencem_24h ?? 0)} tone="warn" hint="último dia para a família responder" to={lista("vencem_24h")} />
-            <StatTile label="Sem aviso" value={fmtInt(r.sem_aviso ?? r.sem_contato)} tone="warn" hint="família ainda não foi avisada" to={lista("sem_aviso")} />
-            <StatTile
-              label="Várias reservas"
-              value={fmtInt(r.criancas_multireserva ?? 0)}
-              tone="info"
-              hint="crianças segurando mais de uma vaga"
-              to={`${base}/multireserva${unidade ? `?unidade=${encodeURIComponent(unidade)}` : ""}`}
+          <div className="para-hoje">
+            <Donut
+              fatias={urgencia}
+              centro={fmtInt(abertas)}
+              centroLabel="abertas"
+              ariaLabel="Convocações abertas por urgência"
+              onFatia={(f) => f.to && navigate(f.to)}
             />
+            <div className="para-hoje-lado">
+              <p className="text-sm muted">
+                Cada fatia é uma parte das convocações abertas. Clique na fatia ou no nome para abrir a lista, da mais urgente para a menos.
+              </p>
+              <p className="text-sm">
+                <strong>{fmtInt(r.sem_aviso ?? r.sem_contato)}</strong> famílias ainda não foram avisadas ·{" "}
+                <Link to={lista("sem_aviso")}>ver lista →</Link>
+              </p>
+              <p className="text-sm">
+                <strong>{fmtInt(r.criancas_multireserva ?? 0)}</strong> crianças seguram mais de uma vaga ·{" "}
+                <Link to={`${base}/multireserva${unidade ? `?unidade=${encodeURIComponent(unidade)}` : ""}`}>ver lista →</Link>
+              </p>
+            </div>
           </div>
 
           <div style={{ marginTop: 16 }}>
@@ -186,38 +229,62 @@ export default function PainelPage() {
 
       {r && (
         <>
-          <div className="grid-tiles">
-            <StatTile
-              label="Aguardando resposta"
-              value={fmtInt(r.selecionadas_aguardando.total)}
-              hint="vagas selecionadas que ainda não viraram matrícula"
-              tone="info"
-              to={lista("abertas")}
-            />
-            <StatTile label="Há menos de 1 dia" value={fmtInt(r.selecionadas_aguardando.faixa_0_24h)} tone="ok" hint="dentro do esperado" />
-            <StatTile label="Entre 1 e 2 dias" value={fmtInt(r.selecionadas_aguardando.faixa_24_48h)} tone="ok" hint="acompanhar" />
-            <StatTile label="Entre 2 e 3 dias" value={fmtInt(r.selecionadas_aguardando.faixa_48_72h)} tone="warn" hint="prazo perto de vencer" />
-            <StatTile label="Há mais de 3 dias" value={fmtInt(r.selecionadas_aguardando.faixa_mais_72h)} tone="danger" hint="parado — agir agora" />
+          <div className="grid-2">
+            <Card title="Há quanto tempo as convocações estão paradas">
+              <Hero value={fmtInt(abertas)} label="convocações abertas" hint="cada barra é uma parte do total; passe o mouse para ver o detalhe" />
+              <StackedBar segmentos={faixas} ariaLabel="Convocações abertas por tempo na situação atual" />
+              <p className="text-sm" style={{ marginTop: 12 }}>
+                <Link to={lista("abertas")}>Ver todas as abertas →</Link>
+              </p>
+            </Card>
+            <Card title="Como as convocações estão terminando">
+              <StackedBar segmentos={desfechos} ariaLabel="Convocações por desfecho" />
+              <div className="grid-tiles" style={{ marginTop: 16, gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
+                <div>
+                  <div className="stat-label">Tempo até o desfecho</div>
+                  <div className="stat-value" style={{ fontSize: 24 }}>{r.tempo_medio_ate_desfecho_h == null ? "—" : fmtHoras(r.tempo_medio_ate_desfecho_h)}</div>
+                  <div className="stat-hint">média de {fmtInt(r.n_desfechos ?? 0)} desfecho(s)</div>
+                </div>
+                <div>
+                  <div className="stat-label">Liberadas hoje</div>
+                  <div className="stat-value" style={{ fontSize: 24 }}>{fmtInt(r.vagas_liberadas_hoje ?? 0)}</div>
+                  <div className="stat-hint">voltaram para a fila</div>
+                </div>
+                <div>
+                  <div className="stat-label">Reservas por criança</div>
+                  <div className="stat-value" style={{ fontSize: 24 }}>
+                    {r.vagas_presas_por_crianca == null ? "—" : r.vagas_presas_por_crianca.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
+                  </div>
+                  <Meter share={r.vagas_presas_por_crianca != null ? r.vagas_presas_por_crianca / 3 : 0} tone="neutral" label="média de reservas, de 1 a 3" />
+                  <div className="stat-hint">de no máximo 3</div>
+                </div>
+                {r.inconsistencias > 0 && (
+                  <div>
+                    <div className="stat-label">Inconsistências</div>
+                    <div className="stat-value" style={{ fontSize: 24, color: "var(--danger)" }}>{fmtInt(r.inconsistencias)}</div>
+                    <div className="stat-hint">matriculada e ainda com reserva aberta</div>
+                  </div>
+                )}
+              </div>
+            </Card>
           </div>
-          <div className="grid-tiles">
-            <StatTile label="Vagas em risco" value={fmtInt(r.vagas_em_risco)} tone="danger" hint="vencidas ou paradas há mais de 3 dias" to={lista("vencidas")} />
-            <StatTile label="Aguardando a família" value={fmtInt(r.aguardando_familia ?? 0)} tone="info" hint="avisada, ainda não respondeu" to={lista("aguardando")} />
-            <StatTile label="Inconsistências" value={fmtInt(r.inconsistencias)} tone="warn" hint="matriculada e ainda com reserva aberta" />
-            {r.confirmadas != null && <StatTile label="Matrículas confirmadas" value={fmtInt(r.confirmadas)} tone="ok" hint="no recorte selecionado" />}
-            <StatTile
-              label="Vagas reservadas por criança"
-              value={r.vagas_presas_por_crianca == null ? "—" : r.vagas_presas_por_crianca.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
-              tone="neutral"
-              hint="média entre as crianças com convocação aberta"
-            />
-            <StatTile label="Vagas liberadas hoje" value={fmtInt(r.vagas_liberadas_hoje ?? 0)} tone="ok" hint="voltaram para a fila após confirmação, recusa ou prazo" />
-            <StatTile
-              label="Tempo até o desfecho"
-              value={r.tempo_medio_ate_desfecho_h == null ? "—" : fmtHoras(r.tempo_medio_ate_desfecho_h)}
-              tone="neutral"
-              hint={`média de ${fmtInt(r.n_desfechos ?? 0)} desfecho(s) · dado que hoje não existe na SME`}
-            />
-          </div>
+
+          {maisVencidas.length > 0 && (
+            <Card title="Unidades com mais convocações vencidas">
+              <p className="text-sm muted" style={{ marginBottom: 12 }}>
+                Comece por aqui: são as vagas que podem ficar ociosas. Clique na unidade para abrir a fila dela.
+              </p>
+              <BarList
+                tone="danger"
+                itens={maisVencidas.map((u) => ({
+                  label: u.unidade_nome,
+                  value: u.em_atraso,
+                  to: `${base}/convocacoes?fila=vencidas&unidade=${encodeURIComponent(u.unidade_codigo)}`,
+                  hint: `${fmtInt(u.em_atraso)} vencida(s) de ${fmtInt(u.convocadas)} convocação(ões)`,
+                }))}
+              />
+            </Card>
+          )}
         </>
       )}
 
@@ -266,7 +333,14 @@ export default function PainelPage() {
                 header: "Vencidas",
                 numeric: true,
                 render: (u) =>
-                  u.em_atraso > 0 ? <Pill tone={u.em_atraso >= 3 ? "danger" : "warn"}>{fmtInt(u.em_atraso)}</Pill> : <span className="muted">0</span>,
+                  u.em_atraso > 0 ? (
+                    <div style={{ minWidth: 90 }}>
+                      <Pill tone={u.em_atraso >= 3 ? "danger" : "warn"}>{fmtInt(u.em_atraso)}</Pill>
+                      <Meter share={u.convocadas ? u.em_atraso / u.convocadas : 0} tone="danger" label="parte das convocações da unidade que venceu" />
+                    </div>
+                  ) : (
+                    <span className="muted">0</span>
+                  ),
                 sortValue: (u) => u.em_atraso,
               },
               {
