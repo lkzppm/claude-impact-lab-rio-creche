@@ -14,7 +14,7 @@ melhorar o processo de **Inscrição Creche** (`matricula.rio`) em três eixos �
 
 ### Equipe
 
-**Nome da equipe:** _(a definir)_ · **Grupo nº 42**
+**Nome da equipe:** Equipe 42
 
 | Membro | GitHub |
 |---|---|
