@@ -19,6 +19,9 @@ Projeto do time para o desafio da **Secretaria Municipal de Educação do Rio**:
 | Decidir escopo, priorizar, ou preparar o pitch | `spec/10-regras-e-entrega.md` (Impacto Real vale 40 de 100) |
 | Decidir onde usar LLM e onde não usar | `spec/05-arquitetura-e-riscos.md` |
 | Encontrar uma sigla | `spec/06-glossario.md` |
+| Mexer em backend, frontend, banco ou API | `spec/11-baseline-tecnico.md` (**é o contrato**) e `spec/PRD.md` |
+| Mexer em envio de mensagem para a família (WhatsApp, e-mail, SMS) | `spec/11-baseline-tecnico.md`, seção "Mensageria", e `mensageria/README.md` |
+| Saber o que a base tem de ruído e como foi tratado | `out/auditoria-dados.md` (gerado por `backend/app/etl/audit.py`) |
 | Citar um número ou uma fonte | `spec/08-fontes.md` |
 
 ## Precedência das informações
@@ -69,7 +72,25 @@ Projeto do time para o desafio da **Secretaria Municipal de Educação do Rio**:
 spec/            base de conhecimento (comece aqui)
 spec/fontes/     material original da SME — não editar
 data/            bases da SME, cópia byte a byte do repo oficial — não editar
+backend/         FastAPI + SQLAlchemy; app/engine (motor DA), app/motor.py (rotina contínua: classifica, convoca e repassa
+                 vaga liberada a cada MOTOR_INTERVALO_SEGUNDOS), app/etl (leitura, auditoria, carga), app/integracoes (comprovação
+                 + cliente da mensageria), app/agente (assistente do painel: chat com tools só leitura, escopo por CRE, log de acesso;
+                 secoes.py = o que cada card mostra, para o "me leva até lá")
+mensageria/      FastAPI; container à parte que envia WhatsApp/e-mail/SMS (Twilio, Resend, SMTP), com catálogo de
+                 mensagens versionado, idempotência e log sem conteúdo — padrão `mock`, nada sai sem credencial
+frontend/        React + Vite + TS; design system espelhando o matricula.rio em src/design-system
+db/              schema SQL versionado, aplicado pelo Postgres na subida
+out/             relatórios gerados (auditoria dos dados) — commitados
+docker-compose.yml  db (Postgres 16) + mensageria + backend + frontend
+.github/         CI (workflows/ci.yml: ruff, testes, integração no Postgres, frontend, auditoria, guard-rails, docker)
+                 e template de PR; `make ci` roda o mesmo localmente. Lint: `ruff.toml` na raiz
 ```
+
+Ambiente Python local: `.venv/` na raiz (`python3 -m venv .venv && .venv/bin/pip install -e backend[dev]`).
+Auditoria dos dados: `cd backend && ../.venv/bin/python -m app.etl.audit` → `out/auditoria-dados.md`.
+O CI compara a auditoria com `out/` — se mudar o leitor, rode `make audit` e commite o relatório junto.
+Dados de demonstração (depois de `make load`): `make seed` (`backend/app/etl/seed_demo.py`) — eventos simulados
+com carimbo de tempo, pelas mesmas funções da API; `--limpar` zera as tabelas de operação.
 
 Pastas de código (`engine/`, `app/`) são criadas conforme o projeto avança; ao criar uma, registre-a aqui
 em uma linha.

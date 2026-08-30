@@ -1,0 +1,78 @@
+services:
+  db:
+    image: postgres:16-alpine
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-creche}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-creche}
+      POSTGRES_DB: ${POSTGRES_DB:-creche}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-creche} -d ${POSTGRES_DB:-creche}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Envio de WhatsApp / e-mail / SMS. Container separado: as credenciais da Twilio e do Resend ficam
+  # aqui, e provedor fora do ar não derruba o backend. Sem MENSAGERIA_* no .env, roda em modo `mock`
+  # e nada sai de fato.
+  mensageria:
+    build: ./mensageria
+    env_file: .env
+    environment:
+      MENSAGERIA_WHATSAPP: ${MENSAGERIA_WHATSAPP:-mock}
+      MENSAGERIA_EMAIL: ${MENSAGERIA_EMAIL:-mock}
+      MENSAGERIA_SMS: ${MENSAGERIA_SMS:-mock}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost}
+    ports:
+      - "8100:8100"
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8100/api/v1/saude', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-creche}:${POSTGRES_PASSWORD:-creche}@db:5432/${POSTGRES_DB:-creche}
+      DATA_DIR: /data
+      OUT_DIR: /out
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost}
+      MENSAGERIA_URL: http://mensageria:8100/api/v1
+      # motor contínuo: 0 desliga a rotina de fundo (o ciclo continua em POST /motor/ciclo)
+      MOTOR_INTERVALO_SEGUNDOS: ${MOTOR_INTERVALO_SEGUNDOS:-60}
+      MOTOR_EXPIRAR_VENCIDAS: ${MOTOR_EXPIRAR_VENCIDAS:-0}
+    volumes:
+      - ./data:/data:ro
+      - ./out:/out
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      mensageria:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000/api/v1}
+        VITE_MAP_TILES_URL: ${VITE_MAP_TILES_URL:-}
+        VITE_MAP_ATTRIBUTION: ${VITE_MAP_ATTRIBUTION:-}
+        VITE_MAP_SUBDOMAINS: ${VITE_MAP_SUBDOMAINS:-}
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

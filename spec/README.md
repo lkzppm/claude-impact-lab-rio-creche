@@ -23,7 +23,9 @@ Desafio proposto pela **Secretaria Municipal de Educação do Rio (SME-Rio)**: m
 | 08 | [Fontes](08-fontes.md) | Links de tudo que foi usado |
 | 09 | [Achados dos dados](09-achados-dos-dados.md) | O que as bases 2021–2025 mostram — e o que elas não permitem |
 | 10 | [Regras e entrega](10-regras-e-entrega.md) | Agenda, regras do hackathon, critérios de julgamento |
-| 11 | [Resumo executivo dos dados](11-resumo-executivo-dados.md) | Uma página: o que tem, os 6 achados que mudam o pitch, o que os dados não permitem |
+| 11 | [Baseline técnico](11-baseline-tecnico.md) | Contrato entre backend, frontend e banco: stack, design system do matricula.rio, modelo de dados, API, motor |
+| 12 | [Resumo executivo dos dados](12-resumo-executivo-dados.md) | Uma página: o que tem, os 6 achados que mudam o pitch, o que os dados não permitem |
+| PRD | [PRD](PRD.md) | O que está sendo construído, para quem, o que não muda, métricas, status |
 
 ## Repositórios oficiais
 

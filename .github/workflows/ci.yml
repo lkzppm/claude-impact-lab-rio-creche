@@ -1,0 +1,193 @@
+# CI do Inscrição Creche — o mesmo que `make ci` roda localmente, mais os guard-rails do projeto.
+#
+# Portões, em ordem de custo:
+#   lint            ruff (backend + mensageria), regras em ruff.toml
+#   backend         testes do motor (unidade) + teste ponta a ponta contra um Postgres real com o schema de db/init
+#   mensageria      testes do serviço de envio (tudo no provedor mock; nada sai para a rede)
+#   frontend        tsc --noEmit + vite build
+#   auditoria       roda a auditoria das bases da SME e confere que os achados batem com out/ (dado ruidoso é requisito)
+#   guard-rails     data/ imutável, nenhum .env versionado, nenhuma chave de API no repositório
+#   docker          docker compose build dos quatro serviços (o que a banca vai subir)
+name: ci
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "20"
+
+jobs:
+  lint:
+    name: lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "ruff>=0.6"
+      - run: ruff check backend/app backend/tests mensageria/app mensageria/tests --output-format github
+
+  backend:
+    name: backend (unidade + integração no Postgres)
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: creche
+          POSTGRES_PASSWORD: creche
+          POSTGRES_DB: creche_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U creche -d creche_test"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -e "backend[dev]"
+      - name: testes de unidade (motor DA, ETL, agente)
+        run: cd backend && python -m pytest -q
+      - name: schema versionado (db/init/*.sql) no Postgres de teste
+        env:
+          PGPASSWORD: creche
+        run: |
+          for f in db/init/*.sql; do
+            echo "== $f"
+            psql -h localhost -U creche -d creche_test -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+      - name: teste ponta a ponta (rodadas, convocações, trigger append-only, ferramentas do polo)
+        env:
+          TEST_DATABASE_URL: postgresql+psycopg://creche:creche@localhost:5432/creche_test
+        run: cd backend && python -m pytest -q tests/test_api_integracao.py
+
+  mensageria:
+    name: mensageria (provedor mock)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: mensageria/requirements.txt
+      - run: pip install -e "mensageria[dev]"
+      - run: cd mensageria && python -m pytest -q
+
+  frontend:
+    name: frontend (typecheck + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: cd frontend && npm ci
+      - run: cd frontend && npm run build
+      - name: CSS do design system com chaves balanceadas
+        # Um merge mal resolvido já deixou regra aberta em components.css e os painéis perderam o estilo em silêncio.
+        run: |
+          python3 - <<'EOF'
+          import glob, sys
+          ok = True
+          for f in glob.glob("frontend/src/**/*.css", recursive=True):
+              s = open(f, encoding="utf-8").read()
+              if s.count("{") != s.count("}"):
+                  print(f"::error file={f}::chaves desbalanceadas: {s.count('{')} abre / {s.count('}')} fecha")
+                  ok = False
+          sys.exit(0 if ok else 1)
+          EOF
+
+  auditoria:
+    name: auditoria das bases da SME
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -e backend
+      - name: rodar a auditoria (DuckDB, ~10 s)
+        run: |
+          cp out/auditoria-dados.json /tmp/auditoria-commitada.json
+          cd backend && python -m app.etl.audit
+      - name: métricas e achados iguais aos commitados em out/
+        run: |
+          python3 - <<'EOF'
+          import json, sys
+          a = json.load(open("/tmp/auditoria-commitada.json"))
+          b = json.load(open("out/auditoria-dados.json"))
+          def resumo(d):
+              sev = {}
+              for x in d["achados"]:
+                  sev[x["severidade"]] = sev.get(x["severidade"], 0) + 1
+              return d["metricas"], sev, sorted(x["id"] for x in d["achados"])
+          ma, sa, ia = resumo(a); mb, sb, ib = resumo(b)
+          print("severidades:", sb)
+          if (ma, sa, ia) != (mb, sb, ib):
+              print("::error::a auditoria gerou métricas/achados diferentes do que está em out/ — rode `make audit` e commite o relatório")
+              print("métricas iguais:", ma == mb, "| severidades iguais:", sa == sb, "| ids iguais:", ia == ib)
+              sys.exit(1)
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: auditoria-dados
+          path: out/auditoria-dados.md
+
+  guard-rails:
+    name: guard-rails (data/ imutável, sem segredo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: data/ é cópia byte a byte da fonte oficial — ninguém escreve lá
+        if: github.event_name == 'pull_request'
+        run: |
+          mudou=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" -- data/)
+          if [ -n "$mudou" ]; then
+            echo "::error::PR altera arquivos em data/ (imutável):"; echo "$mudou"; exit 1
+          fi
+          echo "data/ intocado"
+      - name: nenhum .env versionado
+        run: |
+          if git ls-files | grep -E '(^|/)\.env(\.local)?$'; then
+            echo "::error::arquivo .env versionado"; exit 1
+          fi
+          echo "ok"
+      - name: nenhuma chave de API ou credencial no repositório
+        run: |
+          if git grep -nE 'sk-ant-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|AC[0-9a-f]{32}:[0-9a-f]{32}' -- ':!*.lock' ':!package-lock.json'; then
+            echo "::error::padrão de credencial encontrado"; exit 1
+          fi
+          echo "ok"
+
+  docker:
+    name: docker compose build
+    runs-on: ubuntu-latest
+    needs: [lint, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - run: cp .env.example .env
+      - run: docker compose config --quiet
+      - run: docker compose build
