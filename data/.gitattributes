@@ -1,0 +1,14 @@
+# Fidelidade byte a byte com a fonte da SME. Os CSV usam CRLF e BOM de
+# proposito (ver ../spec/03-dados-disponiveis.md) — nenhuma conversao de fim
+# de linha pode tocar neles, nem no Windows com core.autocrlf=true.
+*.csv   binary
+*.gz    binary
+*.xlsx  binary
+*.docx  binary
+*.shp   binary
+*.dbf   binary
+*.sbn   binary
+*.sbx   binary
+*.shx   binary
+*.prj   binary
+*.cpg   binary

@@ -1,7 +1,15 @@
 # 03 — Dados disponibilizados
 
-**Repositório oficial:** https://github.com/CIT-SME-RJ/dadoscreche (público, ~69 MB)
-`git clone https://github.com/CIT-SME-RJ/dadoscreche.git`
+**As bases estão neste repositório, em [`data/`](../data/)** — cópia byte a byte do repositório oficial
+[`CIT-SME-RJ/dadoscreche`](https://github.com/CIT-SME-RJ/dadoscreche) (commit `057b975`), com os diretórios
+renomeados para caminhos sem espaço nem acento. Mapeamento e checksums em [`data/README.md`](../data/README.md).
+
+| Aqui | No upstream |
+|---|---|
+| `data/inscricoes/` | `Bases IC_ ClassificadoseFila/` |
+| `data/oferta/` | `OferecimentosEvagas/` |
+| `data/territorio/` | `Microáreas_SME_revisãoIPP/` |
+| `data/nascidos_vivos/` | `NascidosvivosRJ.xlsx` (raiz) |
 
 Cobre **5 processos seletivos**: `prm_id` **179** (2021), **181** (2022), **184** (2023), **194** (2024),
 **195** (2025). O processo vigente (2026) **não** está incluído.

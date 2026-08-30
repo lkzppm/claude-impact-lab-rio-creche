@@ -28,8 +28,19 @@ Todo o contexto do desafio está em **[`spec/`](spec/)** — comece pelo
 | 10 | [Regras e entrega](spec/10-regras-e-entrega.md) | Agenda, regras, critérios de julgamento |
 
 O material original recebido da SME (briefing + deck) está em [`spec/fontes/`](spec/fontes/).
-As bases de dados vivem em [`CIT-SME-RJ/dadoscreche`](https://github.com/CIT-SME-RJ/dadoscreche);
-as regras do evento, em [`taicor-ai/claude-impact-lab-rio-2`](https://github.com/taicor-ai/claude-impact-lab-rio-2).
+
+## Os dados
+
+As bases da SME estão em **[`data/`](data/)** (36 MB, cópia byte a byte de
+[`CIT-SME-RJ/dadoscreche`](https://github.com/CIT-SME-RJ/dadoscreche)) — 837 mil opções de inscrição,
+4,3 milhões de respostas socioeconômicas, a régua de pontuação de cada ano, lat/long das unidades,
+microáreas SME/IPP e nascidos vivos por bairro.
+
+Antes de abrir qualquer arquivo, leia as [armadilhas da base](spec/03-dados-disponiveis.md#armadilhas-práticas-custam-horas-se-descobertas-às-15h)
+— CRLF, BOM, cabeçalho ausente e um acento faltando que faz um filtro devolver zero linhas em silêncio.
+
+As regras do evento estão em [`taicor-ai/claude-impact-lab-rio-2`](https://github.com/taicor-ai/claude-impact-lab-rio-2),
+resumidas em [`spec/10`](spec/10-regras-e-entrega.md).
 
 ## Tese central
 
