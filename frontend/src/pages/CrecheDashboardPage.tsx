@@ -68,34 +68,6 @@ export default function CrecheDashboardPage() {
       title={`Painel — ${UNIDADE_EXEMPLO.nome}`}
       subtitle="Vagas por segmento, convocados aguardando comparecimento e a fila de verificação de documentos."
     >
-      <Card
-        title="Cronograma oficial do processo"
-        actions={<span className="text-sm muted">definido pelo Nível Central</span>}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-          {CRONOGRAMA_CENTRAL_EXEMPLO.map((etapa, i) => {
-            const passou = etapa.data < hoje;
-            return (
-              <div
-                key={etapa.chave}
-                style={{
-                  display: "flex",
-                  gap: 12,
-                  alignItems: "center",
-                  padding: "10px 0",
-                  borderBottom: i < CRONOGRAMA_CENTRAL_EXEMPLO.length - 1 ? "1px solid var(--mr-grey-200)" : undefined,
-                  opacity: passou ? 0.55 : 1,
-                }}
-              >
-                <CalendarClock size={18} style={{ color: passou ? "var(--mr-grey-300)" : "var(--info)" }} aria-hidden="true" />
-                <span style={{ flex: 1 }}>{etapa.label}</span>
-                <strong className="text-sm">{fmtDateTime(etapa.data)}</strong>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
       <Card title="Para hoje">
         <div className="para-hoje">
           <Donut
@@ -114,25 +86,6 @@ export default function CrecheDashboardPage() {
               <strong>{fmtInt(atrasado)}</strong> responsável(is) com verificação de documento em atraso ·{" "}
               <Link to="/creche/documentos">ver lista →</Link>
             </p>
-          </div>
-        </div>
-      </Card>
-
-      <Card title="Cronograma de verificação de documento" actions={<span className="text-sm muted">não afeta a vaga da criança</span>}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ display: "flex", gap: 12, alignItems: "center", paddingBottom: 12, borderBottom: "1px solid var(--mr-grey-200)" }}>
-            <AlertCircle size={20} style={{ color: "var(--warn)" }} aria-hidden="true" />
-            <div>
-              <strong>Dia {PRAZO_AVISO_ATRASO_DIAS}</strong>
-              <p className="text-sm muted">Prazo para ir à unidade verificar o documento vence; aviso enviado ao responsável</p>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <ShieldAlert size={20} style={{ color: "var(--danger)" }} aria-hidden="true" />
-            <div>
-              <strong>Dia {PRAZO_PERDA_CRITERIOS_DIAS}</strong>
-              <p className="text-sm muted">Critérios "irmão na rede" e "Pequenos Cariocas" deixam de contar na pontuação</p>
-            </div>
           </div>
         </div>
       </Card>
@@ -163,6 +116,53 @@ export default function CrecheDashboardPage() {
           </Link>
         ))}
       </div>
+
+      <Card
+        title="Cronograma oficial do processo"
+        actions={<span className="text-sm muted">definido pelo Nível Central</span>}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          {CRONOGRAMA_CENTRAL_EXEMPLO.map((etapa, i) => {
+            const passou = etapa.data < hoje;
+            return (
+              <div
+                key={etapa.chave}
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  alignItems: "center",
+                  padding: "10px 0",
+                  borderBottom: i < CRONOGRAMA_CENTRAL_EXEMPLO.length - 1 ? "1px solid var(--mr-grey-200)" : undefined,
+                  opacity: passou ? 0.55 : 1,
+                }}
+              >
+                <CalendarClock size={18} style={{ color: passou ? "var(--mr-grey-300)" : "var(--info)" }} aria-hidden="true" />
+                <span style={{ flex: 1 }}>{etapa.label}</span>
+                <strong className="text-sm">{fmtDateTime(etapa.data)}</strong>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card title="Cronograma de verificação de documento" actions={<span className="text-sm muted">não afeta a vaga da criança</span>}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", paddingBottom: 12, borderBottom: "1px solid var(--mr-grey-200)" }}>
+            <AlertCircle size={20} style={{ color: "var(--warn)" }} aria-hidden="true" />
+            <div>
+              <strong>Dia {PRAZO_AVISO_ATRASO_DIAS}</strong>
+              <p className="text-sm muted">Prazo para ir à unidade verificar o documento vence; aviso enviado ao responsável</p>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <ShieldAlert size={20} style={{ color: "var(--danger)" }} aria-hidden="true" />
+            <div>
+              <strong>Dia {PRAZO_PERDA_CRITERIOS_DIAS}</strong>
+              <p className="text-sm muted">Critérios "irmão na rede" e "Pequenos Cariocas" deixam de contar na pontuação</p>
+            </div>
+          </div>
+        </div>
+      </Card>
     </Page>
   );
 }
