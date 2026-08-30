@@ -921,7 +921,12 @@ function CardUnidade({
           <i style={{ background: COR_CHANCE[u.chance] }} aria-hidden="true" />
           {ROTULO_CHANCE[u.chance]}
         </span>
-        {destaque && <span className="pc-unidade-ordem">{u.ordem_sugerida}ª mais perto com chance</span>}
+        {destaque && (
+          <span className="pc-unidade-ordem">
+            {u.ordem_sugerida}ª mais perto de você
+            {u.chance !== "sem_vaga" && <small> · Com chance de ter vaga</small>}
+          </span>
+        )}
       </div>
       <div className="pc-unidade-nome">{u.nome}</div>
       <div className="pc-unidade-meta">

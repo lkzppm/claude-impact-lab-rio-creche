@@ -3222,3 +3222,10 @@ a {
     display: none;
   }
 }
+.pc-unidade-ordem small {
+  font-size: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 600;
+  color: var(--ok);
+}
