@@ -1,4 +1,7 @@
-"""Teste de integração ponta a ponta contra o Postgres (pula se o banco não estiver acessível).
+"""Teste de integração ponta a ponta contra o Postgres.
+
+⚠️ Ele TRUNCA todas as tabelas. Por isso só roda quando `TEST_DATABASE_URL` está definido — nunca contra o
+banco de desenvolvimento/demo por acidente. Ex.: TEST_DATABASE_URL=postgresql+psycopg://creche:creche@localhost:5432/creche_test
 
 Cobre: rodada com 3 presas + 2 alternativas, rodada clássica (1 presa), convocações por vaga presa,
 confirmação liberando as irmãs, transição inválida, painel, rematch, comprovação mock e trigger append-only.
@@ -12,11 +15,17 @@ from sqlalchemy import text
 from app.db import get_sessionmaker
 from app.models import Capacidade, Inscricao, Opcao, Pergunta, Processo, Resposta, Unidade
 
+import os
+
+_URL = os.environ.get("TEST_DATABASE_URL")
+if not _URL:
+    pytest.skip("defina TEST_DATABASE_URL para rodar o teste de integração (ele trunca o banco)", allow_module_level=True)
+os.environ["DATABASE_URL"] = _URL
 try:
     _S = get_sessionmaker()()
     _S.execute(text("SELECT 1"))
 except Exception:  # noqa: BLE001
-    pytest.skip("Postgres indisponível — suba com `make db`", allow_module_level=True)
+    pytest.skip("Postgres de teste indisponível", allow_module_level=True)
 
 
 @pytest.fixture(scope="module")
