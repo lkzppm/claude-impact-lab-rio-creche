@@ -12,3 +12,6 @@ build/
 # CSVs descompactados localmente ficam fora do versionamento (versao .gz e a oficial)
 data/inscricoes/01_QueryA_InscricoesPorAno.csv
 data/inscricoes/02_QueryB_RespostasSocioEconomicas.csv
+
+# metadados do pip install -e (gerados)
+*.egg-info/
