@@ -33,9 +33,13 @@
  * função todo dia não deveria reenviar o aviso nem reaplicar a perda de critérios.
  */
 
-import { enviarMensagem } from "../api/client";
+import { confirmarResposta, enviarMensagem, getInscricao } from "../api/client";
 import { UNIDADE_EXEMPLO } from "./mock";
 import { telefoneParaWhatsapp } from "./telefone";
+
+/** Trechos do texto da pergunta que identificam os dois critérios afetados pelo atraso (busca solta,
+ * já que o texto exato muda a cada régua — spec/01: só 3 das 13 perguntas sobreviveram de 2023 a 2024). */
+const TEXTOS_CRITERIOS_EM_RISCO = ["irmão", "irmao", "pequenos cariocas"];
 
 export type EstagioAtraso = "aviso_enviado" | "criterios_em_risco";
 
@@ -61,6 +65,7 @@ interface ResponsavelParaAviso {
   nome: string;
   crianca: string;
   telefone: string;
+  inscricaoId?: number | null;
 }
 
 /**
@@ -86,12 +91,31 @@ async function avisarAtraso(responsavel: ResponsavelParaAviso) {
   });
 }
 
-/** Etapa 2 — dia 3 de atraso. Ver `spec/creche/mensageria.md` (`atraso_documento_dia3_perda_criterios`). */
+/**
+ * Etapa 2 — dia 3 de atraso. Ver `spec/creche/mensageria.md` (`atraso_documento_dia3_perda_criterios`).
+ *
+ * Marca `resposta.confirmado = false` nos critérios afetados via `PATCH
+ * /inscricoes/{id}/respostas/{ich_perg_id}` (o mesmo endpoint que `VerificarResponsavelWizard` usa
+ * para confirmar — aqui é o caminho inverso: o atraso desconfirma). Isso não muda `resposta.resposta`
+ * nem a pontuação persistida (spec: a pontuação é sempre `declarado × régua`); é o sinal de "declarado,
+ * não comprovado" que a régua oficial usaria para não contar o critério.
+ *
+ * `TEXTOS_CRITERIOS_EM_RISCO` é uma busca solta no texto da pergunta porque o `ich_perg_id` exato
+ * muda a cada régua (spec/01: só 3 das 13 perguntas sobreviveram de 2023 a 2024) — sem isso, cada
+ * ano exigiria uma tabela de mapeamento própria só para este acionamento.
+ */
 async function aplicarPerdaDeCriterios(responsavel: ResponsavelParaAviso) {
-  // TODO: falta endpoint para marcar `resposta.confirmado = false` nos critérios "irmão na rede" e
-  // "Pequenos Cariocas" da inscrição (tabela `resposta`, por `ich_perg_id` da régua do ano — ver
-  // `backend/app/models.py::Resposta`). A pontuação hoje só é recalculada pelo motor de classificação;
-  // não há rota para forçar a perda de um critério isolado a partir do painel da unidade.
+  if (responsavel.inscricaoId) {
+    try {
+      const inscricao = await getInscricao(responsavel.inscricaoId);
+      const afetados = inscricao.respostas.filter(
+        (r) => r.resposta && r.confirmado && r.texto && TEXTOS_CRITERIOS_EM_RISCO.some((t) => r.texto!.toLowerCase().includes(t)),
+      );
+      await Promise.all(afetados.map((r) => confirmarResposta(responsavel.inscricaoId!, r.ich_perg_id, false, "painel-creche")));
+    } catch (e) {
+      console.warn("aplicarPerdaDeCriterios: não foi possível desconfirmar critérios no backend", e);
+    }
+  }
   const destino = telefoneParaWhatsapp(responsavel.telefone);
   if (!destino) return;
   return enviarMensagem({

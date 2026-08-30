@@ -35,7 +35,7 @@
  *      a inscrição da família é encerrada — não há novo pareamento.
  */
 
-import { enviarMensagem } from "../api/client";
+import { enviarMensagem, registrarEvento } from "../api/client";
 import { UNIDADE_EXEMPLO } from "./mock";
 import { telefoneParaWhatsapp } from "./telefone";
 
@@ -89,10 +89,25 @@ export function ligarParaContatoPrincipal(alunoId: string) {
 }
 
 /**
- * Fim do dia 3 (prazo total), sem confirmação de presença — perde a vaga nesta escola. Avisa a
- * família (`convocacao_perda_vaga`) e encadeia `iniciarReparelhamento`.
+ * Fim do dia 3 (prazo total), sem confirmação de presença — perde a vaga nesta escola.
+ *
+ * Registra a transição real `expirada` (`POST /convocacoes/{id}/eventos`,
+ * `backend/app/routers/convocacoes.py::TRANSICOES`) quando `aluno.id` é o id numérico de
+ * `convocacao` — isso é o que de fato libera a vaga (`LIBERAM_VAGA` marca `alocacao.vaga_liberada`),
+ * deixando-a disponível para o CRE/polo convocar o próximo da fila desta unidade
+ * (`POST /convocacoes/{id}/convocar-proximo`, fora do escopo deste painel). Avisa a família
+ * (`convocacao_perda_vaga`) e encadeia `iniciarReparelhamento` para ESTA família, que é um fluxo
+ * separado — perder a vaga aqui não é o mesmo que "o próximo da fila desta escola".
  */
 export async function perderVagaPorNaoComparecimento(aluno: AlunoParaAviso) {
+  const id = Number(aluno.id);
+  if (Number.isInteger(id)) {
+    try {
+      await registrarEvento(id, { tipo: "expirada", ator: "painel-creche", payload: { motivo: "nao_compareceu" } });
+    } catch (e) {
+      console.warn("perderVagaPorNaoComparecimento: não foi possível registrar a expiração no backend", e);
+    }
+  }
   const destino = telefoneParaWhatsapp(aluno.contatoPrincipal.telefone);
   if (destino) {
     await enviarMensagem({

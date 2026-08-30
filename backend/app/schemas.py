@@ -67,8 +67,16 @@ class UnidadeOut(BaseModel):
     lon: float | None
 
 
+class OcupacaoGrupo(BaseModel):
+    ano: int
+    grupamento: str
+    horario: str
+    confirmadas: int
+
+
 class UnidadeDetalhe(UnidadeOut):
     capacidade: list[CapacidadeOut] = []
+    ocupacao: list[OcupacaoGrupo] = []
 
 
 class CapacidadeIn(BaseModel):
