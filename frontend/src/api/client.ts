@@ -130,3 +130,12 @@ export const responderConvocacao = (id: number, resposta: FamiliaResposta) =>
 
 /* ---------- rede (Nível Central) ---------- */
 export const getPainelCres = (params?: { ano?: number }) => get<PainelCre[]>("/painel/cres", params);
+
+/* ---------- pré-cadastro (família) ---------- */
+import type { GeoCep, PreCadastro, PreCadastroCriado, PreCadastroIn, ReguaFamilia, Sugestoes, SugestoesIn } from "./types";
+export const getReguaFamilia = () => get<ReguaFamilia>("/familia/regua");
+export const getGeoCep = (cep: string) => get<GeoCep>(`/geo/cep/${encodeURIComponent(cep)}`);
+export const getSugestoes = (body: SugestoesIn) => post<Sugestoes>("/familia/sugestoes", body);
+export const criarPreCadastro = (body: PreCadastroIn) => post<PreCadastroCriado>("/familia/pre-cadastro", body);
+export const getPreCadastro = (protocolo: string) =>
+  get<PreCadastro>(`/familia/pre-cadastro/${encodeURIComponent(protocolo)}`);

@@ -4,6 +4,8 @@ import { AreaProvider } from "./areas/AreaContext";
 import LandingPage from "./pages/LandingPage";
 import FamiliaPage from "./pages/FamiliaPage";
 import FamiliaInscricaoPage from "./pages/FamiliaInscricaoPage";
+import PreCadastroPage from "./pages/PreCadastroPage";
+import PreCadastroProtocoloPage from "./pages/PreCadastroProtocoloPage";
 import PainelPage from "./pages/PainelPage";
 import ConvocacoesPage from "./pages/ConvocacoesPage";
 import ConvocacaoDetalhePage from "./pages/ConvocacaoDetalhePage";
@@ -27,6 +29,8 @@ export default function App() {
         {/* Família */}
         <Route path="/familia" element={<FamiliaPage />} />
         <Route path="/familia/inscricao" element={<FamiliaInscricaoPage />} />
+        <Route path="/familia/pre-cadastro" element={<PreCadastroPage />} />
+        <Route path="/familia/pre-cadastro/:protocolo" element={<PreCadastroProtocoloPage />} />
 
         {/* CRE / polo */}
         <Route path="/cre" element={<PainelPage />} />
