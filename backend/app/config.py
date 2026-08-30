@@ -25,6 +25,18 @@ class Settings(BaseSettings):
     # na demonstração a expiração fica visível como "vencidas" e o polo registra em lote pelo painel.
     expiracao_automatica_minutos: int = 0
 
+    # Assistente (chat com tools, app/agente). Sem ANTHROPIC_API_KEY, POST /chat responde 503.
+    anthropic_api_key: str | None = None
+    chat_model: str = "claude-opus-5"
+    chat_max_tools: int = 8            # chamadas de ferramenta por turno
+    chat_max_tokens: int = 8000
+    chat_effort: str = "medium"        # low | medium | high | xhigh | max
+    chat_timeout_s: float = 90.0
+    chat_fallbacks: bool = True        # em caso de recusa, o serviço repete a chamada em outro modelo (beta)
+    chat_max_historico: int = 30       # mensagens do histórico enviadas ao modelo
+    chat_sql_timeout_ms: int = 5000    # statement_timeout da consulta_sql (só no Nível Central)
+    chat_sql_max_linhas: int = 200
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

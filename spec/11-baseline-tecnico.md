@@ -16,8 +16,9 @@
 | Container | `docker-compose`: `db`, `backend`, `frontend` | Sobe com um comando |
 
 Regra: **o motor de matching é código puro Python, sem I/O**, testado com casos pequenos. O LLM não entra
-nesta fase (a explicação do resultado é gerada a partir do log de decisão, em texto templado; o Claude
-entra depois, sobre esse mesmo log).
+no núcleo: a explicação do resultado é gerada a partir do log de decisão, em texto templado. O Claude entra
+**na borda**, como assistente de consulta dos painéis da CRE e do Nível Central (`POST /chat`, seção abaixo):
+só lê o banco por ferramentas, não decide alocação e não altera nada.
 
 ## Design system (espelho do matricula.rio)
 
@@ -63,6 +64,9 @@ convocacao    id PK · alocacao_id FK · inscricao_id FK · unidade_codigo · gr
               prazo_fim timestamptz · criada_em · atualizada_em
 evento        id PK · ocorrido_em timestamptz · tipo · convocacao_id FK nullable · inscricao_id FK nullable
               unidade_codigo nullable · ator · payload jsonb          -- APPEND-ONLY: sem UPDATE/DELETE
+consulta_agente  id PK · ocorrido_em · area ('cre'|'sme') · cre · ator · modelo · pergunta_hash (sha256, não o texto)
+              pergunta_chars · ferramentas jsonb [{nome, argumentos, erro?}] · tokens_entrada · tokens_saida
+              duracao_ms · resultado ('ok'|'erro'|'recusa')          -- APPEND-ONLY: log de acesso do assistente (LGPD)
 ```
 
 - `evento` é o **dado que hoje não existe** (gap nº 1 da SME). Toda transição de `convocacao.status` gera
@@ -120,8 +124,27 @@ mesmo `hash_entrada` → mesma saída).
 | GET | `/painel/cres?ano=` | **Nível Central**: uma linha por CRE — unidades, vagas, inscrições, alocadas, convocadas, abertas, confirmadas, em atraso, lista de espera |
 | GET | `/familia/inscricao?codigo=&ano=` | **Família**: situação em linguagem de responsável — `situacao_resumo`, opções com `resultado` (reservada/fila/sem_vaga) e posição, reservas abertas com prazo, pontuação por critério com comprovação, explicação |
 | POST | `/familia/convocacoes/{id}/responder` `{resposta: confirmar\|recusar}` | a família responde na hora; confirmar libera as outras reservas (`ator = familia` no log) |
+| POST | `/chat` `{area: cre\|sme, cre?, ator?, mensagens: [{role, content}]}` | **Assistente** (áreas CRE e Nível Central): `{resposta, ferramentas: [{nome, argumentos, resumo, erro?}], modelo, tokens_entrada, tokens_saida, log_id}`. Só leitura; na área `cre` toda ferramenta é restrita à CRE informada (no servidor); 503 sem `ANTHROPIC_API_KEY` |
 
 Erros em JSON `{detail}`; paginação `{items, total, page, size}`.
+
+## Assistente (`backend/app/agente/`)
+
+Chat com ferramentas sobre o mesmo banco, para o servidor perguntar em português o que o painel mostra.
+**IA na borda, algoritmo determinístico no núcleo** ([05](05-arquitetura-e-riscos.md)):
+
+- Ferramentas só leitura (`resumo_painel`, `painel_unidades`, `listar_convocacoes`, `detalhe_convocacao`,
+  `ficha_inscricao`, `explicacao_resultado`, `buscar_unidades`, `capacidade_unidade`, `resumo_cres`, `rodadas`,
+  `regua` e, só no Nível Central, `consulta_sql` SELECT-only em transação `READ ONLY`), reaproveitando as
+  funções dos routers — uma só implementação das regras.
+- Escopo por área aplicado no servidor: na área `cre`, a CRE do usuário é forçada em toda consulta e dados de
+  outra CRE são recusados; na `sme`, rede inteira.
+- O prompt de sistema diz que a pontuação é norma (Res. SME 542/2025), que a alocação é do motor e que o
+  assistente não altera nada; dados de criança são anonimizados e devolvidos agregados por padrão.
+- Log de acesso `consulta_agente` (append-only): hash da pergunta, ferramentas com argumentos, tokens — não
+  guarda o texto da pergunta nem da resposta.
+- Configuração: `ANTHROPIC_API_KEY`, `CHAT_MODEL` (padrão `claude-opus-5`), `CHAT_MAX_TOOLS` (8). Sem chave, a
+  rota responde 503 e o painel segue normal.
 
 ## ETL e auditoria (`backend/app/etl/`)
 
@@ -145,7 +168,7 @@ Header em todas: faixa branca com os logos Prefeitura Rio · Educação e Matrí
 ## Estrutura
 
 ```
-backend/   app/{main,config,db,models,schemas}.py · app/routers/ · app/engine/ · app/etl/ · tests/ · Dockerfile
+backend/   app/{main,config,db,models,schemas}.py · app/routers/ · app/engine/ · app/etl/ · app/agente/ · tests/ · Dockerfile
 frontend/  src/{design-system,api,pages,components}/ · Dockerfile (nginx)
 db/        init/*.sql (schema versionado, aplicado pelo Postgres na subida)
 out/       relatórios de auditoria (commitados; não vão para data/)

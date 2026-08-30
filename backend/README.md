@@ -31,7 +31,9 @@ make up          # db + backend (:8000) + frontend (:5173)
 | `app/routers/painel.py` | KPIs da CRE/polo em SQL: faixas de tempo, vencidas, vencem em 24 h, sem aviso, crianças com várias reservas, tempo até o desfecho |
 | `app/routers/unidades.py` | Ficha, **fila de espera da unidade** (ordem do motor) e **capacidade informada** pela unidade (`fonte = informada`, com evento) |
 | `app/etl/` | Auditoria, carga das bases da SME (DuckDB → Postgres) e `seed_demo.py` (eventos simulados com carimbo de tempo, pelas mesmas funções da API) |
-| `tests/` | Invariantes do motor |
+| `app/agente/` | **Assistente do painel** (chat com ferramentas de consulta, só leitura) — ver seção abaixo |
+| `app/routers/chat.py` | `POST /chat`: um turno do assistente; 503 sem `ANTHROPIC_API_KEY` |
+| `tests/` | Invariantes do motor (`test_matching.py`), assistente sem rede (`test_agente.py`), integração com Postgres (`test_api_integracao.py`, só com `TEST_DATABASE_URL`) |
 
 ## Rotas (`/api/v1`)
 
@@ -43,7 +45,7 @@ make up          # db + backend (:8000) + frontend (:5173)
 `POST /convocacoes/{id}/convocar-proximo` · `POST /convocacoes/expirar-vencidas` ·
 `GET /unidades/{codigo}/fila` · `PUT /unidades/{codigo}/capacidade` ·
 `GET /painel/resumo` · `GET /painel/unidades` · `GET /painel/multireserva` · `GET /painel/cres` ·
-`GET /familia/inscricao` · `POST /familia/convocacoes/{id}/responder`
+`GET /familia/inscricao` · `POST /familia/convocacoes/{id}/responder` · `POST /chat`
 
 ### Rodada: "3 vagas presas + 2 alternativas"
 
@@ -95,7 +97,7 @@ do último ano carregado, cria as convocações espalhadas pelos últimos 5 dias
 aconteceu (nada · tentativas · avisada e depois confirmou/recusou/aguarda · recusa direta · parte das vencidas
 já expirada). Tudo passa por `_criar_convocacao`/`_aplicar_transicao` — as mesmas funções da API — com
 `ocorrido_em` no passado (`evento` é append-only, mas aceita a data no INSERT). `--todos` cobre todos os
-grupamentos/turnos; `--limpar` zera as tabelas de operação antes. O PRD §9 registra que a banca vê dados simulados.
+grupamentos/turnos; `--limpar` zera as tabelas de operação antes. O PRD §9 registra que a banca vê dados simulados. · `POST /chat`
 
 ### Decisões
 

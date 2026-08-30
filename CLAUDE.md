@@ -71,7 +71,8 @@ Projeto do time para o desafio da **Secretaria Municipal de Educação do Rio**:
 spec/            base de conhecimento (comece aqui)
 spec/fontes/     material original da SME — não editar
 data/            bases da SME, cópia byte a byte do repo oficial — não editar
-backend/         FastAPI + SQLAlchemy; app/engine (motor DA), app/etl (leitura, auditoria, carga), app/integracoes (comprovação)
+backend/         FastAPI + SQLAlchemy; app/engine (motor DA), app/etl (leitura, auditoria, carga), app/integracoes (comprovação),
+                 app/agente (assistente do painel: chat com tools só leitura, escopo por CRE, log de acesso)
 frontend/        React + Vite + TS; design system espelhando o matricula.rio em src/design-system
 db/              schema SQL versionado, aplicado pelo Postgres na subida
 out/             relatórios gerados (auditoria dos dados) — commitados
