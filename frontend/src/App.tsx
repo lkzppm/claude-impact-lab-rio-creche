@@ -4,15 +4,18 @@ import { AreaProvider } from "./areas/AreaContext";
 import LandingPage from "./pages/LandingPage";
 import FamiliaPage from "./pages/FamiliaPage";
 import FamiliaInscricaoPage from "./pages/FamiliaInscricaoPage";
+import PreCadastroPage from "./pages/PreCadastroPage";
+import PreCadastroProtocoloPage from "./pages/PreCadastroProtocoloPage";
 import PainelPage from "./pages/PainelPage";
 import ConvocacoesPage from "./pages/ConvocacoesPage";
 import ConvocacaoDetalhePage from "./pages/ConvocacaoDetalhePage";
-import ClassificacaoPage from "./pages/ClassificacaoPage";
 import RodadaDetalhePage from "./pages/RodadaDetalhePage";
+import MapaPage from "./pages/MapaPage";
 import InscricoesPage from "./pages/InscricoesPage";
 import InscricaoDetalhePage from "./pages/InscricaoDetalhePage";
 import UnidadesPage from "./pages/UnidadesPage";
 import UnidadeDetalhePage from "./pages/UnidadeDetalhePage";
+import MultiReservaPage from "./pages/MultiReservaPage";
 import SmeRedePage from "./pages/SmeRedePage";
 import ReguaPage from "./pages/ReguaPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -20,6 +23,7 @@ import CrecheDashboardPage from "./pages/CrecheDashboardPage";
 import CrecheVagasPage from "./pages/CrecheVagasPage";
 import CrecheNovosAlunosPage from "./pages/CrecheNovosAlunosPage";
 import CrecheDocumentosPage from "./pages/CrecheDocumentosPage";
+import ChatAssistente from "./components/ChatAssistente";
 
 export default function App() {
   return (
@@ -31,18 +35,24 @@ export default function App() {
         {/* Família */}
         <Route path="/familia" element={<FamiliaPage />} />
         <Route path="/familia/inscricao" element={<FamiliaInscricaoPage />} />
+        <Route path="/familia/pre-cadastro" element={<PreCadastroPage />} />
+        <Route path="/familia/pre-cadastro/:protocolo" element={<PreCadastroProtocoloPage />} />
 
         {/* CRE / polo */}
         <Route path="/cre" element={<PainelPage />} />
         <Route path="/cre/convocacoes" element={<ConvocacoesPage />} />
         <Route path="/cre/convocacoes/:id" element={<ConvocacaoDetalhePage />} />
+        <Route path="/cre/mapa" element={<MapaPage />} />
+        <Route path="/cre/multireserva" element={<MultiReservaPage />} />
         <Route path="/cre/unidades" element={<UnidadesPage />} />
         <Route path="/cre/unidades/:codigo" element={<UnidadeDetalhePage />} />
         <Route path="/cre/inscricoes/:id" element={<InscricaoDetalhePage />} />
 
         {/* Nível Central SME */}
         <Route path="/sme" element={<SmeRedePage />} />
-        <Route path="/sme/classificacao" element={<ClassificacaoPage />} />
+        <Route path="/sme/mapa" element={<MapaPage />} />
+        {/* a classificação roda sozinha (motor 24/7): sobra o detalhe de uma rodada, aberto pela Rede */}
+        <Route path="/sme/classificacao" element={<Navigate to="/sme" replace />} />
         <Route path="/sme/classificacao/:id" element={<RodadaDetalhePage />} />
         <Route path="/sme/inscricoes" element={<InscricoesPage />} />
         <Route path="/sme/inscricoes/:id" element={<InscricaoDetalhePage />} />
@@ -58,11 +68,13 @@ export default function App() {
 
         {/* endereços antigos */}
         <Route path="/convocacoes/*" element={<Navigate to="/cre/convocacoes" replace />} />
-        <Route path="/classificacao/*" element={<Navigate to="/sme/classificacao" replace />} />
+        <Route path="/classificacao/*" element={<Navigate to="/sme" replace />} />
         <Route path="/inscricoes/*" element={<Navigate to="/sme/inscricoes" replace />} />
         <Route path="/unidades/*" element={<Navigate to="/sme/unidades" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      {/* "Perguntar ao painel" — só nas áreas CRE e Nível Central */}
+      <ChatAssistente />
     </AreaProvider>
   );
 }

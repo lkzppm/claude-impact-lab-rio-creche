@@ -38,6 +38,10 @@ Duas peças, uma só base de dados:
    A família confirma **uma** das reservadas; as outras duas são liberadas **na hora** e voltam ao pool
    para uma rodada restrita (rematch). Recusa ou prazo vencido libera só aquela vaga.
 
+   O motor **roda 24/7** (`backend/app/motor.py`): reclassifica quando a entrada muda, convoca as vagas
+   reservadas e repassa cada vaga liberada ao próximo da fila da unidade, sem depender de alguém apertar
+   um botão. A cascata de liberações acontece em minutos, não no calendário.
+
    O motor também roda com `vagas_presas = 1` (DA clássico, uma vaga por criança) para a simulação
    comparar os dois regimes sobre o processo 2025.
 
@@ -63,35 +67,69 @@ Duas peças, uma só base de dados:
    SERPRO; RMI via solicitação de acesso interno da Prefeitura. A pontuação **continua** sendo a da
    resolução; a comprovação só confirma (ou não) o critério declarado — Art. 7º da Res. 542/2025.
 
+4. **Pré-cadastro da família (julho–agosto)** — desenho de uma educadora do time, incorporado em 30/08 à tarde.
+   Antes da inscrição de dezembro, a família informa criança (nascimento → grupamento), CEP, situação
+   (critérios da régua) e **mais de um contato, em mais de um canal** (mãe, pai, avó; celular, WhatsApp,
+   e-mail). Enquanto preenche, vê **em tempo real** a pontuação calculada pelo motor e um **top 5 de
+   creches** — mapa com a casa e as unidades, distância, vagas e a chance real ("no processo de 2025, 71%
+   das crianças com até 51 pontos que escolheram esta creche conseguiram vaga"). Escolhe até 5, em ordem.
+   Efeitos: (a) mede a demanda **antes** de abrir vaga — é o instrumento que a Lei 14.851/2024 exige e o
+   que o Eixo 1 não tem; (b) ataca a escolha às cegas (47% com uma opção, 47,5% fora do bairro);
+   (c) resolve o contato desatualizado na origem, meses antes da convocação; (d) a escola não é afetada.
+
+   **Decisão registrada:** o desenho propunha liberar a escolha só para pontuação > 90. Não foi adotado —
+   a Res. 542/2025 dá a toda família o direito a até 5 opções e 90 pontos é quase inatingível (CadÚnico = 51).
+   Todos escolhem; a sugestão ordena por chance e distância, e a escolha continua sendo da família.
+
 ## 3. O que NÃO muda
 
 - A **tabela de pontuação** (Res. SME 542/2025) e os critérios de desempate. Norma, não parâmetro.
 - O portal de inscrição (`matricula.rio`) e a unidade como lugar da confirmação de matrícula.
-- Nenhum LLM decide alocação. Nesta fase não há LLM em lugar nenhum; ele entra depois, sobre o log de
-  decisão (explicação à família) e sobre o log de eventos (interrogação do gestor).
+- Nenhum LLM decide alocação. O único LLM da aplicação é o **assistente de consulta** dos painéis da CRE e do
+  Nível Central ("Perguntar ao painel"): ele só lê o banco por ferramentas, mostra o que consultou, não
+  registra contato, não confirma matrícula, não muda status nem pontuação — e é restrito, no servidor, ao
+  território de quem pergunta. Quando a resposta já está num card, ele não repete o painel: avisa que o dado está
+  lá e oferece levar o servidor até o card (a página rola e destaca), com o resumo no chat. A explicação do resultado à família continua sendo texto templado do log de
+  decisão.
 
 ## 4. Usuários — três painéis, uma base
 
 | Painel | Usuário | O que faz |
 |---|---|---|
 | **Família** (`/familia`, celular) | responsável pela criança | consulta a inscrição pelo código (em produção, CPF via gov.br); vê as 5 opções com resultado e posição; **confirma ou recusa uma reserva na hora**; vê a pontuação critério a critério com a comprovação automática; lê a explicação do resultado |
-| **CRE / polo** (`/cre`) | servidor do polo (usuário principal) | painel do território: reservas por faixa de tempo, vagas em risco, famílias sem contato; registra tentativas e desfechos; ficha da inscrição |
-| **Nível Central SME** (`/sme`) | equipe central | visão da rede por CRE; executa rodadas, compara 1 vaga × 3 reservas, gera convocações; régua do ano (norma, só leitura) |
+| **CRE / polo** (`/cre`) | servidor do polo (usuário principal) | painel do território como **fila de trabalho**: vencidas, vencem em 24 h, sem aviso, crianças com várias reservas (cada número abre a lista, da mais urgente para a menos, com a próxima ação); registra tentativas e desfechos com canal e nome de quem registrou; vaga recusada/vencida mostra **o próximo da fila** e o convoca; **mapa** das creches da CRE (pressão da fila, vencidas, lista de espera, vagas); fila de espera e capacidade informada por unidade; expiração em lote; ficha da inscrição |
+| **Nível Central SME** (`/sme`) | equipe central | visão da rede por CRE com o **estado do motor contínuo** (não há aba "Classificação": o motor roda 24/7); **mapa da rede com drill-down** — CRE → todas as creches da CRE → creche; régua do ano (norma, só leitura) |
 
 ## 5. Fluxos
 
-**Rodada inicial.** Nível Central escolhe `ano`, `grupamento`, `horario`, `vagas_presas` (3) e
-`alternativas` (2) → motor roda por (grupamento, turno) → `rodada` + `alocacao` gravadas com
-`hash_entrada` → resumo: inscrições, crianças com alguma reserva, média de reservas por criança, lista de
-espera, sem opção viável, distribuição por ordem da opção.
+**Rodada inicial.** O **motor contínuo** (`backend/app/motor.py`) roda sozinho, a cada
+`MOTOR_INTERVALO_SEGUNDOS` (padrão 60): classifica o processo vigente quando ainda não há rodada, e
+reclassifica quando a entrada muda — inscrição nova, opção nova, capacidade corrigida pela unidade. Por
+isso **não existe aba "Classificação"** no Nível Central: a tela mostra o estado do motor (última passada,
+o que ele fez, classificação vigente), não um botão de "rodar". Os parâmetros continuam sendo
+`vagas_presas` (3) e `alternativas` (2), e cada rodada grava `rodada` + `alocacao` com `hash_entrada` e o
+resumo: inscrições, crianças com alguma reserva, média de reservas por criança, lista de espera, sem opção
+viável, distribuição por ordem da opção. `POST /classificacao/rodadas` continua existindo (é a função que
+o motor chama) e `POST /motor/ciclo` força um ciclo na hora, para a demonstração.
 
-**Convocação.** "Gerar convocações" cria uma `convocacao` (status `selecionada`, prazo +72 h) por vaga
-reservada e o evento correspondente. O servidor registra `contato_tentado` (repetível),
-`contato_confirmado`, `confirmada`, `recusada`, `expirada`. `confirmada` em uma unidade →
-as outras reservas da mesma criança viram `liberada` automaticamente, com evento.
+**Convocação.** O motor cria uma `convocacao` (status `selecionada`, prazo +72 h) por vaga reservada da
+rodada nova, com o evento correspondente, sem duplicar o que já está na rua — pula quem já confirmou
+matrícula, quem já foi convocado para aquela unidade e o que passaria da cota de reservas abertas. O
+servidor registra `contato_tentado` (repetível), `contato_confirmado`, `confirmada`, `recusada`,
+`expirada`. `confirmada` em uma unidade → as outras reservas da mesma criança viram `liberada`
+automaticamente, com evento.
 
 **Rematch.** Vagas liberadas/recusadas/expiradas voltam ao pool → rodada `tipo = rematch` restrita às
-unidades com vaga e às crianças em lista de espera, mesma régua.
+unidades com vaga e às crianças em lista de espera, mesma régua. **No dia a dia isso não espera rodada
+nenhuma**: a cada ciclo o motor pega toda vaga liberada ainda sem repasse e convoca a 1ª criança da lista
+de espera daquela unidade/grupamento/turno, na `posicao_fila` do motor, pulando quem já confirmou ou já
+segura 3 reservas — evento `selecionada_da_lista` (o mesmo nome que a SME usa hoje), ator `motor`. Uma
+vaga liberada só é repassada uma vez. O polo continua podendo fazer o gesto unitário ("convocar o próximo
+da fila") sem esperar o ciclo.
+
+**Expiração.** O polo registra "prazo vencido" uma a uma ou em lote (todas as vencidas do recorte). Como
+passo automático do motor (`MOTOR_EXPIRAR_VENCIDAS`, ator `motor`) fica desligado na demonstração, para as
+vencidas aparecerem no painel.
 
 **Comprovação.** `POST /inscricoes/{id}/comprovar` consulta os provedores configurados
 (`COMPROVACAO_PROVIDER=mock` nesta fase) e grava uma linha por critério com fonte, resultado, protocolo e
@@ -133,6 +171,11 @@ credenciais, planejamento por coorte (SINASC × capacidade). Todos descritos em
   dito na banca.
 - **APIs de governo exigem adesão institucional** — o mock reproduz o contrato para que a troca seja de
   configuração, não de código.
+- **Assistente com LLM sobre dado de criança.** Mitigação: só leitura (ferramentas de consulta; a `consulta_sql`
+  do Nível Central roda SELECT-only em transação `READ ONLY` com timeout), escopo por CRE aplicado no servidor,
+  agregados por padrão e códigos anônimos só quando pedidos, log de acesso append-only (`consulta_agente`) com
+  hash da pergunta e sem texto, e o prompt de sistema afirma que a pontuação é norma e a alocação é do motor.
+  O assistente é opcional: sem `ANTHROPIC_API_KEY` os painéis funcionam sem ele.
 
 ## 10. Status
 
@@ -145,8 +188,12 @@ credenciais, planejamento por coorte (SINASC × capacidade). Todos descritos em
 | Motor DA com `vagas_presas` (`backend/app/engine/`) | pronto — 18 testes; 2025 Berçário Integral (30.141 inscrições) em ~4 s |
 | API FastAPI (`backend/app/routers/`) | pronto — fluxo rodada → convocações → eventos → painel validado |
 | Adaptadores de comprovação (`backend/app/integracoes/`) | mock pronto; Conecta (CadÚnico, Bolsa Família, CPF Light) e RMI com contrato real, `pendente` sem credencial |
-| Frontend React com design system do matricula.rio (`frontend/`) | reestruturado em 3 painéis (Família / CRE / Nível Central) com os logos oficiais no header |
+| Frontend React com design system do matricula.rio (`frontend/`) | 3 painéis (Família / CRE / Nível Central) com os logos oficiais no header; painel da CRE reescrito como fila de trabalho (30/08 13h) |
+| Ferramentas do polo (`fila=`, próxima ação, convocar próximo da fila, fila da unidade, capacidade informada, expirar em lote, várias reservas, tempo até desfecho) | pronto — cobertas pelo teste de integração e validadas sobre 2025 Berçário Integral |
+| Seed de demonstração (`make seed`) | pronto — 18.967 convocações de 11.788 crianças em 5 dias simulados, 37 s |
 | `docker-compose` (db + backend + frontend) | pronto — `make up` sobe os três; validado em 30/08 12h40 |
+| Assistente "Perguntar ao painel" (`backend/app/agente/`, `POST /chat`, `frontend/src/components/ChatAssistente.tsx`) | pronto — 13 ferramentas só leitura, escopo por CRE no servidor, log de acesso `consulta_agente`; testes sem rede com cliente falso |
+| "Isso já está no painel — quer que eu te leve até lá?" (`app/agente/secoes.py`, `navegacao` em `POST /chat`, `data-secao` nos cards, `components/irAteSecao.ts`) | pronto — 24 seções mapeadas (11 na CRE, 13 no Nível Central); aceitou: navega, rola, destaca e resume no chat; recusou: só o resumo |
 
 ### Primeiro resultado sobre dados reais (2025, Berçário Integral, capacidade estimada)
 

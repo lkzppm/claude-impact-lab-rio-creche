@@ -82,7 +82,7 @@ export default function InscricoesPage() {
         </label>
       </div>
 
-      <Card flush>
+      <Card flush secao="sme.inscricoes">
         {q.isLoading && <Spinner label="Buscando inscrições…" />}
         {q.isError && (
           <div style={{ padding: 16 }}>

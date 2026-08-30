@@ -48,7 +48,7 @@ export interface Unidade {
 
 export interface Capacidade {
   ano: number;
-  unidade_codigo: string;
+  unidade_codigo?: string;
   grupamento: string;
   horario: string;
   vagas: number;
@@ -57,6 +57,39 @@ export interface Capacidade {
 
 export interface UnidadeDetalhe extends Unidade {
   capacidade: Capacidade[];
+}
+
+export interface NovaCapacidade {
+  ano: number;
+  grupamento: string;
+  horario: string;
+  vagas: number;
+  ator?: string | null;
+}
+
+export type FilaSituacao = "aguardando" | "convocada_aqui" | "confirmada_em_outra" | "reservas_cheias";
+
+export interface FilaUnidadeItem {
+  alocacao_id: number;
+  inscricao_id: number;
+  aluno_anon?: string | null;
+  pontuacao: number;
+  posicao_fila?: number | null;
+  ordem?: number | null;
+  situacao: FilaSituacao | string;
+  reservas_abertas: number;
+}
+
+export interface FilaUnidade {
+  unidade_codigo: string;
+  rodada_id?: number | null;
+  grupamento?: string | null;
+  horario?: string | null;
+  grupos: { grupamento: string; horario: string; n_fila: number; n_reservadas: number }[];
+  n_fila: number;
+  n_reservadas: number;
+  n_convocadas_abertas: number;
+  itens: FilaUnidadeItem[];
 }
 
 export interface Opcao {
@@ -144,7 +177,7 @@ export interface Proposta {
   unidade: string;
   unidade_nome?: string | null;
   ordem: number;
-  resultado: "aceita" | "rejeitada" | "retida" | string;
+  resultado: "retida_provisoriamente" | "rejeitada" | "desbancada" | string;
   corte?: number | null;
   vagas?: number | null;
   /** presa = vaga reservada; selecionavel = só posição na fila */
@@ -152,9 +185,19 @@ export interface Proposta {
   posicao?: number | null;
 }
 
+export interface VagaMotivo {
+  unidade: string;
+  unidade_nome?: string | null;
+  ordem: number;
+  posicao: number;
+  tipo: AlocacaoTipo | string;
+}
+
 export interface Motivo {
   propostas: Proposta[];
-  final?: { unidade: string; unidade_nome?: string | null; ordem: number; posicao: number } | null;
+  presas?: VagaMotivo[];
+  selecionaveis?: VagaMotivo[];
+  final?: { unidade: string; unidade_nome?: string | null; ordem: number; posicao: number; tipo?: string } | null;
 }
 
 export interface Alocacao {
@@ -210,6 +253,10 @@ export interface Convocacao {
   atualizada_em: string;
   horas_no_status: number;
   n_tentativas?: number;
+  pontuacao?: number | null;
+  atrasada?: boolean;
+  /** frase curta para o polo: o que fazer agora */
+  proxima_acao?: string | null;
 }
 
 export interface ConvocacaoIrma {
@@ -219,11 +266,30 @@ export interface ConvocacaoIrma {
   status: string;
 }
 
+export interface ProximoDaFila {
+  alocacao_id: number;
+  inscricao_id: number;
+  aluno_anon?: string | null;
+  pontuacao: number;
+  posicao_fila?: number | null;
+  ordem?: number | null;
+  reservas_abertas: number;
+}
+
 export interface ConvocacaoDetalhe extends Convocacao {
   eventos: Evento[];
   /** outras convocações da mesma criança (mesma inscricao_id); pode não vir */
   irmas?: ConvocacaoIrma[] | null;
+  /** só quando a vaga desta convocação foi liberada e ainda não foi repassada */
+  proximo_da_fila?: ProximoDaFila | null;
+  /** id da convocação criada a partir desta vaga liberada */
+  repassada_para?: number | null;
 }
+
+/** recortes de trabalho do polo (GET /convocacoes?fila=) */
+export type FilaConvocacao = "vencidas" | "vencem_24h" | "sem_aviso" | "aguardando" | "abertas" | "trabalho" | "encerradas";
+
+export type CanalContato = "whatsapp" | "ligacao" | "sms" | "email" | "visita";
 
 export type EventoTipo =
   | "tentativa_contato"
@@ -235,6 +301,23 @@ export type EventoTipo =
 export interface NovoEvento {
   tipo: EventoTipo | string;
   payload?: Record<string, unknown>;
+  /** quem registra (nome/matrícula do servidor); vai para o log de eventos */
+  ator?: string | null;
+}
+
+export interface ExpirarVencidasResposta {
+  expiradas: number;
+  ids: number[];
+}
+
+export interface MultiReservaItem {
+  inscricao_id: number;
+  aluno_anon?: string | null;
+  pontuacao: number;
+  n_abertas: number;
+  unidades: string[];
+  mais_antiga_em: string;
+  horas_mais_antiga: number;
 }
 
 export interface PainelResumo {
@@ -249,9 +332,19 @@ export interface PainelResumo {
   sem_contato: number;
   inconsistencias: number;
   confirmadas?: number;
+  recusadas?: number;
+  expiradas?: number;
   vagas_presas_por_crianca?: number | null;
   vagas_liberadas_hoje?: number | null;
   atualizado_em?: string;
+  /* filas de trabalho do polo */
+  vencidas?: number;
+  vencem_24h?: number;
+  sem_aviso?: number;
+  aguardando_familia?: number;
+  criancas_multireserva?: number;
+  tempo_medio_ate_desfecho_h?: number | null;
+  n_desfechos?: number;
 }
 
 export interface PainelUnidade {
@@ -263,12 +356,94 @@ export interface PainelUnidade {
   convocadas: number;
   confirmadas: number;
   em_atraso: number;
+  liberadas?: number;
   aguardando?: number;
 }
 
 export interface GerarConvocacoesResposta {
   rodada_id: number;
-  n_convocacoes: number;
+  convocacoes_criadas: number;
+  ja_existentes: number;
+  puladas?: number;
+  prazo_fim?: string | null;
+}
+
+/* ---------- motor contínuo (roda sozinho, 24/7) ---------- */
+export interface MotorCiclo {
+  em: string;
+  duracao_ms: number;
+  ano?: number | null;
+  rodada_id?: number | null;
+  rodada_criada: boolean;
+  motivo_rodada?: "bootstrap" | "entrada_mudou" | null;
+  convocacoes_criadas: number;
+  expiradas: number;
+  repassadas: number;
+  vagas_sem_fila: number;
+  erro?: string | null;
+}
+
+export interface MotorEstado {
+  ligado: boolean;
+  intervalo_s: number;
+  expira_vencidas: boolean;
+  executando: boolean;
+  iniciado_em?: string | null;
+  ultima_execucao?: string | null;
+  proxima_execucao?: string | null;
+  ciclos: number;
+  total_rodadas: number;
+  total_convocacoes: number;
+  total_expiradas: number;
+  total_repassadas: number;
+  ultimo_ciclo?: MotorCiclo | null;
+  ultimo_erro?: string | null;
+  rodada_vigente?: Rodada | null;
+  vagas_liberadas_pendentes: number;
+}
+
+/* ---------- mapa com drill-down (rede → CRE → creche) ---------- */
+export interface MapaCre {
+  cre: string;
+  lat?: number | null;
+  lon?: number | null;
+  unidades: number;
+  unidades_no_mapa: number;
+  vagas: number;
+  inscricoes: number;
+  alocadas: number;
+  lista_espera: number;
+  convocadas: number;
+  abertas: number;
+  confirmadas: number;
+  em_atraso: number;
+}
+
+export interface MapaUnidade {
+  codigo: string;
+  nome?: string | null;
+  cre?: string | null;
+  tipo?: string | null;
+  bairro?: string | null;
+  lat?: number | null;
+  lon?: number | null;
+  vagas: number;
+  inscricoes: number;
+  alocadas: number;
+  lista_espera: number;
+  convocadas: number;
+  abertas: number;
+  confirmadas: number;
+  em_atraso: number;
+}
+
+export interface Mapa {
+  ano?: number | null;
+  nivel: "rede" | "cre";
+  cre?: string | null;
+  atualizado_em: string;
+  cres: MapaCre[];
+  unidades: MapaUnidade[];
 }
 
 /* ---------- comprovações via bases oficiais ---------- */
@@ -353,4 +528,165 @@ export interface PainelCre {
   confirmadas: number;
   em_atraso: number;
   lista_espera: number;
+}
+
+/* ---------- pré-cadastro (família) ---------- */
+export interface ReguaFamilia {
+  ano: number;
+  maxima: number;
+  perguntas: { ich_perg_id: number; texto: string; pontos: number; desempate: boolean; automatico: boolean; fonte_automatica: string | null }[];
+}
+
+export interface Verificado {
+  criterio: string;
+  fonte: string;
+  resultado: "confirmado" | "nao_encontrado" | "erro" | "pendente";
+  protocolo: string | null;
+  ich_perg_id: number;
+  texto: string;
+  pontos: number;
+  bloqueia_manual: boolean;
+}
+
+export interface Verificacao {
+  verificados: Verificado[];
+  respostas_automaticas: Record<string, boolean>;
+}
+
+export interface GeoCep {
+  cep: string;
+  logradouro: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  uf: string | null;
+  lat: number | null;
+  lon: number | null;
+  fonte: string;
+}
+
+export type Chance = "alta" | "media" | "baixa" | "sem_vaga";
+
+export interface UnidadeSugerida {
+  codigo: string;
+  nome: string;
+  bairro: string | null;
+  lat: number | null;
+  lon: number | null;
+  distancia_km: number | null;
+  vagas: number;
+  corte: number | null;
+  taxa_pct: number | null;
+  n_base: number;
+  chance: Chance;
+  ordem_sugerida: number;
+}
+
+export interface SugestoesIn {
+  cep: string;
+  lat?: number | null;
+  lon?: number | null;
+  grupamento: string;
+  horario: string;
+  respostas: Record<string, boolean>;
+}
+
+export interface Sugestoes {
+  pontuacao: { total: number; maxima: number; itens: { ich_perg_id: number; texto: string; pontos: number }[] };
+  regua_ano: number;
+  casa: { lat: number | null; lon: number | null; bairro: string | null; fonte: string } | null;
+  unidades: UnidadeSugerida[];
+}
+
+export type Canal = "celular" | "whatsapp" | "email";
+
+export interface Contato {
+  nome: string;
+  parentesco: string;
+  canal: Canal;
+  valor: string;
+  principal: boolean;
+}
+
+export interface PreCadastroIn {
+  cpf: string;
+  nome_responsavel: string;
+  nome_crianca?: string;
+  nascimento_anomes: string;
+  grupamento: string;
+  horario: string;
+  cep: string;
+  cep_alternativo?: string;
+  lat?: number | null;
+  lon?: number | null;
+  respostas: Record<string, boolean>;
+  contatos: Contato[];
+  escolhas: string[];
+  verificacoes?: Verificado[];
+  consentimento: true;
+}
+
+export interface PreCadastroCriado {
+  id: number;
+  protocolo: string;
+  pontuacao: number;
+  criado_em: string;
+  n_escolhas: number;
+  n_contatos: number;
+}
+
+export interface PreCadastro {
+  protocolo: string;
+  criado_em: string;
+  nome_responsavel: string;
+  nome_crianca?: string | null;
+  nascimento_anomes: string;
+  grupamento: string;
+  horario: string;
+  cep: string;
+  bairro: string | null;
+  pontuacao: number;
+  respostas: Record<string, boolean>;
+  contatos: Contato[];
+  escolhas: { ordem: number; codigo: string; nome: string | null; bairro: string | null; distancia_km: number | null }[];
+}
+
+/* ---------- assistente (chat com tools) — POST /chat ---------- */
+export interface ChatMensagem {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ChatPedido {
+  area: "cre" | "sme";
+  cre?: string;
+  ator?: string;
+  mensagens: ChatMensagem[];
+}
+
+export interface ChatFerramenta {
+  nome: string;
+  argumentos: Record<string, unknown>;
+  /** linha mostrada ao servidor: "resumo do painel · 4ª CRE" */
+  resumo: string;
+  erro?: string | null;
+}
+
+/** a resposta já está num card do painel: o chat oferece levar o servidor até lá (rola e destaca) e mostra o resumo */
+export interface ChatNavegacao {
+  /** casa com o `data-secao` do card, ex.: "cre.para_hoje" */
+  secao: string;
+  pagina: string;
+  titulo: string;
+  rota: string;
+  resumo: string;
+}
+
+export interface ChatResposta {
+  resposta: string;
+  ferramentas: ChatFerramenta[];
+  navegacao?: ChatNavegacao | null;
+  modelo: string;
+  tokens_entrada?: number;
+  tokens_saida?: number;
+  log_id?: number | null;
 }

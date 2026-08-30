@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -69,6 +69,37 @@ class UnidadeOut(BaseModel):
 
 class UnidadeDetalhe(UnidadeOut):
     capacidade: list[CapacidadeOut] = []
+
+
+class CapacidadeIn(BaseModel):
+    ano: int
+    grupamento: str
+    horario: str
+    vagas: int = Field(ge=0, le=10000)
+    ator: str | None = None
+
+
+class FilaUnidadeItem(BaseModel):
+    alocacao_id: int
+    inscricao_id: int
+    aluno_anon: str | None
+    pontuacao: int
+    posicao_fila: int | None
+    ordem: int | None
+    situacao: str                          # aguardando | convocada_aqui | confirmada_em_outra | reservas_cheias
+    reservas_abertas: int
+
+
+class FilaUnidade(BaseModel):
+    unidade_codigo: str
+    rodada_id: int | None
+    grupamento: str | None
+    horario: str | None
+    grupos: list[dict[str, Any]] = []      # combinações (grupamento, horario) disponíveis nesta unidade
+    n_fila: int = 0
+    n_reservadas: int = 0                  # vagas presas nesta unidade na rodada
+    n_convocadas_abertas: int = 0
+    itens: list[FilaUnidadeItem] = []
 
 
 class OpcaoOut(BaseModel):
@@ -203,6 +234,7 @@ class ConvocacaoOut(BaseModel):
     n_tentativas: int = 0
     aluno_anon: str | None = None
     pontuacao: int | None = None
+    proxima_acao: str | None = None        # texto curto para o polo: o que fazer agora com esta convocação
 
 
 class ConvocacaoIrma(BaseModel):
@@ -212,9 +244,37 @@ class ConvocacaoIrma(BaseModel):
     status: str
 
 
+class ProximoDaFila(BaseModel):
+    """Quem é o próximo da lista de espera da unidade (mesma rodada, grupamento e turno)."""
+    alocacao_id: int
+    inscricao_id: int
+    aluno_anon: str | None
+    pontuacao: int
+    posicao_fila: int | None
+    ordem: int | None                      # em que opção da família esta unidade estava
+    reservas_abertas: int                  # quantas vagas a criança já segura em outras unidades
+
+
 class ConvocacaoDetalhe(ConvocacaoOut):
     eventos: list[EventoOut] = []
     irmas: list[ConvocacaoIrma] = []
+    proximo_da_fila: ProximoDaFila | None = None   # só quando a vaga desta convocação foi liberada
+    repassada_para: int | None = None              # id da convocação criada a partir desta vaga liberada
+
+
+class ConvocarProximoIn(BaseModel):
+    ator: str | None = None
+
+
+class ExpirarVencidasIn(BaseModel):
+    cre: str | None = None
+    unidade: str | None = None
+    ator: str | None = None
+
+
+class ExpirarVencidasOut(BaseModel):
+    expiradas: int
+    ids: list[int]
 
 
 class EventoRegistrado(BaseModel):
@@ -244,6 +304,24 @@ class PainelResumo(BaseModel):
     recusadas: int
     expiradas: int
     vagas_liberadas: int
+    # filas de trabalho do polo
+    vencidas: int = 0                      # abertas com prazo_fim já passado
+    vencem_24h: int = 0                    # abertas que vencem nas próximas 24 h
+    sem_aviso: int = 0                     # família ainda não avisada (selecionada ou contato_tentado) — igual a sem_contato
+    aguardando_familia: int = 0            # contato_confirmado: a família sabe e ainda não respondeu
+    criancas_multireserva: int = 0         # crianças com mais de uma reserva aberta
+    tempo_medio_ate_desfecho_h: float | None = None   # da seleção ao desfecho (confirmada/recusada/expirada)
+    n_desfechos: int = 0
+
+
+class MultiReservaItem(BaseModel):
+    inscricao_id: int
+    aluno_anon: str | None
+    pontuacao: int
+    n_abertas: int
+    unidades: list[str]
+    mais_antiga_em: datetime
+    horas_mais_antiga: float
 
 
 class ComprovacaoOut(BaseModel):
@@ -268,6 +346,88 @@ class PainelUnidade(BaseModel):
     confirmadas: int
     em_atraso: int
     liberadas: int
+
+
+# ----------------------------------------------------------------------------- mapa (drill-down)
+
+class MapaCre(BaseModel):
+    """Uma CRE no mapa da rede. `lat`/`lon` = centroide das unidades com coordenada."""
+    cre: str
+    lat: float | None = None
+    lon: float | None = None
+    unidades: int
+    unidades_no_mapa: int
+    vagas: int
+    inscricoes: int
+    alocadas: int
+    lista_espera: int
+    convocadas: int
+    abertas: int
+    confirmadas: int
+    em_atraso: int
+
+
+class MapaUnidade(BaseModel):
+    """Uma creche/EDI no mapa da CRE — todas as unidades da CRE aparecem, mesmo sem convocação."""
+    codigo: str
+    nome: str | None
+    cre: str | None
+    tipo: str | None
+    bairro: str | None
+    lat: float | None = None
+    lon: float | None = None
+    vagas: int
+    inscricoes: int
+    alocadas: int
+    lista_espera: int
+    convocadas: int
+    abertas: int
+    confirmadas: int
+    em_atraso: int
+
+
+class MapaOut(BaseModel):
+    ano: int | None
+    nivel: str                             # rede | cre
+    cre: str | None = None
+    atualizado_em: datetime
+    cres: list[MapaCre] = []
+    unidades: list[MapaUnidade] = []       # preenchido quando `cre` é informada
+
+
+# ----------------------------------------------------------------------------- motor contínuo
+
+class MotorCiclo(BaseModel):
+    em: datetime
+    duracao_ms: int
+    ano: int | None = None
+    rodada_id: int | None = None
+    rodada_criada: bool = False
+    motivo_rodada: str | None = None
+    convocacoes_criadas: int = 0
+    expiradas: int = 0
+    repassadas: int = 0
+    vagas_sem_fila: int = 0
+    erro: str | None = None
+
+
+class MotorEstado(BaseModel):
+    ligado: bool
+    intervalo_s: int
+    expira_vencidas: bool
+    executando: bool
+    iniciado_em: datetime | None = None
+    ultima_execucao: datetime | None = None
+    proxima_execucao: datetime | None = None
+    ciclos: int = 0
+    total_rodadas: int = 0
+    total_convocacoes: int = 0
+    total_expiradas: int = 0
+    total_repassadas: int = 0
+    ultimo_ciclo: MotorCiclo | None = None
+    ultimo_erro: str | None = None
+    rodada_vigente: RodadaOut | None = None
+    vagas_liberadas_pendentes: int = 0     # liberadas ainda sem repasse (o motor pega no próximo ciclo)
 
 
 # ----------------------------------------------------------------------------- visão da família
@@ -353,3 +513,222 @@ class PainelCre(BaseModel):
     confirmadas: int
     em_atraso: int
     lista_espera: int
+
+
+# ----------------------------------------------------------------------------- assistente (chat com tools)
+
+class ChatMensagem(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=4000)
+
+
+class ChatPedido(BaseModel):
+    area: Literal["cre", "sme"]
+    cre: str | None = Field(default=None, max_length=16)       # obrigatória na área cre; ignorada na sme
+    ator: str | None = Field(default=None, max_length=120)     # identificação declarada, vai para o log de acesso
+    mensagens: list[ChatMensagem] = Field(min_length=1, max_length=60)
+
+
+class ChatFerramenta(BaseModel):
+    nome: str
+    argumentos: dict[str, Any]
+    resumo: str                            # linha exibida ao servidor: "resumo do painel · 4ª CRE"
+    erro: str | None = None
+
+
+class ChatNavegacao(BaseModel):
+    """A resposta já está num card: o frontend pergunta se leva o servidor até lá (rola e destaca) e mostra o resumo."""
+    secao: str                             # casa com o data-secao do frontend, ex.: "cre.para_hoje"
+    pagina: str
+    titulo: str
+    rota: str                              # ex.: "/cre/convocacoes?fila=vencidas"
+    resumo: str
+
+
+class ChatResposta(BaseModel):
+    resposta: str
+    ferramentas: list[ChatFerramenta]
+    navegacao: ChatNavegacao | None = None
+    modelo: str
+    tokens_entrada: int = 0
+    tokens_saida: int = 0
+    log_id: int | None = None              # id em consulta_agente (None se o log falhou)
+
+
+# ----------------------------------------------------------------------------- pré-cadastro da família
+
+class ReguaPergunta(BaseModel):
+    ich_perg_id: int
+    texto: str
+    pontos: int
+    desempate: bool
+    automatico: bool = False                 # verificado por API oficial a partir do CPF
+    fonte_automatica: str | None = None
+
+
+class ReguaFamilia(BaseModel):
+    ano: int
+    maxima: int
+    perguntas: list[ReguaPergunta]
+
+
+class GeoEndereco(BaseModel):
+    cep: str
+    logradouro: str | None
+    bairro: str | None
+    cidade: str | None
+    uf: str | None
+    lat: float | None
+    lon: float | None
+    fonte: str
+
+
+class SugestoesIn(BaseModel):
+    cep: str | None = None
+    lat: float | None = None
+    lon: float | None = None
+    grupamento: str
+    horario: str
+    respostas: dict[str, bool] = Field(default_factory=dict)
+    ano: int | None = None
+
+
+class PontuacaoItem(BaseModel):
+    ich_perg_id: int
+    texto: str
+    pontos: int
+
+
+class PontuacaoEstimada(BaseModel):
+    total: int
+    maxima: int
+    itens: list[PontuacaoItem]
+
+
+class CasaOut(BaseModel):
+    lat: float
+    lon: float
+    bairro: str | None
+    fonte: str
+
+
+class UnidadeSugerida(BaseModel):
+    codigo: str
+    nome: str | None
+    bairro: str | None
+    lat: float
+    lon: float
+    distancia_km: float
+    vagas: int
+    corte: int | None
+    taxa_pct: float | None                   # % de crianças com até a sua pontuação que conseguiram vaga aqui
+    n_base: int                              # quantos casos sustentam a taxa
+    chance: str                              # alta | media | baixa | sem_vaga
+    ordem_sugerida: int
+
+
+class SugestoesOut(BaseModel):
+    pontuacao: PontuacaoEstimada
+    regua_ano: int
+    casa: CasaOut | None
+    unidades: list[UnidadeSugerida]
+
+
+class ContatoIn(BaseModel):
+    nome: str = Field(min_length=2)
+    parentesco: str | None = None
+    canal: str = Field(pattern="^(celular|whatsapp|email)$")
+    valor: str = Field(min_length=5)
+    principal: bool = False
+
+
+class ContatoOut(ContatoIn):
+    id: int
+    verificado_em: datetime | None = None
+
+
+class PreCadastroIn(BaseModel):
+    cpf: str = Field(min_length=11)
+    nome_responsavel: str = Field(min_length=3)
+    nome_crianca: str | None = None
+    nascimento_anomes: str = Field(pattern=r"^\d{4}-\d{2}$")
+    grupamento: str
+    horario: str
+    cep: str
+    cep_alternativo: str | None = None
+    lat: float | None = None
+    lon: float | None = None
+    respostas: dict[str, bool] = Field(default_factory=dict)
+    contatos: list[ContatoIn] = Field(min_length=3)   # regra do produto: 3 contatos evitam o gargalo da convocação
+    escolhas: list[str] = Field(min_length=1, max_length=5)
+    verificacoes: list[dict[str, Any]] | None = None
+    consentimento: bool
+
+
+class PreCadastroCriado(BaseModel):
+    id: int
+    protocolo: str
+    pontuacao: int
+    criado_em: datetime
+    n_escolhas: int
+    n_contatos: int
+
+
+class EscolhaOut(BaseModel):
+    ordem: int
+    codigo: str
+    nome: str | None
+    bairro: str | None
+    distancia_km: float | None
+
+
+class PreCadastroOut(BaseModel):
+    protocolo: str
+    criado_em: datetime
+    nome_responsavel: str
+    nome_crianca: str | None
+    nascimento_anomes: str
+    grupamento: str
+    horario: str
+    cep: str
+    bairro: str | None
+    lat: float | None
+    lon: float | None
+    regua_ano: int
+    pontuacao: int
+    respostas: dict[str, bool]
+    verificacoes: list[dict[str, Any]] | None = None
+    contatos: list[ContatoOut]
+    escolhas: list[EscolhaOut]
+
+
+class VerificarIn(BaseModel):
+    cpf: str = Field(min_length=11)
+    nascimento_anomes: str | None = None
+
+
+class CriterioVerificado(BaseModel):
+    criterio: str
+    fonte: str
+    resultado: str                           # confirmado | nao_encontrado | erro | pendente
+    protocolo: str | None
+    ich_perg_id: int | None
+    texto: str | None
+    pontos: int
+    bloqueia_manual: bool                    # True: a resposta é a da API; False: família ainda pode marcar (ex.: laudo)
+
+
+class VerificacaoOut(BaseModel):
+    verificados: list[CriterioVerificado]
+    respostas_automaticas: dict[str, bool]
+
+
+class MensagemIn(BaseModel):
+    """Pedido de envio repassado ao serviço de mensageria (`mensageria/`)."""
+    canal: Literal["whatsapp", "email", "sms"]
+    destino: str = Field(min_length=3, description="celular (E.164 ou DDD+número) ou e-mail")
+    template: str = Field(description="nome no catálogo — GET /mensagens/templates")
+    dados: dict[str, Any] = Field(default_factory=dict)
+    referencia: str | None = Field(default=None, max_length=64, description="ex.: 'convocacao:1234'")
+    chave_idem: str | None = Field(default=None, max_length=128)
+    ator: str = "painel"

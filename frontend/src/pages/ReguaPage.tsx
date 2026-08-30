@@ -45,7 +45,7 @@ export default function ReguaPage() {
         )}
       </div>
 
-      <Card flush>
+      <Card flush secao="sme.regua">
         {(processos.isLoading || regua.isLoading) && <Spinner label="Carregando a régua…" />}
         {regua.isError && (
           <div style={{ padding: 16 }}>

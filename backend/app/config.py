@@ -22,6 +22,30 @@ class Settings(BaseSettings):
     # Prazo da família após a convocação (Res. SME 542/2025: 3 dias úteis; aqui 3 dias corridos)
     prazo_convocacao_dias: int = 3
 
+    # Motor contínuo (app/motor.py): classifica, convoca e repassa vaga liberada sozinho, 24/7.
+    motor_intervalo_segundos: int = 60          # 0 = desligado (só o POST /motor/ciclo manual)
+    motor_atraso_inicial_segundos: int = 5      # espera o banco subir antes do primeiro ciclo
+    motor_vagas_presas: int = 3                 # usados só no bootstrap; depois o motor repete o recorte
+    motor_alternativas: int = 2                 # da última rodada do ano
+    motor_grupamento: str | None = None         # recorte do bootstrap (None = todos)
+    motor_horario: str | None = None
+    motor_max_repasses_por_ciclo: int = 200     # teto de vagas liberadas repassadas por ciclo
+    # Registrar `expirada` (ator = motor) nas convocações com prazo vencido. Desligado por padrão: na
+    # demonstração a expiração fica visível como "vencidas" e o polo registra em lote pelo painel (PRD §9).
+    motor_expirar_vencidas: bool = False
+
+    # Assistente (chat com tools, app/agente). Sem ANTHROPIC_API_KEY, POST /chat responde 503.
+    anthropic_api_key: str | None = None
+    chat_model: str = "claude-opus-5"
+    chat_max_tools: int = 8            # chamadas de ferramenta por turno
+    chat_max_tokens: int = 8000
+    chat_effort: str = "medium"        # low | medium | high | xhigh | max
+    chat_timeout_s: float = 90.0
+    chat_fallbacks: bool = True        # em caso de recusa, o serviço repete a chamada em outro modelo (beta)
+    chat_max_historico: int = 30       # mensagens do histórico enviadas ao modelo
+    chat_sql_timeout_ms: int = 5000    # statement_timeout da consulta_sql (só no Nível Central)
+    chat_sql_max_linhas: int = 200
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

@@ -3,16 +3,18 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.schemas import PainelCre, PainelResumo, PainelUnidade, SelecionadasAguardando
+from app.schemas import (MapaCre, MapaOut, MapaUnidade, MultiReservaItem, PainelCre, PainelResumo, PainelUnidade,
+                         SelecionadasAguardando)
 
 router = APIRouter(prefix="/painel", tags=["painel"])
 
 ABERTAS_SQL = "('selecionada','contato_tentado','contato_confirmado')"
+DESFECHO_SQL = "('confirmada','recusada','expirada')"
 
 
 def _filtro(cre: str | None, unidade: str | None) -> tuple[str, dict]:
@@ -40,10 +42,17 @@ def resumo(cre: str | None = None, unidade: str | None = None, db: Session = Dep
                                                             AND now() - c.atualizada_em < interval '72 hours') AS f2,
           COUNT(*) FILTER (WHERE c.status IN {ABERTAS_SQL} AND now() - c.atualizada_em >= interval '72 hours') AS f3,
           COUNT(*) FILTER (WHERE c.status IN {ABERTAS_SQL} AND (c.prazo_fim < now() OR now() - c.atualizada_em >= interval '72 hours')) AS risco,
-          COUNT(*) FILTER (WHERE c.status IN ('selecionada','contato_tentado')) AS sem_contato,
+          COUNT(*) FILTER (WHERE c.status IN ('selecionada','contato_tentado')) AS sem_aviso,
+          COUNT(*) FILTER (WHERE c.status = 'contato_confirmado') AS aguardando,
+          COUNT(*) FILTER (WHERE c.status IN {ABERTAS_SQL} AND c.prazo_fim < now()) AS vencidas,
+          COUNT(*) FILTER (WHERE c.status IN {ABERTAS_SQL} AND c.prazo_fim >= now()
+                                                            AND c.prazo_fim < now() + interval '24 hours') AS vencem_24h,
           COUNT(*) FILTER (WHERE c.status = 'confirmada') AS confirmadas,
           COUNT(*) FILTER (WHERE c.status = 'recusada') AS recusadas,
-          COUNT(*) FILTER (WHERE c.status = 'expirada') AS expiradas
+          COUNT(*) FILTER (WHERE c.status = 'expirada') AS expiradas,
+          COUNT(*) FILTER (WHERE c.status IN {DESFECHO_SQL}) AS n_desfechos,
+          AVG(EXTRACT(EPOCH FROM (c.atualizada_em - c.criada_em)) / 3600.0)
+              FILTER (WHERE c.status IN {DESFECHO_SQL}) AS tempo_desfecho_h
         {base}
     """), params).one()
     # inconsistência: criança com vaga confirmada e ainda assim outra convocação aberta (deveria ter sido liberada)
@@ -55,11 +64,11 @@ def resumo(cre: str | None = None, unidade: str | None = None, db: Session = Dep
              AND COUNT(*) FILTER (WHERE c.status IN {ABERTAS_SQL}) > 0
         ) t
     """), params).scalar() or 0
-    presas_media = db.execute(text(f"""
-        SELECT COALESCE(AVG(n), 0) FROM (
+    presas = db.execute(text(f"""
+        SELECT COALESCE(AVG(n), 0) AS media, COUNT(*) FILTER (WHERE n > 1) AS multi FROM (
           SELECT COUNT(*) AS n {base} AND c.status IN {ABERTAS_SQL} GROUP BY c.inscricao_id
         ) t
-    """), params).scalar() or 0
+    """), params).one()
     liberadas_hoje = db.execute(text(f"""
         SELECT COUNT(*) FROM evento e JOIN convocacao c ON c.id = e.convocacao_id
         JOIN unidade u ON u.codigo = c.unidade_codigo
@@ -76,11 +85,47 @@ def resumo(cre: str | None = None, unidade: str | None = None, db: Session = Dep
         selecionadas_aguardando=SelecionadasAguardando(
             total=faixas.abertas, faixa_0_24h=faixas.f0, faixa_24_48h=faixas.f1,
             faixa_48_72h=faixas.f2, faixa_mais_72h=faixas.f3),
-        vagas_em_risco=faixas.risco, sem_contato=faixas.sem_contato, inconsistencias=inconsist,
-        vagas_presas_por_crianca=round(float(presas_media), 2), vagas_liberadas_hoje=int(liberadas_hoje),
+        vagas_em_risco=faixas.risco, sem_contato=faixas.sem_aviso, inconsistencias=inconsist,
+        vagas_presas_por_crianca=round(float(presas.media), 2), vagas_liberadas_hoje=int(liberadas_hoje),
         confirmadas=faixas.confirmadas, recusadas=faixas.recusadas, expiradas=faixas.expiradas,
         vagas_liberadas=liberadas,
+        vencidas=faixas.vencidas, vencem_24h=faixas.vencem_24h, sem_aviso=faixas.sem_aviso,
+        aguardando_familia=faixas.aguardando, criancas_multireserva=int(presas.multi or 0),
+        tempo_medio_ate_desfecho_h=round(float(faixas.tempo_desfecho_h), 1) if faixas.tempo_desfecho_h is not None else None,
+        n_desfechos=int(faixas.n_desfechos or 0),
     )
+
+
+@router.get("/multireserva", response_model=list[MultiReservaItem])
+def multireserva(cre: str | None = None, unidade: str | None = None, limit: int = Query(200, ge=1, le=2000),
+                 db: Session = Depends(get_db)):
+    """Crianças com mais de uma reserva aberta — as que seguram vaga. Filtro por CRE/unidade escolhe as
+    crianças (alguma reserva no recorte); a contagem considera todas as reservas abertas da criança."""
+    where, params = _filtro(cre, unidade)
+    params["limit"] = limit
+    linhas = db.execute(text(f"""
+        WITH alvo AS (
+          SELECT DISTINCT c.inscricao_id FROM convocacao c JOIN unidade u ON u.codigo = c.unidade_codigo
+          WHERE c.status IN {ABERTAS_SQL} {where}
+        )
+        SELECT c.inscricao_id, i.aluno_anon, i.pontuacao, COUNT(*) AS n_abertas,
+               array_agg(COALESCE(u.nome, c.unidade_codigo) ORDER BY c.criada_em) AS unidades,
+               MIN(c.criada_em) AS mais_antiga_em,
+               EXTRACT(EPOCH FROM (now() - MIN(c.criada_em))) / 3600.0 AS horas
+        FROM convocacao c
+        JOIN alvo ON alvo.inscricao_id = c.inscricao_id
+        JOIN inscricao i ON i.id = c.inscricao_id
+        JOIN unidade u ON u.codigo = c.unidade_codigo
+        WHERE c.status IN {ABERTAS_SQL}
+        GROUP BY c.inscricao_id, i.aluno_anon, i.pontuacao
+        HAVING COUNT(*) > 1
+        ORDER BY MIN(c.criada_em), c.inscricao_id
+        LIMIT :limit
+    """), params).all()
+    return [MultiReservaItem(inscricao_id=r.inscricao_id, aluno_anon=r.aluno_anon, pontuacao=int(r.pontuacao),
+                             n_abertas=int(r.n_abertas), unidades=list(r.unidades or []),
+                             mais_antiga_em=r.mais_antiga_em, horas_mais_antiga=round(float(r.horas), 1))
+            for r in linhas]
 
 
 @router.get("/unidades", response_model=list[PainelUnidade])
@@ -171,3 +216,118 @@ def cres(ano: int | None = None, db: Session = Depends(get_db)):
                       alocadas=int(r.alocadas), convocadas=int(r.convocadas), abertas=int(r.abertas),
                       confirmadas=int(r.confirmadas), em_atraso=int(r.em_atraso), lista_espera=int(r.lista_espera))
             for r in linhas]
+
+
+# --- mapa com drill-down: rede → CRE → unidade ------------------------------------------------------
+
+# CTEs comuns aos dois níveis. `alvo` é o universo do mapa: as unidades que participam do processo de
+# creche — a base da SME tem 2 mil escolas, mas só as que têm vaga, inscrição ou convocação entram aqui.
+# `:cre` NULL = rede inteira.
+_MAPA_CTES = f"""
+    WITH ult AS (SELECT MAX(id) AS id FROM rodada),
+    alvo AS (
+      SELECT u.codigo, u.cre FROM unidade u
+      WHERE u.cre IS NOT NULL
+        AND (CAST(:cre AS text) IS NULL OR u.cre = CAST(:cre AS text))
+        AND (EXISTS (SELECT 1 FROM capacidade c WHERE c.unidade_codigo = u.codigo AND c.ano = :ano)
+          OR EXISTS (SELECT 1 FROM convocacao cv WHERE cv.unidade_codigo = u.codigo)
+          OR EXISTS (SELECT 1 FROM opcao o JOIN inscricao i ON i.id = o.inscricao_id
+                     WHERE o.unidade_codigo = u.codigo AND i.ano = :ano))
+    ),
+    insc AS (
+      SELECT o.unidade_codigo, COUNT(DISTINCT o.inscricao_id) AS inscricoes
+      FROM opcao o JOIN inscricao i ON i.id = o.inscricao_id JOIN alvo ON alvo.codigo = o.unidade_codigo
+      WHERE i.ano = :ano AND o.ordem = 1 GROUP BY o.unidade_codigo
+    ),
+    cap AS (
+      SELECT c.unidade_codigo, SUM(c.vagas) AS vagas FROM capacidade c JOIN alvo ON alvo.codigo = c.unidade_codigo
+      WHERE c.ano = :ano GROUP BY c.unidade_codigo
+    ),
+    aloc AS (
+      SELECT a.unidade_codigo,
+             COUNT(*) FILTER (WHERE a.status = 'alocada' AND a.tipo = 'presa') AS alocadas,
+             COUNT(DISTINCT a.inscricao_id) FILTER (WHERE a.status = 'lista_espera') AS lista_espera
+      FROM alocacao a JOIN alvo ON alvo.codigo = a.unidade_codigo
+      WHERE a.rodada_id = (SELECT id FROM ult)
+      GROUP BY a.unidade_codigo
+    ),
+    conv AS (
+      SELECT c.unidade_codigo, COUNT(*) AS convocadas,
+             COUNT(*) FILTER (WHERE c.status IN {ABERTAS_SQL}) AS abertas,
+             COUNT(*) FILTER (WHERE c.status = 'confirmada') AS confirmadas,
+             COUNT(*) FILTER (WHERE c.status IN {ABERTAS_SQL} AND c.prazo_fim < now()) AS em_atraso
+      FROM convocacao c JOIN alvo ON alvo.codigo = c.unidade_codigo GROUP BY c.unidade_codigo
+    )
+"""
+
+
+@router.get("/mapa", response_model=MapaOut)
+def mapa(cre: str | None = None, ano: int | None = None, db: Session = Depends(get_db)):
+    """Mapa com drill-down. Sem `cre`: uma bolha por CRE (centroide das unidades com coordenada).
+    Com `cre`: **todas** as unidades daquela CRE, inclusive as que ainda não têm convocação — é a lista
+    de creches disponíveis no território, com vagas, fila e convocações vencidas."""
+    ano = ano or db.execute(text("SELECT MAX(ano) FROM processo")).scalar()
+    agora = datetime.now(timezone.utc)
+    cres = [
+        MapaCre(cre=str(r.cre), lat=float(r.lat) if r.lat is not None else None,
+                lon=float(r.lon) if r.lon is not None else None, unidades=int(r.unidades),
+                unidades_no_mapa=int(r.no_mapa), vagas=int(r.vagas), inscricoes=int(r.inscricoes),
+                alocadas=int(r.alocadas), lista_espera=int(r.lista_espera), convocadas=int(r.convocadas),
+                abertas=int(r.abertas), confirmadas=int(r.confirmadas), em_atraso=int(r.em_atraso))
+        for r in db.execute(text(f"""
+            {_MAPA_CTES},
+            le AS (
+              SELECT alvo.cre, COUNT(DISTINCT a.inscricao_id) AS lista_espera
+              FROM alocacao a JOIN alvo ON alvo.codigo = a.unidade_codigo
+              WHERE a.rodada_id = (SELECT id FROM ult) AND a.status = 'lista_espera' GROUP BY alvo.cre
+            )
+            SELECT u.cre,
+                   AVG(u.lat) AS lat, AVG(u.lon) AS lon,
+                   COUNT(*) AS unidades,
+                   COUNT(*) FILTER (WHERE u.lat IS NOT NULL AND u.lon IS NOT NULL) AS no_mapa,
+                   COALESCE(SUM(cap.vagas), 0) AS vagas,
+                   COALESCE(SUM(insc.inscricoes), 0) AS inscricoes,
+                   COALESCE(SUM(aloc.alocadas), 0) AS alocadas,
+                   COALESCE(MAX(le.lista_espera), 0) AS lista_espera,
+                   COALESCE(SUM(conv.convocadas), 0) AS convocadas,
+                   COALESCE(SUM(conv.abertas), 0) AS abertas,
+                   COALESCE(SUM(conv.confirmadas), 0) AS confirmadas,
+                   COALESCE(SUM(conv.em_atraso), 0) AS em_atraso
+            FROM unidade u
+            JOIN alvo ON alvo.codigo = u.codigo
+            LEFT JOIN cap ON cap.unidade_codigo = u.codigo
+            LEFT JOIN insc ON insc.unidade_codigo = u.codigo
+            LEFT JOIN aloc ON aloc.unidade_codigo = u.codigo
+            LEFT JOIN conv ON conv.unidade_codigo = u.codigo
+            LEFT JOIN le ON le.cre = u.cre
+            GROUP BY u.cre
+            ORDER BY CASE WHEN u.cre ~ '^[0-9]+$' THEN u.cre::int ELSE 99 END, u.cre
+        """), {"ano": ano, "cre": None}).all()
+    ]
+    unidades: list[MapaUnidade] = []
+    if cre:
+        unidades = [
+            MapaUnidade(codigo=r.codigo, nome=r.nome, cre=r.cre, tipo=r.tipo, bairro=r.bairro,
+                        lat=float(r.lat) if r.lat is not None else None,
+                        lon=float(r.lon) if r.lon is not None else None,
+                        vagas=int(r.vagas), inscricoes=int(r.inscricoes), alocadas=int(r.alocadas),
+                        lista_espera=int(r.lista_espera), convocadas=int(r.convocadas), abertas=int(r.abertas),
+                        confirmadas=int(r.confirmadas), em_atraso=int(r.em_atraso))
+            for r in db.execute(text(f"""
+                {_MAPA_CTES}
+                SELECT u.codigo, u.nome, u.cre, u.tipo, u.bairro, u.lat, u.lon,
+                       COALESCE(cap.vagas, 0) AS vagas, COALESCE(insc.inscricoes, 0) AS inscricoes,
+                       COALESCE(aloc.alocadas, 0) AS alocadas, COALESCE(aloc.lista_espera, 0) AS lista_espera,
+                       COALESCE(conv.convocadas, 0) AS convocadas, COALESCE(conv.abertas, 0) AS abertas,
+                       COALESCE(conv.confirmadas, 0) AS confirmadas, COALESCE(conv.em_atraso, 0) AS em_atraso
+                FROM unidade u
+                JOIN alvo ON alvo.codigo = u.codigo
+                LEFT JOIN cap ON cap.unidade_codigo = u.codigo
+                LEFT JOIN insc ON insc.unidade_codigo = u.codigo
+                LEFT JOIN aloc ON aloc.unidade_codigo = u.codigo
+                LEFT JOIN conv ON conv.unidade_codigo = u.codigo
+                ORDER BY u.nome
+            """), {"ano": ano, "cre": cre}).all()
+        ]
+    return MapaOut(ano=ano, nivel="cre" if cre else "rede", cre=cre, atualizado_em=agora,
+                   cres=cres, unidades=unidades)
