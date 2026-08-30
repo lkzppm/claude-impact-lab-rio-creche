@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     versao: str = "0.1.0"
     # Prazo da família após a convocação (Res. SME 542/2025: 3 dias úteis; aqui 3 dias corridos)
     prazo_convocacao_dias: int = 3
+    # Rotina que registra `expirada` (ator = sistema) nas convocações com prazo vencido. 0 = desligada:
+    # na demonstração a expiração fica visível como "vencidas" e o polo registra em lote pelo painel.
+    expiracao_automatica_minutos: int = 0
 
     @property
     def cors_origins_list(self) -> list[str]:
