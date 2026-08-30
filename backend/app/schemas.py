@@ -268,3 +268,88 @@ class PainelUnidade(BaseModel):
     confirmadas: int
     em_atraso: int
     liberadas: int
+
+
+# ----------------------------------------------------------------------------- visão da família
+
+class RodadaRef(BaseModel):
+    id: int
+    criada_em: datetime
+    tipo: str
+
+
+class FamiliaInscricao(BaseModel):
+    id: int
+    ano: int
+    aluno_anon: str | None
+    nascimento_anomes: str | None
+    grupamento: str | None
+    horario: str | None
+    bairro: str | None
+    pontuacao: int
+    data_criacao: datetime | None
+
+
+class FamiliaCriterio(BaseModel):
+    ich_perg_id: int
+    texto: str
+    pontos: int
+    desempate: bool = False
+    declarado: bool
+    comprovado: str | None = None          # confirmado | nao_encontrado | pendente | erro | None (sem verificação)
+
+
+class FamiliaPontuacao(BaseModel):
+    total: int
+    maxima: int
+    criterios: list[FamiliaCriterio]
+
+
+class FamiliaOpcao(BaseModel):
+    ordem: int
+    unidade_codigo: str
+    unidade_nome: str | None
+    bairro: str | None
+    situacao_origem: str | None
+    resultado: str | None                  # reservada | fila | sem_vaga | None (não classificada)
+    posicao: int | None
+
+
+class FamiliaConvocacao(BaseModel):
+    id: int
+    unidade_codigo: str
+    unidade_nome: str | None
+    status: str
+    prazo_fim: datetime | None
+    horas_restantes: float | None
+    pode_responder: bool
+
+
+class FamiliaVisao(BaseModel):
+    inscricao: FamiliaInscricao
+    pontuacao: FamiliaPontuacao
+    opcoes: list[FamiliaOpcao]
+    rodada: RodadaRef | None
+    explicacao: str | None
+    convocacoes: list[FamiliaConvocacao]
+    comprovacoes: list[ComprovacaoOut]
+    situacao_resumo: str                   # reservas_abertas | matricula_confirmada | lista_espera | sem_opcao_viavel | aguardando_classificacao
+
+
+class FamiliaResposta(BaseModel):
+    resposta: str = Field(pattern="^(confirmar|recusar)$")
+
+
+# ----------------------------------------------------------------------------- nível central: por CRE
+
+class PainelCre(BaseModel):
+    cre: str
+    unidades: int
+    vagas: int
+    inscricoes: int
+    alocadas: int
+    convocadas: int
+    abertas: int
+    confirmadas: int
+    em_atraso: int
+    lista_espera: int

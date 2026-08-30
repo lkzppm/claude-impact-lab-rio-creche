@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.schemas import PainelResumo, PainelUnidade, SelecionadasAguardando
+from app.schemas import PainelCre, PainelResumo, PainelUnidade, SelecionadasAguardando
 
 router = APIRouter(prefix="/painel", tags=["painel"])
 
@@ -126,3 +126,48 @@ def unidades(cre: str | None = None, ano: int | None = None, db: Session = Depen
     return [PainelUnidade(unidade_codigo=r.codigo, unidade_nome=r.nome, cre=r.cre, vagas=int(r.vagas), alocadas=int(r.alocadas),
                           convocadas=int(r.convocadas), confirmadas=int(r.confirmadas), em_atraso=int(r.em_atraso),
                           liberadas=int(r.liberadas)) for r in linhas]
+
+
+@router.get("/cres", response_model=list[PainelCre])
+def cres(ano: int | None = None, db: Session = Depends(get_db)):
+    """Visão do Nível Central: uma linha por CRE. `inscricoes`/`vagas` do ano (padrão: o mais recente carregado)."""
+    ano = ano or db.execute(text("SELECT MAX(ano) FROM processo")).scalar()
+    linhas = db.execute(text(f"""
+        WITH ult AS (SELECT MAX(id) AS id FROM rodada),
+        insc AS (
+          SELECT u.cre, COUNT(DISTINCT o.inscricao_id) AS inscricoes
+          FROM opcao o JOIN inscricao i ON i.id = o.inscricao_id JOIN unidade u ON u.codigo = o.unidade_codigo
+          WHERE i.ano = :ano AND o.ordem = 1 GROUP BY u.cre
+        ),
+        cap AS (
+          SELECT u.cre, COUNT(DISTINCT c.unidade_codigo) AS unidades, SUM(c.vagas) AS vagas
+          FROM capacidade c JOIN unidade u ON u.codigo = c.unidade_codigo WHERE c.ano = :ano GROUP BY u.cre
+        ),
+        aloc AS (
+          SELECT u.cre,
+                 COUNT(*) FILTER (WHERE a.status = 'alocada' AND a.tipo = 'presa') AS alocadas,
+                 COUNT(DISTINCT a.inscricao_id) FILTER (WHERE a.status = 'lista_espera') AS lista_espera
+          FROM alocacao a JOIN unidade u ON u.codigo = a.unidade_codigo
+          WHERE a.rodada_id = (SELECT id FROM ult) GROUP BY u.cre
+        ),
+        conv AS (
+          SELECT u.cre, COUNT(*) AS convocadas,
+                 COUNT(*) FILTER (WHERE c.status IN {ABERTAS_SQL}) AS abertas,
+                 COUNT(*) FILTER (WHERE c.status = 'confirmada') AS confirmadas,
+                 COUNT(*) FILTER (WHERE c.status IN {ABERTAS_SQL} AND c.prazo_fim < now()) AS em_atraso
+          FROM convocacao c JOIN unidade u ON u.codigo = c.unidade_codigo GROUP BY u.cre
+        )
+        SELECT cre,
+               COALESCE(cap.unidades, 0) AS unidades, COALESCE(cap.vagas, 0) AS vagas,
+               COALESCE(insc.inscricoes, 0) AS inscricoes,
+               COALESCE(aloc.alocadas, 0) AS alocadas, COALESCE(aloc.lista_espera, 0) AS lista_espera,
+               COALESCE(conv.convocadas, 0) AS convocadas, COALESCE(conv.abertas, 0) AS abertas,
+               COALESCE(conv.confirmadas, 0) AS confirmadas, COALESCE(conv.em_atraso, 0) AS em_atraso
+        FROM (SELECT DISTINCT cre FROM unidade WHERE cre IS NOT NULL) u
+        LEFT JOIN cap USING (cre) LEFT JOIN insc USING (cre) LEFT JOIN aloc USING (cre) LEFT JOIN conv USING (cre)
+        ORDER BY CASE WHEN cre ~ '^[0-9]+$' THEN cre::int ELSE 99 END, cre
+    """), {"ano": ano}).all()
+    return [PainelCre(cre=str(r.cre), unidades=int(r.unidades), vagas=int(r.vagas), inscricoes=int(r.inscricoes),
+                      alocadas=int(r.alocadas), convocadas=int(r.convocadas), abertas=int(r.abertas),
+                      confirmadas=int(r.confirmadas), em_atraso=int(r.em_atraso), lista_espera=int(r.lista_espera))
+            for r in linhas]
