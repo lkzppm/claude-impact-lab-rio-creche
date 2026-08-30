@@ -81,6 +81,23 @@ Duas peças, uma só base de dados:
    a Res. 542/2025 dá a toda família o direito a até 5 opções e 90 pontos é quase inatingível (CadÚnico = 51).
    Todos escolhem; a sugestão ordena por chance e distância, e a escolha continua sendo da família.
 
+### 2.5 Formulário da família: linguagem simples e comprovação explícita
+
+O pré-cadastro é feito para quem tem pouca leitura: frases curtas, uma pergunta por cartão, ícone em tudo,
+botões grandes (turno "Dia todo"/"Meio período", canal de contato com ícone), progresso em 6 passos na barra
+fixa. **A pontuação da régua não aparece para a família** — é conta interna da SME (Res. 542/2025 é norma); o que
+a família vê é sim/não e o que precisa levar.
+
+Como cada critério é comprovado (spec/01 §1 e §3; Art. 7º: "critérios não comprovados deixam de ser computados"):
+
+| Comprovação | Critérios | O que a família vê |
+|---|---|---|
+| **Automática** (CPF → RMI/Conecta) | CadÚnico, Bolsa Família/Cartão Carioca | "Conferido pelo CPF: sim, encontramos / não encontramos" — sem papel |
+| **Documento na unidade** (presencial) | educação especial (laudo), violência doméstica (B.O./medida protetiva), monoparental (certidão), responsável com deficiência (laudo), doença crônica (laudo/atestado), álcool/drogas (declaração CAPS/posto), privado de liberdade (declaração), refugiado (CONARE/RNM), responsável menor de 18 (identidade) | ao marcar, aparece "Leve na creche: <documento>"; no fim, a lista "O que levar na creche" (base + específicos) |
+| **Sistema da SME** | fila do ano anterior, irmão na rede, Pequenos Cariocas | "A SME confere no sistema" — sem papel |
+
+Mapa em `frontend/src/familia/criterios.ts` (casamento por palavra-chave, sobrevive à troca de régua; fallback genérico = documento).
+
 ## 3. O que NÃO muda
 
 - A **tabela de pontuação** (Res. SME 542/2025) e os critérios de desempate. Norma, não parâmetro.

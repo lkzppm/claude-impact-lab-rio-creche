@@ -2868,3 +2868,357 @@ a {
 .pc-skeleton li {
   animation-duration: 1.4s;
 }
+
+/* ===================== pré-cadastro simples (baixa escolaridade): ícone em tudo, alvo grande, sem pontuação ===================== */
+.pc-sec h2 svg {
+  vertical-align: -5px;
+  color: var(--mr-blue-700);
+  margin-right: 6px;
+}
+.pc-h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pc-h3 svg {
+  color: var(--mr-blue-700);
+}
+.pc-ok {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pc-ok svg {
+  color: var(--ok);
+  flex: none;
+}
+.pc-opcoes-grandes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+}
+.pc-opcao-grande {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  min-height: 104px;
+  padding: var(--sp-3);
+  border: 2px solid var(--mr-grey-300);
+  border-radius: var(--radius-card);
+  background: var(--mr-white);
+  cursor: pointer;
+  color: var(--mr-ink-soft);
+  transition: border-color var(--dur-2), background var(--dur-2), transform var(--dur-1);
+}
+.pc-opcao-grande input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.pc-opcao-grande svg {
+  color: var(--mr-cyan-600);
+}
+.pc-opcao-grande strong {
+  font-size: 18px;
+  color: var(--mr-blue-900);
+}
+.pc-opcao-grande small {
+  font-size: var(--fs-sm);
+}
+.pc-opcao-grande.on {
+  border-color: var(--mr-blue-700);
+  background: var(--info-soft);
+  box-shadow: 0 0 0 3px rgba(2, 143, 190, 0.18);
+}
+.pc-opcao-grande:active {
+  transform: scale(0.98);
+}
+.pc-opcao-grande:has(input:focus-visible) {
+  outline: 3px solid var(--mr-cyan-400);
+  outline-offset: 2px;
+}
+
+/* pergunta sim/não: ícone · frase · marca */
+.pc-quest {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 64px;
+  padding: var(--sp-3) var(--sp-4);
+  border: 2px solid var(--mr-grey-300);
+  border-radius: var(--radius-card);
+  background: var(--mr-white);
+  cursor: pointer;
+  transition: border-color var(--dur-2), background var(--dur-2);
+}
+.pc-quest input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.pc-quest:has(input:focus-visible) {
+  outline: 3px solid var(--mr-cyan-400);
+  outline-offset: 2px;
+}
+.pc-quest.on {
+  border-color: var(--mr-blue-700);
+  background: var(--info-soft);
+}
+.pc-quest-auto {
+  cursor: default;
+}
+.pc-quest-icone {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mr-grey-100);
+  color: var(--mr-blue-700);
+  flex: none;
+}
+.pc-quest.on .pc-quest-icone {
+  background: var(--mr-blue-700);
+  color: var(--mr-white);
+}
+.pc-quest-texto {
+  font-size: 17px;
+  line-height: 1.35;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pc-quest-como {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--warn);
+}
+.pc-quest-como-sme {
+  color: var(--mr-ink-muted);
+}
+.pc-quest-check {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--mr-grey-300);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mr-white);
+  flex: none;
+  transition: background var(--dur-2), border-color var(--dur-2);
+}
+.pc-quest.on .pc-quest-check {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+.pc-quest-estado .pill {
+  font-size: var(--fs-sm);
+}
+.pc-aviso-forte {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: flex-start;
+}
+.pc-aviso-forte svg {
+  flex: none;
+  color: var(--warn);
+  margin-top: 2px;
+}
+
+/* contatos: 3 bolinhas de progresso, cartão por pessoa, canal como botão com ícone */
+.pc-passos-contato {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.pc-passo-contato {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--mr-grey-300);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--mr-ink-muted);
+  transition: background var(--dur-2), border-color var(--dur-2), color var(--dur-2);
+}
+.pc-passo-contato.ok {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: var(--mr-white);
+}
+.pc-passos-contato-texto {
+  margin-left: var(--sp-1);
+  font-weight: 600;
+  color: var(--mr-ink-soft);
+}
+.pc-contato {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  border-width: 2px;
+  transition: border-color var(--dur-2);
+}
+.pc-contato.ok {
+  border-color: var(--ok);
+}
+.pc-contato-titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-weight: 700;
+  color: var(--mr-blue-900);
+}
+.pc-contato-titulo svg {
+  color: var(--mr-cyan-600);
+}
+.pc-canais {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+}
+.pc-canal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 48px;
+  border: 2px solid var(--mr-grey-300);
+  border-radius: var(--radius-pill);
+  background: var(--mr-white);
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: border-color var(--dur-2), background var(--dur-2);
+}
+.pc-canal input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.pc-canal.on {
+  border-color: var(--mr-blue-700);
+  background: var(--info-soft);
+  color: var(--mr-blue-900);
+}
+.pc-canal:has(input:focus-visible) {
+  outline: 3px solid var(--mr-cyan-400);
+}
+
+/* creches: chance como bolinha colorida + frase */
+.pc-chance {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 15px;
+}
+.pc-chance i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.pc-unidade-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.pc-unidade-meta svg {
+  color: var(--mr-ink-muted);
+}
+
+/* sucesso: check grande, código, documentos */
+.pc-sucesso {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--sp-3);
+}
+.pc-sucesso-icone {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--ok);
+  color: var(--mr-white);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: surgir var(--dur-3) var(--ease-out) both;
+}
+.pc-protocolo-ajuda {
+  display: block;
+  font-size: var(--fs-sm);
+  opacity: 0.9;
+  margin-top: 4px;
+}
+.pc-docs {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.pc-docs li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-card);
+  background: var(--mr-grey-100);
+  font-weight: 600;
+}
+.pc-docs li svg {
+  color: var(--ok);
+  flex: none;
+}
+
+/* barra fixa: 6 passos */
+.pc-barra-passos {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--sp-2);
+}
+.pc-barra-passo {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background var(--dur-2), border-color var(--dur-2);
+}
+.pc-barra-passo.ok {
+  background: var(--mr-cyan-400);
+  border-color: var(--mr-cyan-400);
+  color: var(--mr-blue-900);
+}
+.pc-barra-enviar {
+  background: var(--mr-cyan-400);
+  color: var(--mr-blue-900);
+}
+.pc-barra-enviar span {
+  color: var(--mr-blue-900);
+}
+@media (max-width: 480px) {
+  .pc-barra-passos {
+    display: none;
+  }
+}

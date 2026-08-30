@@ -1,14 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { ApiError, getPreCadastro } from "../api/client";
+import { Check } from "lucide-react";
+import { DOCUMENTOS_BASE, criterioSimples } from "../familia/criterios";
+import { ApiError, getPreCadastro, getReguaFamilia } from "../api/client";
 import { Spinner, fmtDateTime } from "../design-system";
 import { fmtKm } from "../components/MapaCreches";
 
-const CANAL: Record<string, string> = { celular: "Celular", whatsapp: "WhatsApp", email: "E-mail" };
+const CANAL: Record<string, string> = { celular: "Telefone", whatsapp: "WhatsApp", email: "E-mail" };
 
 export default function PreCadastroProtocoloPage() {
   const { protocolo = "" } = useParams();
   const q = useQuery({ queryKey: ["familia", "pre-cadastro", protocolo], queryFn: () => getPreCadastro(protocolo), enabled: !!protocolo, retry: false });
+  const regua = useQuery({ queryKey: ["familia", "regua"], queryFn: getReguaFamilia, staleTime: 3600_000 });
 
   if (q.isLoading) {
     return (
@@ -37,6 +40,13 @@ export default function PreCadastroProtocoloPage() {
     );
   }
   const d = q.data;
+  // documentos a levar: os de toda família + os dos critérios marcados que só valem com papel
+  const extras = (regua.data?.perguntas ?? [])
+    .filter((p) => d.respostas[String(p.ich_perg_id)])
+    .map((p) => criterioSimples(p.texto))
+    .filter((c) => c.comprovacao === "documento" && c.documento)
+    .map((c) => c.documento as string);
+  const documentos = [...DOCUMENTOS_BASE, ...extras.filter((x, i, a) => a.indexOf(x) === i && !DOCUMENTOS_BASE.includes(x))];
   return (
     <main className="fam">
       <div className="fam-wrap">
@@ -52,15 +62,15 @@ export default function PreCadastroProtocoloPage() {
           <ul className="pc-resumo">
             <li>
               <span>Nascimento</span>
-              <strong>{d.nascimento_anomes}</strong>
+              <strong>{d.nascimento_anomes.split("-").reverse().join("/")}</strong>
             </li>
             <li>
-              <span>Grupamento</span>
+              <span>Turma</span>
               <strong>{d.grupamento}</strong>
             </li>
             <li>
-              <span>Turno</span>
-              <strong>{d.horario}</strong>
+              <span>Horário</span>
+              <strong>{d.horario === "Integral" ? "Dia todo" : "Meio período"}</strong>
             </li>
             <li>
               <span>Endereço</span>
@@ -73,10 +83,15 @@ export default function PreCadastroProtocoloPage() {
         </section>
 
         <section className="fam-sec">
-          <h2>Sua pontuação</h2>
-          <p className="fam-pontos">
-            <strong>{d.pontuacao}</strong> pontos pela régua vigente. Os critérios marcados serão conferidos nas bases do governo.
-          </p>
+          <h2>O que levar na creche</h2>
+          <p className="fam-sec-lead">Na data que vier no seu comprovante, leve estes papéis. Sem eles, a sua situação não conta.</p>
+          <ul className="pc-docs">
+            {documentos.map((doc) => (
+              <li key={doc}>
+                <Check size={20} aria-hidden="true" /> {doc}
+              </li>
+            ))}
+          </ul>
         </section>
 
         <section className="fam-sec">
@@ -116,11 +131,11 @@ export default function PreCadastroProtocoloPage() {
           </ul>
         </section>
 
-        <p className="fam-nota">Responsável: {d.nome_responsavel}. Em dezembro, na inscrição oficial no matricula.rio, esses dados já vêm preenchidos.</p>
+        <p className="fam-nota">Responsável: {d.nome_responsavel}. Vamos avisar pelos contatos que você deixou. Se mudar de número, faça o cadastro de novo.</p>
         <Link className="btn btn-secondary fam-btn" to="/familia">
           Voltar ao início
         </Link>
-        <p className="fam-rodape">Dúvidas? Procure a unidade escolar ou ligue 1746.</p>
+        <p className="fam-rodape">Dúvidas? Vá até a creche ou ligue 1746.</p>
       </div>
     </main>
   );
