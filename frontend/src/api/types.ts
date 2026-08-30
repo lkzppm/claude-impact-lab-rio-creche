@@ -359,7 +359,23 @@ export interface PainelCre {
 export interface ReguaFamilia {
   ano: number;
   maxima: number;
-  perguntas: { ich_perg_id: number; texto: string; pontos: number; desempate: boolean }[];
+  perguntas: { ich_perg_id: number; texto: string; pontos: number; desempate: boolean; automatico: boolean; fonte_automatica: string | null }[];
+}
+
+export interface Verificado {
+  criterio: string;
+  fonte: string;
+  resultado: "confirmado" | "nao_encontrado" | "erro" | "pendente";
+  protocolo: string | null;
+  ich_perg_id: number;
+  texto: string;
+  pontos: number;
+  bloqueia_manual: boolean;
+}
+
+export interface Verificacao {
+  verificados: Verificado[];
+  respostas_automaticas: Record<string, boolean>;
 }
 
 export interface GeoCep {
@@ -430,6 +446,7 @@ export interface PreCadastroIn {
   respostas: Record<string, boolean>;
   contatos: Contato[];
   escolhas: string[];
+  verificacoes?: Verificado[];
   consentimento: true;
 }
 

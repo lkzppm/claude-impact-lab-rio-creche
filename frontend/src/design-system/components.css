@@ -1312,3 +1312,21 @@
   text-align: right;
   color: var(--mr-blue-900);
 }
+
+.pc-crit-auto {
+  cursor: default;
+}
+.pc-crit-fonte {
+  width: 22px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--mr-blue-700);
+}
+.pc-crit-sub {
+  margin-top: 6px;
+  margin-left: var(--sp-4);
+  border-style: dashed;
+}
+.pc-crit .pill {
+  white-space: nowrap;
+}

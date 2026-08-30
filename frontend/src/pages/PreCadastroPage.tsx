@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
-import { ApiError, criarPreCadastro, getGeoCep, getReguaFamilia, getSugestoes } from "../api/client";
-import type { Canal, Contato, GeoCep, PreCadastroCriado, PreCadastroIn, Sugestoes, UnidadeSugerida } from "../api/types";
+import { ApiError, criarPreCadastro, getGeoCep, getReguaFamilia, getSugestoes, verificarCpf } from "../api/client";
+import type { Canal, Contato, GeoCep, PreCadastroCriado, PreCadastroIn, Sugestoes, UnidadeSugerida, Verificacao } from "../api/types";
 import { Spinner } from "../design-system";
 import MapaCreches, { COR_CHANCE, ROTULO_CHANCE, fmtKm } from "../components/MapaCreches";
 
@@ -101,10 +101,16 @@ const mascaraTelefone = (s: string) => {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 };
 
-/** Grupamento pelo mês de nascimento, na data de referência (31/03 do próximo ano letivo). */
+const anoMes = (data: string) => (/^\d{4}-\d{2}-\d{2}$/.test(data) ? data.slice(0, 7) : "");
+const isoData = (d: Date) => d.toISOString().slice(0, 10);
+const HOJE = isoData(new Date());
+const MIN_NASC = isoData(new Date(new Date().getFullYear() - 4, new Date().getMonth(), new Date().getDate()));
+
+/** Grupamento pela data de nascimento, na data de referência (31/03 do próximo ano letivo). */
 function grupamentoPorIdade(nascimento: string): { grupamento: string | null; meses: number | null } {
-  if (!/^\d{4}-\d{2}$/.test(nascimento)) return { grupamento: null, meses: null };
-  const [a, m] = nascimento.split("-").map(Number);
+  const am = anoMes(nascimento);
+  if (!am) return { grupamento: null, meses: null };
+  const [a, m] = am.split("-").map(Number);
   const hoje = new Date();
   const anoRef = hoje.getMonth() + 1 > 3 ? hoje.getFullYear() + 1 : hoje.getFullYear();
   const meses = (anoRef - a) * 12 + (3 - m);
@@ -146,6 +152,9 @@ export default function PreCadastroPage() {
   const [geoErro, setGeoErro] = useState<string | null>(null);
   const [geoCarregando, setGeoCarregando] = useState(false);
   const [enviado, setEnviado] = useState<PreCadastroCriado | null>(null);
+  const [verif, setVerif] = useState<Verificacao | null>(null);
+  const [verifErro, setVerifErro] = useState<string | null>(null);
+  const [verifCarregando, setVerifCarregando] = useState(false);
   const [tentouEnviar, setTentouEnviar] = useState(false);
   const secCreches = useRef<HTMLElement>(null);
 
@@ -184,6 +193,38 @@ export default function PreCadastroPage() {
     };
   }, [cepDigitos]);
 
+  // verificação automática pelo CPF (CadÚnico, Bolsa Família, Saúde…)
+  const cpfDigitos = soDigitos(r.cpf);
+  const cpfOk = cpfValido(r.cpf);
+  const nascAnoMes = anoMes(r.nascimento);
+  useEffect(() => {
+    if (!cpfOk) {
+      setVerif(null);
+      setVerifErro(null);
+      return;
+    }
+    let ativo = true;
+    setVerifCarregando(true);
+    verificarCpf(cpfDigitos, nascAnoMes || undefined)
+      .then((v) => ativo && (setVerif(v), setVerifErro(null)))
+      .catch(() => ativo && (setVerif(null), setVerifErro("Não foi possível verificar agora. Você pode continuar; conferimos depois.")))
+      .finally(() => ativo && setVerifCarregando(false));
+    return () => {
+      ativo = false;
+    };
+  }, [cpfOk, cpfDigitos, nascAnoMes]);
+
+  // respostas efetivas = manuais + automáticas (automática vence quando bloqueia_manual)
+  const bloqueadas = useMemo(() => new Set((verif?.verificados ?? []).filter((v) => v.bloqueia_manual).map((v) => String(v.ich_perg_id))), [verif]);
+  const respostasEfetivas = useMemo(() => {
+    const out: Record<string, boolean> = { ...r.respostas };
+    for (const [k, v] of Object.entries(verif?.respostas_automaticas ?? {})) {
+      if (bloqueadas.has(k) || v) out[k] = v || !!out[k];
+    }
+    for (const k of bloqueadas) out[k] = !!verif?.respostas_automaticas[k];
+    return out;
+  }, [r.respostas, verif, bloqueadas]);
+
   // sugestões em tempo real (debounce)
   const entradaSugestoes = useMemo(
     () => ({
@@ -192,9 +233,9 @@ export default function PreCadastroPage() {
       lon: geo?.lon ?? null,
       grupamento: r.grupamento,
       horario: r.horario,
-      respostas: r.respostas,
+      respostas: respostasEfetivas,
     }),
-    [cepDigitos, geo?.lat, geo?.lon, r.grupamento, r.horario, r.respostas],
+    [cepDigitos, geo?.lat, geo?.lon, r.grupamento, r.horario, respostasEfetivas],
   );
   const entradaDeb = useDebounce(entradaSugestoes, 400);
   const podeSugerir = !!entradaDeb.grupamento && !!entradaDeb.horario;
@@ -204,7 +245,7 @@ export default function PreCadastroPage() {
     enabled: podeSugerir,
     placeholderData: (prev) => prev,
   });
-  const pontos = sug.data?.pontuacao.total ?? pontosLocais(r.respostas, regua.data);
+  const pontos = sug.data?.pontuacao.total ?? pontosLocais(respostasEfetivas, regua.data);
   const maxima = sug.data?.pontuacao.maxima ?? regua.data?.maxima ?? 100;
   const unidades = sug.data?.unidades ?? [];
   const top5 = unidades.slice(0, 5);
@@ -256,7 +297,7 @@ export default function PreCadastroPage() {
   // validação final
   const cepOk = (geo != null && geo.lat != null && geo.lon != null) || (cepDigitos.length === 8 && r.semLocalizacao);
   const pendencias: string[] = [];
-  if (!idade.grupamento && !r.grupamento) pendencias.push("mês e ano de nascimento da criança");
+  if (!nascAnoMes) pendencias.push("data de nascimento da criança");
   if (!r.grupamento) pendencias.push("grupamento");
   if (!r.horario) pendencias.push("turno");
   if (!cepOk) pendencias.push(cepDigitos.length === 8 ? "confirme o CEP (ou marque “continuar sem localização”)" : "CEP da casa");
@@ -286,14 +327,15 @@ export default function PreCadastroPage() {
       cpf: soDigitos(r.cpf),
       nome_responsavel: r.nomeResponsavel.trim(),
       nome_crianca: r.nomeCrianca.trim() || undefined,
-      nascimento_anomes: r.nascimento,
+      nascimento_anomes: nascAnoMes,
       grupamento: r.grupamento,
       horario: r.horario,
       cep: cepDigitos,
       cep_alternativo: soDigitos(r.cepAlternativo) || undefined,
       lat: geo?.lat ?? null,
       lon: geo?.lon ?? null,
-      respostas: r.respostas,
+      respostas: respostasEfetivas,
+      verificacoes: verif?.verificados ?? [],
       contatos: contatosValidos.map((c) => ({ ...c, nome: c.nome.trim(), valor: c.valor.trim() })),
       escolhas: r.escolhas,
       consentimento: true,
@@ -372,9 +414,9 @@ export default function PreCadastroPage() {
           <input id="nomeCrianca" className="fam-input" value={r.nomeCrianca} onChange={(e) => set("nomeCrianca", e.target.value)} autoComplete="off" />
 
           <label className="fam-label" htmlFor="nascimento">
-            Mês e ano de nascimento
+            Data de nascimento da criança
           </label>
-          <input id="nascimento" type="month" className="fam-input" value={r.nascimento} onChange={(e) => set("nascimento", e.target.value)} required />
+          <input id="nascimento" type="date" className="fam-input" value={r.nascimento} min={MIN_NASC} max={HOJE} onChange={(e) => set("nascimento", e.target.value)} required />
           {r.nascimento && idade.meses != null && !idade.grupamento && (
             <p className="fam-erro" role="alert">
               Com {idade.meses < 0 ? "essa data" : `${idade.meses} meses`} em 31 de março, a criança fica fora da faixa de creche (0 a 3 anos). Confira a data.
@@ -408,6 +450,16 @@ export default function PreCadastroPage() {
               </label>
             ))}
           </fieldset>
+
+          <label className="fam-label" htmlFor="cpf">
+            CPF do responsável
+          </label>
+          <input id="cpf" className="fam-input" inputMode="numeric" placeholder="000.000.000-00" value={r.cpf} onChange={(e) => set("cpf", mascaraCpf(e.target.value))} />
+          {r.cpf && cpfDigitos.length === 11 && !cpfOk && <p className="fam-erro">CPF inválido. Confira os números.</p>}
+          {cpfOk && verifCarregando && <p className="fam-ajuda">Consultando as bases do governo…</p>}
+          {cpfOk && verif && !verifCarregando && <p className="pc-ok">CPF verificado. Veja no passo 3 o que já foi confirmado automaticamente.</p>}
+          {cpfOk && verifErro && <p className="fam-erro">{verifErro}</p>}
+          <p className="fam-ajuda">Com o CPF conferimos CadÚnico, Bolsa Família e outros critérios nas bases oficiais — sem papel.</p>
         </section>
 
         {/* 2. Onde mora */}
@@ -458,14 +510,57 @@ export default function PreCadastroPage() {
           <h2>
             <span className="pc-num">3</span> Situação da família
           </h2>
-          <p className="fam-sec-lead">Marque o que vale para a sua família. Depois isso é conferido automaticamente nas bases do governo — não precisa levar papel.</p>
           {regua.isLoading && <Spinner label="Carregando critérios…" />}
           {regua.isError && <p className="fam-erro">Não deu para carregar os critérios agora.</p>}
           {regua.data && (
             <>
+              <h3 className="pc-h3">Verificado automaticamente pelo CPF</h3>
+              {!cpfOk && <p className="fam-ajuda">Digite o CPF no passo 1 para verificar automaticamente.</p>}
+              {cpfOk && verifCarregando && !verif && <Spinner label="Consultando as bases do governo…" />}
               <ul className="pc-criterios">
                 {regua.data.perguntas
-                  .filter((p) => !p.desempate)
+                  .filter((p) => p.automatico)
+                  .map((p) => {
+                    const k = String(p.ich_perg_id);
+                    const v = verif?.verificados.find((x) => x.ich_perg_id === p.ich_perg_id);
+                    const podeMarcar = v && !v.bloqueia_manual && v.resultado !== "confirmado";
+                    const on = !!r.respostas[k];
+                    return (
+                      <li key={k}>
+                        <div className={`pc-crit pc-crit-auto ${v?.resultado === "confirmado" ? "on" : ""}`}>
+                          <span className="pc-crit-fonte" aria-hidden="true">
+                            {v?.resultado === "confirmado" ? "✓" : "•"}
+                          </span>
+                          <span className="pc-crit-texto">{p.texto}</span>
+                          <span className="pc-crit-pontos">
+                            {!cpfOk || !v ? (
+                              <span className="pill pill-neutral">{p.pontos} pontos</span>
+                            ) : v.resultado === "confirmado" ? (
+                              <span className="pill pill-ok">Confirmado · +{p.pontos} pontos</span>
+                            ) : v.resultado === "nao_encontrado" ? (
+                              <span className="pill pill-neutral">Não consta</span>
+                            ) : (
+                              <span className="pill pill-warn">Não foi possível verificar agora</span>
+                            )}
+                          </span>
+                        </div>
+                        {podeMarcar && (
+                          <label className={`pc-crit pc-crit-sub ${on ? "on" : ""}`}>
+                            <input type="checkbox" checked={on} onChange={(e) => set("respostas", { ...r.respostas, [k]: e.target.checked })} />
+                            <span className="pc-crit-texto">Não consta laudo na Saúde. Se a criança tem laudo, marque e leve o documento na matrícula.</span>
+                            <span className="pc-crit-pontos">{p.pontos} pontos</span>
+                          </label>
+                        )}
+                      </li>
+                    );
+                  })}
+              </ul>
+
+              <h3 className="pc-h3">Conte-nos o resto</h3>
+              <p className="fam-ajuda">Estes critérios ainda não têm base oficial para conferir automaticamente; serão comprovados na matrícula.</p>
+              <ul className="pc-criterios">
+                {regua.data.perguntas
+                  .filter((p) => !p.automatico && !p.desempate)
                   .map((p) => {
                     const k = String(p.ich_perg_id);
                     const on = !!r.respostas[k];
@@ -662,11 +757,24 @@ export default function PreCadastroPage() {
             Nome do responsável
           </label>
           <input id="nomeResp" className="fam-input" value={r.nomeResponsavel} onChange={(e) => set("nomeResponsavel", e.target.value)} autoComplete="name" />
-          <label className="fam-label" htmlFor="cpf">
-            CPF do responsável
-          </label>
-          <input id="cpf" className="fam-input" inputMode="numeric" placeholder="000.000.000-00" value={r.cpf} onChange={(e) => set("cpf", mascaraCpf(e.target.value))} />
-          {r.cpf && soDigitos(r.cpf).length === 11 && !cpfValido(r.cpf) && <p className="fam-erro">CPF inválido. Confira os números.</p>}
+          <ul className="pc-resumo">
+            <li>
+              <span>CPF do responsável</span>
+              <strong>{cpfOk ? r.cpf : "— (preencha no passo 1)"}</strong>
+            </li>
+            <li>
+              <span>Criança</span>
+              <strong>
+                {r.nomeCrianca || "—"} · {r.nascimento || "—"} · {r.grupamento || "—"} · {r.horario}
+              </strong>
+            </li>
+            <li>
+              <span>Pontuação</span>
+              <strong>
+                {pontos} de {maxima}
+              </strong>
+            </li>
+          </ul>
 
           <label className="pc-check pc-consent">
             <input type="checkbox" checked={r.consentimento} onChange={(e) => set("consentimento", e.target.checked)} />
