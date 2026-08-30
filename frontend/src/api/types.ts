@@ -364,7 +364,86 @@ export interface GerarConvocacoesResposta {
   rodada_id: number;
   convocacoes_criadas: number;
   ja_existentes: number;
+  puladas?: number;
   prazo_fim?: string | null;
+}
+
+/* ---------- motor contínuo (roda sozinho, 24/7) ---------- */
+export interface MotorCiclo {
+  em: string;
+  duracao_ms: number;
+  ano?: number | null;
+  rodada_id?: number | null;
+  rodada_criada: boolean;
+  motivo_rodada?: "bootstrap" | "entrada_mudou" | null;
+  convocacoes_criadas: number;
+  expiradas: number;
+  repassadas: number;
+  vagas_sem_fila: number;
+  erro?: string | null;
+}
+
+export interface MotorEstado {
+  ligado: boolean;
+  intervalo_s: number;
+  expira_vencidas: boolean;
+  executando: boolean;
+  iniciado_em?: string | null;
+  ultima_execucao?: string | null;
+  proxima_execucao?: string | null;
+  ciclos: number;
+  total_rodadas: number;
+  total_convocacoes: number;
+  total_expiradas: number;
+  total_repassadas: number;
+  ultimo_ciclo?: MotorCiclo | null;
+  ultimo_erro?: string | null;
+  rodada_vigente?: Rodada | null;
+  vagas_liberadas_pendentes: number;
+}
+
+/* ---------- mapa com drill-down (rede → CRE → creche) ---------- */
+export interface MapaCre {
+  cre: string;
+  lat?: number | null;
+  lon?: number | null;
+  unidades: number;
+  unidades_no_mapa: number;
+  vagas: number;
+  inscricoes: number;
+  alocadas: number;
+  lista_espera: number;
+  convocadas: number;
+  abertas: number;
+  confirmadas: number;
+  em_atraso: number;
+}
+
+export interface MapaUnidade {
+  codigo: string;
+  nome?: string | null;
+  cre?: string | null;
+  tipo?: string | null;
+  bairro?: string | null;
+  lat?: number | null;
+  lon?: number | null;
+  vagas: number;
+  inscricoes: number;
+  alocadas: number;
+  lista_espera: number;
+  convocadas: number;
+  abertas: number;
+  confirmadas: number;
+  em_atraso: number;
+}
+
+export interface Mapa {
+  ano?: number | null;
+  nivel: "rede" | "cre";
+  cre?: string | null;
+  atualizado_em: string;
+  cres: MapaCre[];
+  unidades: MapaUnidade[];
 }
 
 /* ---------- comprovações via bases oficiais ---------- */

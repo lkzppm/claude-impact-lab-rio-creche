@@ -21,6 +21,7 @@ import {
   fmtHoras,
 } from "../design-system";
 import type { Segmento } from "../design-system";
+import MotorCard from "../components/MotorCard";
 
 export const LEGENDA_CRE = [
   { label: "Matrículas confirmadas", tone: "ok" as const, hint: "a família compareceu e a matrícula foi efetivada" },
@@ -60,6 +61,7 @@ export default function SmeRedePage() {
       title="Visão da rede"
       subtitle="As 11 CREs em uma tela: onde a convocação está andando e onde está parada. Clique numa CRE para abrir o painel dela."
     >
+      <MotorCard base="/sme" />
       {resumo.isLoading && <Spinner label="Calculando o resumo…" />}
       {resumo.isError && <ErrorBox error={resumo.error} />}
       {r && (
@@ -107,7 +109,8 @@ export default function SmeRedePage() {
         {cres.data && cres.data.length === 0 && (
           <EmptyState title="Ainda sem dados por CRE">
             <p>
-              Rode uma classificação e gere convocações em <Link to="/sme/classificacao">Classificação</Link>.
+              O motor classifica e convoca sozinho — se nada aparecer aqui, confira o cartão do motor no topo da página
+              (ele diz o que fez no último ciclo) e se as bases foram carregadas.
             </p>
           </EmptyState>
         )}

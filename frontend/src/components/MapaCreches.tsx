@@ -41,10 +41,11 @@ export default function MapaCreches({ casa, unidades, escolhidas, onSelecionar, 
   useEffect(() => {
     if (!ref.current || mapRef.current) return;
     const map = L.map(ref.current, { scrollWheelZoom: false, dragging: true, tap: true, zoomControl: true, attributionControl: true } as L.MapOptions);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    // OpenStreetMap padrão: sem chave de API (o basemap claro da CARTO passou a exigir uma)
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
-      subdomains: "abcd",
-      attribution: "© OpenStreetMap © CARTO",
+      opacity: 0.55,
+      attribution: "© OpenStreetMap",
     }).addTo(map);
     map.setView([-22.91, -43.35], 11);
     camadaRef.current = L.layerGroup().addTo(map);

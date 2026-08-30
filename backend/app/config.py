@@ -21,9 +21,18 @@ class Settings(BaseSettings):
     versao: str = "0.1.0"
     # Prazo da família após a convocação (Res. SME 542/2025: 3 dias úteis; aqui 3 dias corridos)
     prazo_convocacao_dias: int = 3
-    # Rotina que registra `expirada` (ator = sistema) nas convocações com prazo vencido. 0 = desligada:
-    # na demonstração a expiração fica visível como "vencidas" e o polo registra em lote pelo painel.
-    expiracao_automatica_minutos: int = 0
+
+    # Motor contínuo (app/motor.py): classifica, convoca e repassa vaga liberada sozinho, 24/7.
+    motor_intervalo_segundos: int = 60          # 0 = desligado (só o POST /motor/ciclo manual)
+    motor_atraso_inicial_segundos: int = 5      # espera o banco subir antes do primeiro ciclo
+    motor_vagas_presas: int = 3                 # usados só no bootstrap; depois o motor repete o recorte
+    motor_alternativas: int = 2                 # da última rodada do ano
+    motor_grupamento: str | None = None         # recorte do bootstrap (None = todos)
+    motor_horario: str | None = None
+    motor_max_repasses_por_ciclo: int = 200     # teto de vagas liberadas repassadas por ciclo
+    # Registrar `expirada` (ator = motor) nas convocações com prazo vencido. Desligado por padrão: na
+    # demonstração a expiração fica visível como "vencidas" e o polo registra em lote pelo painel (PRD §9).
+    motor_expirar_vencidas: bool = False
 
     # Assistente (chat com tools, app/agente). Sem ANTHROPIC_API_KEY, POST /chat responde 503.
     anthropic_api_key: str | None = None

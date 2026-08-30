@@ -29,6 +29,7 @@ import {
 } from "../design-system";
 import type { Fatia, Segmento } from "../design-system";
 import { UnidadeSelect, CRES } from "../components/Filters";
+import MotorCard from "../components/MotorCard";
 import { useArea } from "../areas/AreaContext";
 import { useToast } from "../components/useToast";
 
@@ -148,6 +149,8 @@ export default function PainelPage() {
         )}
       </div>
 
+      <MotorCard compacto />
+
       {resumo.isLoading && <Spinner label="Calculando o resumo…" />}
       {resumo.isError && <ErrorBox error={resumo.error} />}
 
@@ -192,7 +195,7 @@ export default function PainelPage() {
             {trabalho.isLoading && <Spinner label="Montando a fila…" />}
             {trabalho.isError && <ErrorBox error={trabalho.error} />}
             {trabalho.data && trabalho.data.items.length === 0 && (
-              <p className="muted text-sm">Nenhuma convocação aberta neste recorte. Quando o Nível Central gerar convocações, elas aparecem aqui.</p>
+              <p className="muted text-sm">Nenhuma convocação aberta neste recorte. O motor gera as convocações sozinho — assim que sair uma, ela aparece aqui.</p>
             )}
             {trabalho.data && trabalho.data.items.length > 0 && (
               <>
