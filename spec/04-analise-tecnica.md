@@ -1,9 +1,6 @@
-# Análise do Case — 3 pilares da matrícula em creche (SME-Rio)
+# 04 — Análise técnica dos três pilares
 
-> Case oficial recebido no hackathon: melhorar **Planejamento**, **Inscrição & Classificação** e **Convocação** do sistema atual (matricula.rio).
-> Este documento é a análise técnica + ângulos de ataque. Contexto institucional e legal: ver `00_BRIEFING_CONTEXTO.md`.
-
----
+> Análise do time sobre o case da SME ([02](02-case-oficial.md)). Contexto institucional e legal em [01](01-contexto-e-legislacao.md).
 
 ## Diagnóstico em uma frase
 
@@ -18,8 +15,8 @@ o sistema trata **oferta e demanda como listas independentes que se encontram po
 
 ---
 
-# PILAR 3 — CONVOCAÇÃO
-## (começo por aqui: é o problema mais bem definido, o mais demonstrável em 1 dia e o de maior impacto)
+## PILAR 3 — CONVOCAÇÃO
+### (começo por aqui: é o problema mais bem definido, o mais demonstrável em 1 dia e o de maior impacto)
 
 ### O que está realmente acontecendo
 
@@ -69,7 +66,7 @@ Dias de vaga ociosa no início do ano letivo · taxa de contato efetivo na 1ª c
 
 ---
 
-# PILAR 2 — INSCRIÇÃO E CLASSIFICAÇÃO
+## PILAR 2 — INSCRIÇÃO E CLASSIFICAÇÃO
 
 ### Os três sub-problemas (são distintos, tratar separado)
 
@@ -104,7 +101,7 @@ Três atores conferindo o mesmo dado em planilha/papel. É onde nasce a divergê
 
 ---
 
-# PILAR 1 — PLANEJAMENTO
+## PILAR 1 — PLANEJAMENTO
 
 ### O erro estatístico que está no centro do método atual
 
@@ -152,65 +149,25 @@ Erro de previsão por território (vs. o baseline "fila do ano anterior") · cob
 
 ---
 
-# Arquitetura recomendada (e o argumento que vende)
+## Anexo — hipóteses levantadas antes do case
 
-> **IA na borda, algoritmo determinístico no núcleo.**
+Registradas na pesquisa prévia, mantidas porque continuam válidas como cardápio de recortes.
 
-| Camada | Tecnologia | Por quê |
-|---|---|---|
-| Conversa com a família (inscrição, comprovação, convocação) | **LLM / Claude** | Linguagem natural, WhatsApp, explica pontuação, coleta preferência ("trabalho na Barra até 19h30") |
-| Leitura e pré-validação de documentos | **LLM multimodal + human-in-the-loop** | Reduz deslocamento e fila presencial; nunca decide sozinho |
-| Explicação do resultado ao responsável | **LLM sobre o log de decisão** | Transparência real, em linguagem de família |
-| **Alocação de vagas** | **Deferred Acceptance determinístico** | **Auditável, reprodutível, juridicamente defensável. NÃO usar LLM aqui.** |
-| Previsão de demanda | Modelo estatístico por coorte + geoespacial | Explicável e checável contra o SINASC |
-| Interrogação do gestor | **LLM sobre o modelo** | Acesso ao dado sem depender de analista |
+**A. Copiloto do responsável (o mais alinhado ao Pref Rio)**
+Agente no WhatsApp que: descobre a pontuação a que a família tem direito (inclusive critérios que ela nem sabe que possui — CadÚnico é 51 pontos), monta a lista de documentos, lembra da data de comprovação, e explica o resultado. Ataca diretamente o Art. 7º (perda de pontos por não comprovação).
 
-**Dizer isso explicitamente à banca é um diferencial.** Diante de uma prefeitura que já publicou um guia de uso ético de IA no serviço público, tem Conselho Municipal de Proteção de Dados e **já se queimou publicamente ao anunciar um "modelo de IA próprio"**, o time que declara *"aqui a IA não decide quem entra na creche — quem decide é a resolução, e o algoritmo é auditável"* ganha credibilidade que nenhuma demo compra.
+**B. Escolha informada das 5 opções**
+Recomendador que, dado o endereço e a pontuação estimada, mostra probabilidade realista de vaga por unidade. Hoje a família escolhe às cegas — e uma escolha ruim custa um ano.
 
----
+**C. Fila transparente**
+"Onde eu estou na fila e o que isso significa" — o dado qualitativo mais repetido pelas mães é a ausência de previsão. Transparência é barata e tem impacto emocional enorme.
 
-# Se der para escolher só um recorte
+**D. Lado gestor: mapa de demanda vs. oferta**
+Cruzar inscrições não atendidas por bairro com capacidade instalada para orientar onde abrir vaga/creche parceira. Fala direto com a pressão judicial de zerar a fila.
 
-**Convocação com DA + agente de WhatsApp.** Razões:
-1. É o único dos três em que dá para **provar o ganho na hora**, com simulação: rodar o processo atual vs. DA sobre dados sintéticos e mostrar `vagas ociosas × dias` despencando.
-2. É o mais **legalmente seguro** — preserva a pontuação da resolução intacta.
-3. É o que **fala direto com a ordem judicial** de zerar a fila.
-4. Tem **precedente municipal de adoção** (Pref Rio) e **benchmark nacional de resultado** (São Paulo zerou a fila).
+**E. Triagem documental**
+Leitura assistida de documentos comprobatórios para reduzir filas presenciais e erro de digitação. Cuidado: dado sensível, requer human-in-the-loop.
 
-**Demo que convence:** um contador na tela. "Processo atual: 340 vagas ociosas por 18 dias = 6.120 criança-dias perdidos. Com alocação coordenada: 12 vagas ociosas por 2 dias = 24." Um número, uma tela, sem jargão.
+**Filtro de qualidade para qualquer ideia:** ela reduz **fila** ou reduz **fricção**? Se não reduz nenhum dos dois, não é o case. E: a SME consegue rodar isso na segunda-feira?
 
 ---
-
-# Armadilhas a evitar
-
-- ❌ Propor mudar a **tabela de pontuação** — é norma (Res. SME 542/2025), não código. Mata o projeto na banca.
-- ❌ LLM decidindo alocação — indefensável perante LGPD art. 14, ECA e controle externo.
-- ❌ Propor **app novo** — o público-alvo é de baixa conectividade. WhatsApp, 1746, Carioca Digital e Rioeduca já existem.
-- ❌ Otimizar alocação sobre **capacidade não confiável** — sem fonte única de verdade da vaga, o algoritmo erra com precisão.
-- ❌ Ignorar o **Pref Rio** e o **EOL de São Paulo** no pitch — passa a impressão de que o time não pesquisou.
-- ❌ Prometer integração que a SME não consegue entregar — o prêmio é a **doação do projeto à cidade**; o que não roda, não vale.
-
----
-
-# Perguntas para a SME (as que mais mudam o projeto)
-
-1. Existe hoje uma **base única de capacidade por unidade e turma**, ou o número vem de cada creche?
-2. A criança pode mesmo ser **classificada em mais de uma das 5 opções simultaneamente**? Quantas, em média?
-3. Qual a **profundidade média da cascata** de convocação e quantos dias letivos ela consome?
-4. Quantas vagas ficam **ociosas em março** e quantas crianças seguem na fila nesse mesmo momento?
-5. Qual o **% de contatos inválidos** na convocação?
-6. Que **campos** vêm na base de inscrição do case? Tem endereço georreferenciável? Pontuação final? Ordem de preferência das 5 opções?
-7. A SME tem acesso a **SINASC / CadÚnico georreferenciado**, ou isso passa por Saúde e Assistência Social?
-8. Dá para integrar com o **Pref Rio** da IplanRio, ou o canal teria que ser novo?
-
----
-
-## Fontes adicionais desta análise
-
-- [MIT Blueprint Labs — Welfare Effects of Coordinated Assignment (NYC)](https://blueprintlabs.mit.edu/research/the-welfare-effects-of-coordinated-assignment-evidence-from-the-new-york-city-high-school-match)
-- [Prefeitura de SP — Plataforma Vaga na Creche](https://educacao.sme.prefeitura.sp.gov.br/entenda-como-funciona-a-plataforma-vaga-na-creche/)
-- [Prodam — Fila de creche zerada pelo segundo ano consecutivo](https://portal.prodam.sp.gov.br/w/fila-para-matricular-criancas-em-creches-da-prefeitura-se-mantem-zerada-pelo-segundo-ano-consecutivo)
-- [Agência Brasil — Lei 14.851/2024, mensuração obrigatória da demanda](https://agenciabrasil.ebc.com.br/educacao/noticia/2024-05/prefeituras-deverao-manter-atualizadas-dados-sobre-demanda-por-creches)
-- [Conviva Educação — Retrato da Educação Infantil 2025](https://convivaeducacao.org.br/fique_atento/5855)
-- [Sistema de Admisión Escolar (Chile) — algoritmo 2026](https://www.13.cl/programas/servicios-13/servicios/sistema-de-admision-escolar-2026-asi-funciona-el-algoritmo-que-reemplazara-a-la-tombola)
-- [matricula.rio](https://matricula.rio/)
