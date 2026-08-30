@@ -231,48 +231,46 @@ export default function PainelPage() {
 
       {r && (
         <>
-          <div className="grid-2">
-            <Card title="Há quanto tempo as convocações estão paradas">
-              <Hero value={fmtInt(abertas)} label="convocações abertas" hint="cada barra é uma parte do total; passe o mouse para ver o detalhe" />
-              <StackedBar segmentos={faixas} ariaLabel="Convocações abertas por tempo na situação atual" />
-              <p className="text-sm" style={{ marginTop: 12 }}>
-                <Link to={lista("abertas")}>Ver todas as abertas →</Link>
-              </p>
-            </Card>
-            <Card title="Como as convocações estão terminando">
-              <p className="text-sm muted" style={{ marginBottom: 12 }}>
-                Cada convocação gerada está em uma destas quatro situações. Clique no nome para abrir a lista.
-              </p>
-              <Breakdown segmentos={desfechos} ariaLabel="Convocações por desfecho" />
-              <div className="metricas-rodape">
-                <div className="metrica">
-                  <span className="stat-label">Tempo até o desfecho</span>
-                  <span className="metrica-valor">{r.tempo_medio_ate_desfecho_h == null ? "—" : fmtHoras(r.tempo_medio_ate_desfecho_h)}</span>
-                  <span className="stat-hint">média de {fmtInt(r.n_desfechos ?? 0)} desfecho(s)</span>
-                </div>
-                <div className="metrica">
-                  <span className="stat-label">Liberadas hoje</span>
-                  <span className="metrica-valor">{fmtInt(r.vagas_liberadas_hoje ?? 0)}</span>
-                  <span className="stat-hint">voltaram para a fila</span>
-                </div>
-                <div className="metrica">
-                  <span className="stat-label">Reservas por criança</span>
-                  <span className="metrica-valor">
-                    {r.vagas_presas_por_crianca == null ? "—" : r.vagas_presas_por_crianca.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
-                  </span>
-                  <span className="stat-hint">média, de no máximo 3</span>
-                  <Meter share={r.vagas_presas_por_crianca != null ? r.vagas_presas_por_crianca / 3 : 0} tone="neutral" label="média de reservas, de 1 a 3" />
-                </div>
-                {r.inconsistencias > 0 && (
-                  <div className="metrica">
-                    <span className="stat-label">Inconsistências</span>
-                    <span className="metrica-valor danger">{fmtInt(r.inconsistencias)}</span>
-                    <span className="stat-hint">matriculada e ainda com reserva aberta</span>
-                  </div>
-                )}
+          <Card title="Há quanto tempo as convocações estão paradas">
+            <Hero value={fmtInt(abertas)} label="convocações abertas" hint="cada barra é uma parte do total; passe o mouse para ver o detalhe" />
+            <StackedBar segmentos={faixas} ariaLabel="Convocações abertas por tempo na situação atual" />
+            <p className="text-sm" style={{ marginTop: 12 }}>
+              <Link to={lista("abertas")}>Ver todas as abertas →</Link>
+            </p>
+          </Card>
+          <Card title="Como as convocações estão terminando">
+            <p className="text-sm muted" style={{ marginBottom: 12 }}>
+              Cada convocação gerada está em uma destas quatro situações. Clique no nome para abrir a lista.
+            </p>
+            <Breakdown segmentos={desfechos} ariaLabel="Convocações por desfecho" />
+            <div className="metricas-rodape">
+              <div className="metrica">
+                <span className="stat-label">Tempo até o desfecho</span>
+                <span className="metrica-valor">{r.tempo_medio_ate_desfecho_h == null ? "—" : fmtHoras(r.tempo_medio_ate_desfecho_h)}</span>
+                <span className="stat-hint">média de {fmtInt(r.n_desfechos ?? 0)} desfecho(s)</span>
               </div>
-            </Card>
-          </div>
+              <div className="metrica">
+                <span className="stat-label">Liberadas hoje</span>
+                <span className="metrica-valor">{fmtInt(r.vagas_liberadas_hoje ?? 0)}</span>
+                <span className="stat-hint">voltaram para a fila</span>
+              </div>
+              <div className="metrica">
+                <span className="stat-label">Reservas por criança</span>
+                <span className="metrica-valor">
+                  {r.vagas_presas_por_crianca == null ? "—" : r.vagas_presas_por_crianca.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
+                </span>
+                <span className="stat-hint">média, de no máximo 3</span>
+                <Meter share={r.vagas_presas_por_crianca != null ? r.vagas_presas_por_crianca / 3 : 0} tone="neutral" label="média de reservas, de 1 a 3" />
+              </div>
+              {r.inconsistencias > 0 && (
+                <div className="metrica">
+                  <span className="stat-label">Inconsistências</span>
+                  <span className="metrica-valor danger">{fmtInt(r.inconsistencias)}</span>
+                  <span className="stat-hint">matriculada e ainda com reserva aberta</span>
+                </div>
+              )}
+            </div>
+          </Card>
 
           {maisVencidas.length > 0 && (
             <Card title="Unidades com mais convocações vencidas">

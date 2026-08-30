@@ -2076,20 +2076,50 @@
   color: var(--mr-ink-muted);
 }
 
-/* faixa de métricas no rodapé de um card, separada por um filete */
+/* faixa de métricas no rodapé de um card, separada por um filete.
+   Subgrid: rótulo, valor, dica e medidor de cada métrica caem nas mesmas linhas da faixa, então um rótulo
+   que quebra em duas linhas não desalinha os valores vizinhos (a "escadinha"). */
 .metricas-rodape {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--sp-3) var(--sp-4);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  column-gap: var(--sp-5);
+  row-gap: 4px;
   margin-top: var(--sp-4);
-  padding-top: var(--sp-3);
+  padding-top: var(--sp-4);
   border-top: 1px solid var(--mr-grey-200);
 }
 .metrica {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 4; /* rótulo · valor · dica · medidor (a linha fica vazia quando não há) */
+  justify-items: center;
+  align-content: start;
+  text-align: center;
   min-width: 0;
+}
+/* sem subgrid (navegador antigo) ou em uma coluna só (celular): pilha simples, alinhar não é o problema */
+@supports not (grid-template-rows: subgrid) {
+  .metricas-rodape {
+    row-gap: var(--sp-4);
+  }
+  .metrica {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+}
+@media (max-width: 640px) {
+  .metricas-rodape {
+    grid-template-columns: 1fr;
+    row-gap: var(--sp-4);
+  }
+  .metrica {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
 }
 .metrica-valor {
   font-size: 22px;
@@ -2100,6 +2130,12 @@
 }
 .metrica-valor.danger {
   color: var(--danger);
+}
+.metrica .meter {
+  width: 100%;
+  max-width: 160px;
+  margin-top: 0;
+  align-self: center;
 }
 
 .para-hoje {

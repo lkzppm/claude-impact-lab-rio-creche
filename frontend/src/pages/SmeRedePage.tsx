@@ -64,28 +64,26 @@ export default function SmeRedePage() {
       {resumo.isError && <ErrorBox error={resumo.error} />}
       {r && (
         <>
-          <div className="grid-2">
-            <Card title="Há quanto tempo as convocações estão paradas">
-              <Hero value={fmtInt(abertas)} label="convocações abertas na rede" hint={r.atualizado_em ? `atualizado ${fmtDateTime(r.atualizado_em)}` : undefined} />
-              <StackedBar segmentos={faixas} ariaLabel="Convocações abertas por tempo na situação atual" />
-            </Card>
-            <Card title="Como as convocações estão terminando">
-              <p className="text-sm muted" style={{ marginBottom: 12 }}>
-                Cada convocação gerada nesta rodada está em uma destas quatro situações. Verde é matrícula fechada; laranja e vermelho
-                devolveram a vaga para a fila.
-              </p>
-              <Breakdown segmentos={desfechos} ariaLabel="Convocações por desfecho" />
-              {r.tempo_medio_ate_desfecho_h != null && (
-                <div className="metricas-rodape">
-                  <div className="metrica">
-                    <span className="stat-label">Da seleção à resposta</span>
-                    <span className="metrica-valor">{fmtHoras(r.tempo_medio_ate_desfecho_h)}</span>
-                    <span className="stat-hint">média de {fmtInt(r.n_desfechos ?? 0)} desfechos — dado que hoje não existe na SME</span>
-                  </div>
+          <Card title="Há quanto tempo as convocações estão paradas">
+            <Hero value={fmtInt(abertas)} label="convocações abertas na rede" hint={r.atualizado_em ? `atualizado ${fmtDateTime(r.atualizado_em)}` : undefined} />
+            <StackedBar segmentos={faixas} ariaLabel="Convocações abertas por tempo na situação atual" />
+          </Card>
+          <Card title="Como as convocações estão terminando">
+            <p className="text-sm muted" style={{ marginBottom: 12 }}>
+              Cada convocação gerada nesta rodada está em uma destas quatro situações. Verde é matrícula fechada; laranja e vermelho
+              devolveram a vaga para a fila.
+            </p>
+            <Breakdown segmentos={desfechos} ariaLabel="Convocações por desfecho" />
+            {r.tempo_medio_ate_desfecho_h != null && (
+              <div className="metricas-rodape">
+                <div className="metrica">
+                  <span className="stat-label">Da seleção à resposta</span>
+                  <span className="metrica-valor">{fmtHoras(r.tempo_medio_ate_desfecho_h)}</span>
+                  <span className="stat-hint">média de {fmtInt(r.n_desfechos ?? 0)} desfechos — dado que hoje não existe na SME</span>
                 </div>
-              )}
-            </Card>
-          </div>
+              </div>
+            )}
+          </Card>
 
           <div className="grid-tiles">
             <StatTile label="Vencidas" value={fmtInt(r.vencidas ?? 0)} tone="danger" hint="prazo passou sem resposta" share={abertas ? (r.vencidas ?? 0) / abertas : 0} />
