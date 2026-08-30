@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
-import { getConvocacao, registrarEvento } from "../api/client";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { convocarProximo, getConvocacao, registrarEvento } from "../api/client";
 import type { EventoTipo } from "../api/types";
 import {
   Page,
@@ -11,15 +11,18 @@ import {
   EmptyState,
   StatusPill,
   STATUS_ENCERRADOS,
+  EVENTO_LABEL,
+  CANAL_LABEL,
+  PrazoBar,
   Button,
   ConfirmDialog,
   Toast,
   fmtDateTime,
   fmtHoras,
-  prazoTexto,
+  fmtQuando,
 } from "../design-system";
 import { useToast } from "../components/useToast";
-import { useBase } from "../areas/AreaContext";
+import { useArea } from "../areas/AreaContext";
 
 interface Acao {
   tipo: EventoTipo;
@@ -28,6 +31,7 @@ interface Acao {
   descricao: string;
   variant: "primary" | "secondary" | "danger";
   withNote?: boolean;
+  withCanal?: boolean;
   /** estados em que a ação faz sentido */
   quando: string[];
 }
@@ -37,25 +41,27 @@ const ACOES: Acao[] = [
     tipo: "tentativa_contato",
     label: "Registrar tentativa de contato",
     titulo: "Registrar uma tentativa de contato",
-    descricao: "Use quando ligou, mandou mensagem ou e-mail e a família ainda não respondeu. Fica registrado com data e hora.",
+    descricao: "Use quando ligou, mandou mensagem ou e-mail e a família ainda não respondeu. Fica registrado com data, hora e canal.",
     variant: "secondary",
     withNote: true,
+    withCanal: true,
     quando: ["selecionada", "contato_tentado"],
   },
   {
     tipo: "contato_confirmado",
     label: "Família avisada",
     titulo: "Confirmar que a família foi avisada",
-    descricao: "A família recebeu o aviso da vaga. A partir de agora contam os 3 dias úteis para comparecer.",
+    descricao: "A família recebeu o aviso da vaga. A partir de agora contam os 3 dias para responder — o relógio recomeça deste contato.",
     variant: "primary",
     withNote: true,
+    withCanal: true,
     quando: ["selecionada", "contato_tentado"],
   },
   {
     tipo: "matricula_confirmada",
     label: "Confirmar matrícula",
     titulo: "Confirmar a matrícula",
-    descricao: "A família compareceu à unidade e a matrícula foi efetivada. A vaga sai da lista de pendências.",
+    descricao: "A família compareceu à unidade e a matrícula foi efetivada. As outras reservas desta criança são liberadas na hora.",
     variant: "primary",
     quando: ["selecionada", "contato_tentado", "contato_confirmado"],
   },
@@ -63,9 +69,10 @@ const ACOES: Acao[] = [
     tipo: "recusa",
     label: "Família recusou",
     titulo: "Registrar recusa da família",
-    descricao: "A família não quer esta vaga. Ela volta imediatamente para a fila e pode ser oferecida à próxima criança.",
+    descricao: "A família não quer esta vaga. Ela volta imediatamente para a fila e você pode convocar o próximo em seguida.",
     variant: "danger",
     withNote: true,
+    withCanal: true,
     quando: ["selecionada", "contato_tentado", "contato_confirmado"],
   },
   {
@@ -79,25 +86,29 @@ const ACOES: Acao[] = [
   },
 ];
 
-const TIPO_EVENTO_LABEL: Record<string, string> = {
-  selecionada: "Vaga selecionada para a criança",
-  criacao: "Convocação criada",
-  tentativa_contato: "Tentativa de contato",
-  contato_confirmado: "Família avisada",
-  matricula_confirmada: "Matrícula confirmada",
-  recusa: "Família recusou a vaga",
-  expiracao: "Prazo vencido",
-  liberacao: "Vaga liberada — a família confirmou em outra unidade",
-  liberada: "Vaga liberada — a família confirmou em outra unidade",
-};
+function toastDepois(tipo: EventoTipo, prazoFim: string | null | undefined): string {
+  switch (tipo) {
+    case "contato_confirmado":
+      return `Registrado. A família tem até ${fmtQuando(prazoFim)} para responder.`;
+    case "matricula_confirmada":
+      return "Matrícula confirmada. As outras reservas desta criança foram liberadas para a fila.";
+    case "recusa":
+    case "expiracao":
+      return "Registrado. A vaga voltou para a fila — veja quem é o próximo logo abaixo.";
+    default:
+      return "Tentativa registrada com data e hora.";
+  }
+}
 
 export default function ConvocacaoDetalhePage() {
   const { id: idParam } = useParams();
   const id = Number(idParam);
   const qc = useQueryClient();
   const toast = useToast();
-  const base = useBase();
+  const navigate = useNavigate();
+  const { base, ator } = useArea();
   const [acao, setAcao] = useState<Acao | null>(null);
+  const [confirmarProximo, setConfirmarProximo] = useState(false);
 
   const q = useQuery({
     queryKey: ["convocacao", id],
@@ -105,18 +116,38 @@ export default function ConvocacaoDetalhePage() {
     enabled: Number.isFinite(id),
   });
 
+  function invalidar() {
+    qc.invalidateQueries({ queryKey: ["convocacao", id] });
+    qc.invalidateQueries({ queryKey: ["convocacoes"] });
+    qc.invalidateQueries({ queryKey: ["painel-resumo"] });
+    qc.invalidateQueries({ queryKey: ["painel-unidades"] });
+    qc.invalidateQueries({ queryKey: ["fila-unidade"] });
+  }
+
   const mut = useMutation({
-    mutationFn: ({ tipo, nota }: { tipo: EventoTipo; nota: string }) =>
-      registrarEvento(id, { tipo, payload: nota ? { observacao: nota } : {} }),
-    onSuccess: (res) => {
-      toast.show(`Registrado. Situação agora: ${res.status}`);
+    mutationFn: ({ tipo, nota, canal }: { tipo: EventoTipo; nota: string; canal?: string }) =>
+      registrarEvento(id, {
+        tipo,
+        ator: ator || undefined,
+        payload: { ...(nota ? { observacao: nota } : {}), ...(canal ? { canal } : {}) },
+      }),
+    onSuccess: (res, v) => {
+      toast.show(toastDepois(v.tipo, res.convocacao?.prazo_fim));
       setAcao(null);
-      qc.invalidateQueries({ queryKey: ["convocacao", id] });
-      qc.invalidateQueries({ queryKey: ["convocacoes"] });
-      qc.invalidateQueries({ queryKey: ["painel-resumo"] });
-      qc.invalidateQueries({ queryKey: ["painel-unidades"] });
+      invalidar();
     },
     onError: (e) => toast.show(`Não deu para registrar: ${e instanceof Error ? e.message : String(e)}`),
+  });
+
+  const proximo = useMutation({
+    mutationFn: () => convocarProximo(id, ator || undefined),
+    onSuccess: (nova) => {
+      setConfirmarProximo(false);
+      toast.show(`${nova.aluno_anon ?? "Próxima criança"} convocada para ${nova.unidade_nome ?? nova.unidade_codigo}.`);
+      invalidar();
+      navigate(`${base}/convocacoes/${nova.id}`);
+    },
+    onError: (e) => toast.show(`Não deu para convocar: ${e instanceof Error ? e.message : String(e)}`),
   });
 
   const c = q.data;
@@ -131,8 +162,10 @@ export default function ConvocacaoDetalhePage() {
   }
 
   const encerrada = c ? STATUS_ENCERRADOS.includes(c.status) : false;
+  const vagaLiberada = c ? ["recusada", "expirada", "liberada"].includes(c.status) : false;
   const irmas = c?.irmas ?? [];
   const acoesDisponiveis = c ? ACOES.filter((a) => a.quando.includes(c.status)) : [];
+  const prox = c?.proximo_da_fila;
 
   return (
     <Page
@@ -146,31 +179,85 @@ export default function ConvocacaoDetalhePage() {
       {c && (
         <div className="grid-2">
           <div className="stack">
+            {!encerrada && c.proxima_acao && (
+              <div className={`alert ${c.atrasada ? "alert-danger" : "alert-info"}`}>
+                <strong>O que fazer agora:</strong> {c.proxima_acao}.
+              </div>
+            )}
+
             <Card title="Situação">
               <dl className="dl">
                 <dt>Nesta situação há</dt>
                 <dd className="tabular">{fmtHoras(c.horas_no_status)}</dd>
                 <dt>Prazo</dt>
-                <dd>{encerrada ? "—" : `${prazoTexto(c.prazo_fim)}${c.prazo_fim ? ` (${fmtDateTime(c.prazo_fim)})` : ""}`}</dd>
+                <dd>
+                  {encerrada ? "—" : <PrazoBar prazoFim={c.prazo_fim} status={c.status} />}
+                </dd>
                 <dt>Criada em</dt>
                 <dd>{fmtDateTime(c.criada_em)}</dd>
                 <dt>Última mudança</dt>
                 <dd>{fmtDateTime(c.atualizada_em)}</dd>
                 <dt>Unidade</dt>
                 <dd>
-                  <Link to={`${base}/unidades/${encodeURIComponent(c.unidade_codigo)}`}>{c.unidade_nome ?? c.unidade_codigo}</Link>
+                  <Link to={`${base}/unidades/${encodeURIComponent(c.unidade_codigo)}?grupamento=${encodeURIComponent(c.grupamento)}&horario=${encodeURIComponent(c.horario)}`}>
+                    {c.unidade_nome ?? c.unidade_codigo}
+                  </Link>
                   {c.cre && <span className="muted"> · {c.cre}ª CRE</span>}
                 </dd>
                 <dt>Inscrição</dt>
                 <dd>
                   <Link to={`${base}/inscricoes/${c.inscricao_id}`}>#{c.inscricao_id} · ver ficha</Link>
+                  {c.pontuacao != null && <span className="muted"> · {c.pontuacao} pontos</span>}
                 </dd>
               </dl>
             </Card>
 
+            {vagaLiberada && (
+              <Card title="Vaga liberada">
+                {c.repassada_para != null ? (
+                  <div className="alert alert-ok">
+                    Esta vaga já foi repassada: <Link to={`${base}/convocacoes/${c.repassada_para}`}>convocação #{c.repassada_para} →</Link>
+                  </div>
+                ) : prox ? (
+                  <div className="proximo">
+                    <div>
+                      <div className="text-sm muted">
+                        Próximo da fila desta unidade · {c.grupamento} · {c.horario}
+                      </div>
+                      <div className="proximo-nome">{prox.aluno_anon ?? `inscrição #${prox.inscricao_id}`}</div>
+                      <div className="text-sm">
+                        {prox.pontuacao} pontos · posição {prox.posicao_fila ?? "—"} na fila
+                        {prox.ordem ? ` · esta é a ${prox.ordem}ª opção da família` : ""}
+                        {prox.reservas_abertas > 0 ? ` · já segura ${prox.reservas_abertas} reserva(s)` : ""}
+                      </div>
+                    </div>
+                    <div className="row">
+                      <Button onClick={() => setConfirmarProximo(true)} disabled={proximo.isPending}>
+                        Convocar próximo da fila
+                      </Button>
+                      <Link
+                        to={`${base}/unidades/${encodeURIComponent(c.unidade_codigo)}?grupamento=${encodeURIComponent(c.grupamento)}&horario=${encodeURIComponent(c.horario)}`}
+                        className="text-sm"
+                      >
+                        ver fila completa →
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="muted text-sm">
+                    Ninguém na lista de espera desta unidade para {c.grupamento} · {c.horario}. A vaga fica disponível para a próxima rodada de
+                    reaproveitamento do Nível Central.
+                  </p>
+                )}
+                <p className="text-sm muted" style={{ marginTop: 12 }}>
+                  A ordem é a da classificação (pontuação da resolução + desempates): quem confirma é o próximo, não quem liga primeiro.
+                </p>
+              </Card>
+            )}
+
             <Card title="Outras vagas desta criança">
               {irmas.length === 0 ? (
-                <p className="muted text-sm">Esta é a única convocação ativa desta criança.</p>
+                <p className="muted text-sm">Esta é a única convocação desta criança.</p>
               ) : (
                 <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
                   {irmas.map((i) => (
@@ -186,7 +273,7 @@ export default function ConvocacaoDetalhePage() {
               </p>
             </Card>
 
-            <Card title="O que fazer agora">
+            <Card title="Registrar">
               {encerrada ? (
                 <p className="muted text-sm">Esta convocação está encerrada. Nada mais a registrar.</p>
               ) : (
@@ -199,7 +286,7 @@ export default function ConvocacaoDetalhePage() {
                 </div>
               )}
               <p className="text-sm muted" style={{ marginTop: 12 }}>
-                Toda ação fica registrada com data, hora e quem registrou. Nada é apagado.
+                Toda ação fica registrada com data, hora e quem registrou{ator ? ` (${ator})` : " — informe seu nome na barra azul"}. Nada é apagado.
               </p>
             </Card>
           </div>
@@ -211,19 +298,19 @@ export default function ConvocacaoDetalhePage() {
               <ol className="timeline">
                 {[...c.eventos]
                   .sort((a, b) => new Date(b.ocorrido_em).getTime() - new Date(a.ocorrido_em).getTime())
-                  .map((e) => (
-                    <li key={e.id}>
-                      <time dateTime={e.ocorrido_em}>{fmtDateTime(e.ocorrido_em)}</time>
-                      <strong>{TIPO_EVENTO_LABEL[e.tipo] ?? e.tipo}</strong>
-                      {e.ator && <span className="muted text-sm"> · {e.ator}</span>}
-                      {e.payload && typeof e.payload.observacao === "string" && e.payload.observacao && (
-                        <div className="text-sm">{e.payload.observacao}</div>
-                      )}
-                      {e.payload && typeof e.payload.canal === "string" && (
-                        <div className="text-sm muted">canal: {e.payload.canal}</div>
-                      )}
-                    </li>
-                  ))}
+                  .map((e) => {
+                    const canal = e.payload && typeof e.payload.canal === "string" ? (CANAL_LABEL[e.payload.canal] ?? e.payload.canal) : null;
+                    const obs = e.payload && typeof e.payload.observacao === "string" ? e.payload.observacao : null;
+                    return (
+                      <li key={e.id}>
+                        <time dateTime={e.ocorrido_em}>{fmtDateTime(e.ocorrido_em)}</time>
+                        <strong>{EVENTO_LABEL[e.tipo] ?? e.tipo}</strong>
+                        {e.ator && <span className="muted text-sm"> · {e.ator}</span>}
+                        {canal && <div className="text-sm muted">canal: {canal}</div>}
+                        {obs && <div className="text-sm">{obs}</div>}
+                      </li>
+                    );
+                  })}
               </ol>
             )}
           </Card>
@@ -237,9 +324,23 @@ export default function ConvocacaoDetalhePage() {
         confirmLabel={acao?.label}
         danger={acao?.variant === "danger"}
         withNote={acao?.withNote}
+        withCanal={acao?.withCanal}
         busy={mut.isPending}
         onCancel={() => setAcao(null)}
-        onConfirm={(nota) => acao && mut.mutate({ tipo: acao.tipo, nota })}
+        onConfirm={(nota, canal) => acao && mut.mutate({ tipo: acao.tipo, nota, canal })}
+      />
+      <ConfirmDialog
+        open={confirmarProximo}
+        title="Convocar o próximo da fila?"
+        description={
+          prox
+            ? `${prox.aluno_anon ?? `Inscrição #${prox.inscricao_id}`} recebe esta vaga em ${c?.unidade_nome ?? c?.unidade_codigo}, com prazo de 3 dias a partir de agora. Fica registrado como "Convocada da lista de espera".`
+            : undefined
+        }
+        confirmLabel="Sim, convocar"
+        busy={proximo.isPending}
+        onCancel={() => setConfirmarProximo(false)}
+        onConfirm={() => proximo.mutate()}
       />
       <Toast message={toast.message} />
     </Page>

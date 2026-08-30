@@ -13,6 +13,7 @@ import InscricoesPage from "./pages/InscricoesPage";
 import InscricaoDetalhePage from "./pages/InscricaoDetalhePage";
 import UnidadesPage from "./pages/UnidadesPage";
 import UnidadeDetalhePage from "./pages/UnidadeDetalhePage";
+import MultiReservaPage from "./pages/MultiReservaPage";
 import SmeRedePage from "./pages/SmeRedePage";
 import ReguaPage from "./pages/ReguaPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/cre" element={<PainelPage />} />
         <Route path="/cre/convocacoes" element={<ConvocacoesPage />} />
         <Route path="/cre/convocacoes/:id" element={<ConvocacaoDetalhePage />} />
+        <Route path="/cre/multireserva" element={<MultiReservaPage />} />
         <Route path="/cre/unidades" element={<UnidadesPage />} />
         <Route path="/cre/unidades/:codigo" element={<UnidadeDetalhePage />} />
         <Route path="/cre/inscricoes/:id" element={<InscricaoDetalhePage />} />

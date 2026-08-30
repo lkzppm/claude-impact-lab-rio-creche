@@ -70,7 +70,10 @@ consulta_agente  id PK · ocorrido_em · area ('cre'|'sme') · cre · ator · mo
 ```
 
 - `evento` é o **dado que hoje não existe** (gap nº 1 da SME). Toda transição de `convocacao.status` gera
-  um `evento`; o status é derivável do log.
+  um `evento`; o status é derivável do log. Tipos gravados: `selecionada`, `selecionada_da_lista`,
+  `contato_tentado`, `contato_confirmado`, `confirmada`, `recusada`, `expirada`, `liberada_por_confirmacao`,
+  `capacidade_informada`. `ator` é quem registrou (`sistema`, `familia` ou o nome informado pelo servidor);
+  `payload.canal` guarda o canal do contato.
 - `capacidade` é **estimada** na carga inicial (nº de `Confirmado` por unidade/grupamento/turno/ano) e
   marcada como tal — a base traz ocupação, não oferta ([09 §7](09-achados-dos-dados.md#7-o-que-os-dados-não-permitem)).
 - `situacao_origem` guarda o desfecho real da SME para comparação com o resultado do motor.
@@ -101,6 +104,8 @@ mesmo `hash_entrada` → mesma saída).
 | GET | `/processos/{ano}/regua` | perguntas + pontuação do ano |
 | GET | `/unidades?cre=&q=&limit=` | lista com lat/lon |
 | GET | `/unidades/{codigo}` | ficha + capacidade por grupamento/turno |
+| GET | `/unidades/{codigo}/fila?grupamento=&horario=` | **CRE**: lista de espera da unidade na última rodada, na ordem do motor, com a situação de cada criança (`aguardando` · `convocada_aqui` · `confirmada_em_outra` · `reservas_cheias`) |
+| PUT | `/unidades/{codigo}/capacidade` `{ano, grupamento, horario, vagas, ator?}` | capacidade informada pela unidade (`fonte = informada`) + evento `capacidade_informada` |
 | GET | `/inscricoes?ano=&unidade=&situacao=&page=` | paginado |
 | GET | `/inscricoes/{id}` | inscrição + opções + respostas + pontuação |
 | POST | `/classificacao/rodadas` `{ano, grupamento?, horario?, tipo}` | executa o motor, grava `rodada` + `alocacao`, devolve resumo |
@@ -108,10 +113,13 @@ mesmo `hash_entrada` → mesma saída).
 | GET | `/classificacao/rodadas/{id}/alocacoes?unidade=&status=` | alocações |
 | GET | `/classificacao/rodadas/{id}/explicacao/{inscricao_id}` | texto + `motivo` estruturado |
 | POST | `/convocacoes/gerar` `{rodada_id}` | cria uma `convocacao` (status `selecionada`) por alocação + evento |
-| GET | `/convocacoes?cre=&unidade=&status=&atrasadas=` | lista com `horas_no_status` |
-| GET | `/convocacoes/{id}` | detalhe + eventos |
-| POST | `/convocacoes/{id}/eventos` `{tipo, payload}` | registra transição; devolve novo status |
-| GET | `/painel/resumo?cre=&unidade=` | KPIs: selecionadas aguardando (por faixa 0–24h, 24–48h, 48–72h, >72h), vagas em risco, sem contato, inconsistências |
+| GET | `/convocacoes?cre=&unidade=&status=&fila=` | lista com `horas_no_status`, `atrasada` e `proxima_acao`; `fila` = `vencidas` · `vencem_24h` · `sem_aviso` · `aguardando` · `abertas` · `trabalho` · `encerradas`, ordenada por urgência |
+| GET | `/convocacoes/{id}` | detalhe + eventos + irmãs; se a vaga foi liberada, `proximo_da_fila` ou `repassada_para` |
+| POST | `/convocacoes/{id}/eventos` `{tipo, payload{observacao?, canal?}, ator?}` | registra transição; devolve novo status |
+| POST | `/convocacoes/{id}/convocar-proximo` `{ator?}` | vaga liberada → convoca o próximo da lista de espera da unidade (evento `selecionada_da_lista`); 409 se ainda aberta ou já repassada |
+| POST | `/convocacoes/expirar-vencidas` `{cre?, unidade?, ator?}` | registra `expirada` em lote nas abertas com prazo vencido; a mesma função roda como rotina se `EXPIRACAO_AUTOMATICA_MINUTOS > 0` |
+| GET | `/painel/resumo?cre=&unidade=` | KPIs: selecionadas aguardando (por faixa 0–24h, 24–48h, 48–72h, >72h), vagas em risco, sem aviso, aguardando a família, vencidas, vencem em 24 h, crianças com várias reservas, inconsistências, tempo médio até o desfecho |
+| GET | `/painel/multireserva?cre=&unidade=` | crianças com mais de uma reserva aberta: nº de reservas, unidades, há quanto tempo |
 | GET | `/painel/unidades?cre=` | uma linha por unidade: vagas, alocadas, convocadas, confirmadas, em atraso |
 | GET | `/painel/cres?ano=` | **Nível Central**: uma linha por CRE — unidades, vagas, inscrições, alocadas, convocadas, abertas, confirmadas, em atraso, lista de espera |
 | GET | `/familia/inscricao?codigo=&ano=` | **Família**: situação em linguagem de responsável — `situacao_resumo`, opções com `resultado` (reservada/fila/sem_vaga) e posição, reservas abertas com prazo, pontuação por critério com comprovação, explicação |
@@ -152,7 +160,7 @@ Chat com ferramentas sobre o mesmo banco, para o servidor perguntar em portuguê
 |---|---|---|
 | `/` | — | escolha de perfil, sem login |
 | `/familia` | **Família** (mobile-first) | consulta por código, vê opções/reservas/pontuação, confirma ou recusa uma reserva |
-| `/cre` | **CRE / polo** | painel e convocações do seu território (CRE selecionada e lembrada), registra contatos e desfechos |
+| `/cre` | **CRE / polo** | escolhe a CRE no primeiro acesso (lembrada); painel "Para hoje" com filas de trabalho clicáveis; convocações por fila com próxima ação; ficha com relógio, canal, histórico e "convocar próximo da fila"; crianças com várias reservas; unidade com fila de espera e capacidade informada; expiração em lote; "Registrando como" vira o `ator` do log |
 | `/sme` | **Nível Central SME** | visão da rede por CRE, roda classificação e compara regimes, gera convocações, régua do ano |
 
 Header em todas: faixa branca com os logos Prefeitura Rio · Educação e Matrícula Carioca (`frontend/public/`), barra azul `#005E96` com a navegação do perfil.
