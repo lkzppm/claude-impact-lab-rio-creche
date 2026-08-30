@@ -354,3 +354,33 @@ export interface PainelCre {
   em_atraso: number;
   lista_espera: number;
 }
+
+/* ---------- assistente (chat com tools) — POST /chat ---------- */
+export interface ChatMensagem {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ChatPedido {
+  area: "cre" | "sme";
+  cre?: string;
+  ator?: string;
+  mensagens: ChatMensagem[];
+}
+
+export interface ChatFerramenta {
+  nome: string;
+  argumentos: Record<string, unknown>;
+  /** linha mostrada ao servidor: "resumo do painel · 4ª CRE" */
+  resumo: string;
+  erro?: string | null;
+}
+
+export interface ChatResposta {
+  resposta: string;
+  ferramentas: ChatFerramenta[];
+  modelo: string;
+  tokens_entrada?: number;
+  tokens_saida?: number;
+  log_id?: number | null;
+}

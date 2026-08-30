@@ -16,6 +16,7 @@ import UnidadeDetalhePage from "./pages/UnidadeDetalhePage";
 import SmeRedePage from "./pages/SmeRedePage";
 import ReguaPage from "./pages/ReguaPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import ChatAssistente from "./components/ChatAssistente";
 
 export default function App() {
   return (
@@ -53,6 +54,8 @@ export default function App() {
         <Route path="/unidades/*" element={<Navigate to="/sme/unidades" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      {/* "Perguntar ao painel" — só nas áreas CRE e Nível Central */}
+      <ChatAssistente />
     </AreaProvider>
   );
 }

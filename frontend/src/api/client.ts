@@ -130,3 +130,7 @@ export const responderConvocacao = (id: number, resposta: FamiliaResposta) =>
 
 /* ---------- rede (Nível Central) ---------- */
 export const getPainelCres = (params?: { ano?: number }) => get<PainelCre[]>("/painel/cres", params);
+
+/* ---------- assistente (chat com tools) ---------- */
+import type { ChatPedido, ChatResposta } from "./types";
+export const perguntarAssistente = (body: ChatPedido) => post<ChatResposta>("/chat", body);
