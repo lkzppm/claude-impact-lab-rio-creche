@@ -45,7 +45,9 @@ export default function CrecheDocumentosPage() {
   }
 
   async function aoAvisarAtraso(r: Responsavel) {
-    const resultado = await escalonarAtraso({ id: r.id, nome: r.nome, crianca: r.crianca, telefone: r.telefone, diasAtraso: r.diasAtraso ?? 0 });
+    const resultado = await escalonarAtraso({
+      id: r.id, nome: r.nome, crianca: r.crianca, telefone: r.telefone, inscricaoId: r.inscricaoId, diasAtraso: r.diasAtraso ?? 0,
+    });
     show(resultado ? `Aviso de atraso enviado a ${r.nome} (WhatsApp).` : "Nenhum aviso pendente para este dia de atraso.");
   }
 

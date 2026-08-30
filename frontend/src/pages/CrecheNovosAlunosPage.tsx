@@ -9,11 +9,14 @@ import {
   PRAZO_1A_PERGUNTA_VISITA_DIAS,
   PRAZO_2A_PERGUNTA_E_LIGACAO_DIAS,
   PRAZO_PERDA_VAGA_DIAS,
+  perderVagaPorNaoComparecimento,
+  perguntarConfirmacaoVisita,
 } from "../creche/fluxoConvocacao";
 import {
   Contato,
   NOVOS_ALUNOS_EXEMPLO,
   NovoAluno,
+  PRAZO_COMPARECIMENTO_DIAS,
   SEGMENTO_LABEL,
   TAMANHO_PAGINA_GALERIA,
   UNIDADE_EXEMPLO,
@@ -67,8 +70,19 @@ function ResultadoContatoCell({ onRegistrar }: { onRegistrar: (resultado: Result
   );
 }
 
-function CardConvocado({ aluno, onAvancar }: { aluno: NovoAluno; onAvancar: (a: NovoAluno) => void }) {
+function CardConvocado({
+  aluno,
+  onAvancar,
+  onPerguntarVisita,
+  onPerderVaga,
+}: {
+  aluno: NovoAluno;
+  onAvancar: (a: NovoAluno) => void;
+  onPerguntarVisita: (a: NovoAluno) => void;
+  onPerderVaga: (a: NovoAluno) => void;
+}) {
   const urgente = aluno.prazoDiasRestantes <= 1;
+  const prazoVencido = aluno.prazoDiasRestantes <= 0;
   return (
     <div className="aluno-card">
       <span className={`aluno-card-nome ${urgente ? "aluno-card-nome-urgente" : ""}`}>
@@ -81,9 +95,21 @@ function CardConvocado({ aluno, onAvancar }: { aluno: NovoAluno; onAvancar: (a: 
       {aluno.confirmacaoVisita === "sim" && <Pill tone="ok">Confirmou que vai à visita</Pill>}
       {aluno.confirmacaoVisita === "nao" && <Pill tone="warn">Disse que não vai</Pill>}
       {aluno.confirmacaoVisita == null && aluno.ligacaoTentada && <Pill tone="warn">Sem resposta — ligação feita</Pill>}
-      <button type="button" className="btn btn-secondary btn-sm" onClick={() => onAvancar(aluno)}>
-        Avançar fluxo
-      </button>
+      <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+        {aluno.confirmacaoVisita !== "sim" && (
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onPerguntarVisita(aluno)}>
+            Perguntar se vai à visita
+          </button>
+        )}
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => onAvancar(aluno)}>
+          Avançar fluxo
+        </button>
+        {prazoVencido && (
+          <button type="button" className="btn btn-danger btn-sm" onClick={() => onPerderVaga(aluno)}>
+            Registrar perda de vaga
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -136,6 +162,23 @@ export default function CrecheNovosAlunosPage() {
     );
     setAlunoEmFluxo(null);
     show("Prazo de comparecimento adiado em 1 dia.");
+  }
+
+  async function aoPerguntarVisita(aluno: NovoAluno) {
+    const diaAtual = PRAZO_COMPARECIMENTO_DIAS - aluno.prazoDiasRestantes || 1;
+    await perguntarConfirmacaoVisita(
+      { id: aluno.id, nome: aluno.nome, contatoPrincipal: aluno.contatoPrincipal },
+      diaAtual,
+    );
+    show(`Pergunta de confirmação enviada a ${aluno.contatoPrincipal.nome} (WhatsApp).`);
+  }
+
+  async function aoPerderVaga(aluno: NovoAluno) {
+    await perderVagaPorNaoComparecimento({ id: aluno.id, nome: aluno.nome, contatoPrincipal: aluno.contatoPrincipal });
+    setAlunos((atual) =>
+      atual.map((a) => (a.id === aluno.id ? { ...a, status: "perdeu_vaga", perdeuVagaEm: new Date().toISOString() } : a)),
+    );
+    show(`${aluno.nome} perdeu a vaga por não comparecimento — reparelhamento iniciado.`);
   }
 
   function aoRegistrarContato(alunoId: string, resultado: ResultadoContato) {
@@ -249,7 +292,13 @@ export default function CrecheNovosAlunosPage() {
           <>
             <div className="aluno-grid">
               {paginar(convocados, paginaConvocados, TAMANHO_PAGINA_GALERIA).map((a) => (
-                <CardConvocado key={a.id} aluno={a} onAvancar={setAlunoEmFluxo} />
+                <CardConvocado
+                  key={a.id}
+                  aluno={a}
+                  onAvancar={setAlunoEmFluxo}
+                  onPerguntarVisita={aoPerguntarVisita}
+                  onPerderVaga={aoPerderVaga}
+                />
               ))}
             </div>
             <Pagination page={paginaConvocados} pageSize={TAMANHO_PAGINA_GALERIA} total={convocados.length} onPageChange={setPaginaConvocados} />
