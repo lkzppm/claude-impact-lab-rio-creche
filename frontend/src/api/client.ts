@@ -153,3 +153,13 @@ export const getPainelCres = (params?: { ano?: number }) => get<PainelCre[]>("/p
 /* ---------- assistente (chat com tools) ---------- */
 import type { ChatPedido, ChatResposta } from "./types";
 export const perguntarAssistente = (body: ChatPedido) => post<ChatResposta>("/chat", body);
+/* ---------- pré-cadastro (família) ---------- */
+import type { GeoCep, PreCadastro, PreCadastroCriado, PreCadastroIn, ReguaFamilia, Sugestoes, SugestoesIn, Verificacao } from "./types";
+export const getReguaFamilia = () => get<ReguaFamilia>("/familia/regua");
+export const getGeoCep = (cep: string) => get<GeoCep>(`/geo/cep/${encodeURIComponent(cep)}`);
+export const getSugestoes = (body: SugestoesIn) => post<Sugestoes>("/familia/sugestoes", body);
+export const criarPreCadastro = (body: PreCadastroIn) => post<PreCadastroCriado>("/familia/pre-cadastro", body);
+export const getPreCadastro = (protocolo: string) =>
+  get<PreCadastro>(`/familia/pre-cadastro/${encodeURIComponent(protocolo)}`);
+export const verificarCpf = (cpf: string, nascimento_anomes?: string) =>
+  post<Verificacao>("/familia/verificar", { cpf, nascimento_anomes: nascimento_anomes || undefined });

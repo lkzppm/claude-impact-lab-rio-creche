@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export const CODIGO_KEY = "creche.familia.codigo";
 
@@ -70,6 +70,13 @@ export default function FamiliaPage() {
         <h1 className="fam-h1">Acompanhe a inscrição da sua criança</h1>
         <p className="fam-lead">Veja se já tem vaga reservada, em que posição da fila está e responda à convocação por aqui.</p>
         <FormularioCodigo inicial={lerCodigoSalvo()} />
+        <div className="fam-banner fam-banner-info">
+          <strong>Ainda não tem inscrição?</strong>
+          <span>Faça o pré-cadastro: em 5 minutos você vê sua pontuação e as creches com mais chance perto de casa.</span>
+          <Link className="btn btn-primary fam-btn" to="/familia/pre-cadastro">
+            Ainda não tenho inscrição — fazer pré-cadastro
+          </Link>
+        </div>
         <p className="fam-rodape">Dúvidas? Procure a unidade escolar ou ligue 1746.</p>
       </div>
     </main>

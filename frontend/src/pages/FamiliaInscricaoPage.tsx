@@ -139,6 +139,11 @@ export default function FamiliaInscricaoPage() {
               : "Tente novamente em alguns minutos. Se continuar, procure a unidade escolar."}
           </p>
           <FormularioCodigo inicial={codigo} />
+          {naoAchou && (
+            <Link className="btn btn-secondary fam-btn" to="/familia/pre-cadastro">
+              Ainda não tenho inscrição — fazer pré-cadastro
+            </Link>
+          )}
           <p className="fam-rodape">Dúvidas? Procure a unidade escolar ou ligue 1746.</p>
         </div>
       </main>

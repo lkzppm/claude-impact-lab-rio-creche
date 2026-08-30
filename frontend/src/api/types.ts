@@ -451,6 +451,126 @@ export interface PainelCre {
   lista_espera: number;
 }
 
+/* ---------- pré-cadastro (família) ---------- */
+export interface ReguaFamilia {
+  ano: number;
+  maxima: number;
+  perguntas: { ich_perg_id: number; texto: string; pontos: number; desempate: boolean; automatico: boolean; fonte_automatica: string | null }[];
+}
+
+export interface Verificado {
+  criterio: string;
+  fonte: string;
+  resultado: "confirmado" | "nao_encontrado" | "erro" | "pendente";
+  protocolo: string | null;
+  ich_perg_id: number;
+  texto: string;
+  pontos: number;
+  bloqueia_manual: boolean;
+}
+
+export interface Verificacao {
+  verificados: Verificado[];
+  respostas_automaticas: Record<string, boolean>;
+}
+
+export interface GeoCep {
+  cep: string;
+  logradouro: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  uf: string | null;
+  lat: number | null;
+  lon: number | null;
+  fonte: string;
+}
+
+export type Chance = "alta" | "media" | "baixa" | "sem_vaga";
+
+export interface UnidadeSugerida {
+  codigo: string;
+  nome: string;
+  bairro: string | null;
+  lat: number | null;
+  lon: number | null;
+  distancia_km: number | null;
+  vagas: number;
+  corte: number | null;
+  taxa_pct: number | null;
+  n_base: number;
+  chance: Chance;
+  ordem_sugerida: number;
+}
+
+export interface SugestoesIn {
+  cep: string;
+  lat?: number | null;
+  lon?: number | null;
+  grupamento: string;
+  horario: string;
+  respostas: Record<string, boolean>;
+}
+
+export interface Sugestoes {
+  pontuacao: { total: number; maxima: number; itens: { ich_perg_id: number; texto: string; pontos: number }[] };
+  regua_ano: number;
+  casa: { lat: number | null; lon: number | null; bairro: string | null; fonte: string } | null;
+  unidades: UnidadeSugerida[];
+}
+
+export type Canal = "celular" | "whatsapp" | "email";
+
+export interface Contato {
+  nome: string;
+  parentesco: string;
+  canal: Canal;
+  valor: string;
+  principal: boolean;
+}
+
+export interface PreCadastroIn {
+  cpf: string;
+  nome_responsavel: string;
+  nome_crianca?: string;
+  nascimento_anomes: string;
+  grupamento: string;
+  horario: string;
+  cep: string;
+  cep_alternativo?: string;
+  lat?: number | null;
+  lon?: number | null;
+  respostas: Record<string, boolean>;
+  contatos: Contato[];
+  escolhas: string[];
+  verificacoes?: Verificado[];
+  consentimento: true;
+}
+
+export interface PreCadastroCriado {
+  id: number;
+  protocolo: string;
+  pontuacao: number;
+  criado_em: string;
+  n_escolhas: number;
+  n_contatos: number;
+}
+
+export interface PreCadastro {
+  protocolo: string;
+  criado_em: string;
+  nome_responsavel: string;
+  nome_crianca?: string | null;
+  nascimento_anomes: string;
+  grupamento: string;
+  horario: string;
+  cep: string;
+  bairro: string | null;
+  pontuacao: number;
+  respostas: Record<string, boolean>;
+  contatos: Contato[];
+  escolhas: { ordem: number; codigo: string; nome: string | null; bairro: string | null; distancia_km: number | null }[];
+}
+
 /* ---------- assistente (chat com tools) — POST /chat ---------- */
 export interface ChatMensagem {
   role: "user" | "assistant";

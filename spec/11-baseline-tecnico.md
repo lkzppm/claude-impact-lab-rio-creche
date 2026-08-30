@@ -62,6 +62,9 @@ alocacao      id PK · rodada_id FK · inscricao_id FK · opcao_id FK nullable �
 convocacao    id PK · alocacao_id FK · inscricao_id FK · unidade_codigo · grupamento · horario
               status ('selecionada' | 'contato_tentado' | 'contato_confirmado' | 'confirmada' | 'recusada' | 'expirada')
               prazo_fim timestamptz · criada_em · atualizada_em
+pre_cadastro  id PK · protocolo UNIQUE · cpf_hash · nome_responsavel · nome_crianca · nascimento_anomes · grupamento · horario
+              cep · cep_alternativo · bairro · lat · lon · regua_ano · respostas jsonb · pontuacao · escolhas jsonb (≤5) · consentimento_em
+contato       id PK · pre_cadastro_id FK · nome · parentesco · canal ('celular'|'whatsapp'|'email') · valor · principal · verificado_em
 evento        id PK · ocorrido_em timestamptz · tipo · convocacao_id FK nullable · inscricao_id FK nullable
               unidade_codigo nullable · ator · payload jsonb          -- APPEND-ONLY: sem UPDATE/DELETE
 consulta_agente  id PK · ocorrido_em · area ('cre'|'sme') · cre · ator · modelo · pergunta_hash (sha256, não o texto)
@@ -125,6 +128,11 @@ mesmo `hash_entrada` → mesma saída).
 | GET | `/familia/inscricao?codigo=&ano=` | **Família**: situação em linguagem de responsável — `situacao_resumo`, opções com `resultado` (reservada/fila/sem_vaga) e posição, reservas abertas com prazo, pontuação por critério com comprovação, explicação |
 | POST | `/familia/convocacoes/{id}/responder` `{resposta: confirmar\|recusar}` | a família responde na hora; confirmar libera as outras reservas (`ator = familia` no log) |
 | POST | `/chat` `{area: cre\|sme, cre?, ator?, mensagens: [{role, content}]}` | **Assistente** (áreas CRE e Nível Central): `{resposta, ferramentas: [{nome, argumentos, resumo, erro?}], modelo, tokens_entrada, tokens_saida, log_id}`. Só leitura; na área `cre` toda ferramenta é restrita à CRE informada (no servidor); 503 sem `ANTHROPIC_API_KEY` |
+| GET | `/familia/regua?ano=` | critérios do questionário com pontos (norma, só leitura) para o pré-cadastro |
+| GET | `/geo/cep/{cep}` | endereço (BrasilAPI) + coordenada (Nominatim → centroide do bairro na base); `fonte` declara a precisão |
+| POST | `/familia/sugestoes` `{cep\|lat,lon, grupamento, horario, respostas}` | **tempo real**: pontuação pelo motor + até 15 unidades com distância, vagas e `chance` (= % das crianças com até a sua pontuação que escolheram a unidade e conseguiram vaga no ano da régua); as 5 primeiras são o top 5 |
+| POST | `/familia/pre-cadastro` | grava pré-cadastro (jul–ago): criança, CEP(s), respostas, **≥3 contatos (pessoas/canais distintos) com parentesco e canal**, até 5 escolhas em ordem, consentimento; CPF só como hash; devolve `protocolo` |
+| GET | `/familia/pre-cadastro/{protocolo}` | consulta do pré-cadastro |
 
 Erros em JSON `{detail}`; paginação `{items, total, page, size}`.
 
@@ -161,6 +169,8 @@ Chat com ferramentas sobre o mesmo banco, para o servidor perguntar em portuguê
 | `/` | — | escolha de perfil, sem login |
 | `/familia` | **Família** (mobile-first) | consulta por código, vê opções/reservas/pontuação, confirma ou recusa uma reserva |
 | `/cre` | **CRE / polo** | escolhe a CRE no primeiro acesso (lembrada); painel "Para hoje" com filas de trabalho clicáveis; convocações por fila com próxima ação; ficha com relógio, canal, histórico e "convocar próximo da fila"; crianças com várias reservas; unidade com fila de espera e capacidade informada; expiração em lote; "Registrando como" vira o `ator` do log |
+| `/familia/pre-cadastro` | **Família sem inscrição** | pré-cadastro (jul–ago): pontuação e top 5 em tempo real, mapa com a casa e as creches, contatos múltiplos, até 5 escolhas |
+| `/cre` | **CRE / polo** | painel e convocações do seu território (CRE selecionada e lembrada), registra contatos e desfechos |
 | `/sme` | **Nível Central SME** | visão da rede por CRE, roda classificação e compara regimes, gera convocações, régua do ano |
 
 Header em todas: faixa branca com os logos Prefeitura Rio · Educação e Matrícula Carioca (`frontend/public/`), barra azul `#005E96` com a navegação do perfil.
