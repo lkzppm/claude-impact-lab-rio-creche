@@ -24,7 +24,7 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-creche}:${POSTGRES_PASSWORD:-creche}@db:5432/${POSTGRES_DB:-creche}
       DATA_DIR: /data
       OUT_DIR: /out
-      CORS_ORIGINS: http://localhost:5173,http://localhost
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost}
     volumes:
       - ./data:/data:ro
       - ./out:/out
