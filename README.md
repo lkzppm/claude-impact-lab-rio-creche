@@ -42,6 +42,27 @@ Antes de abrir qualquer arquivo, leia as [armadilhas da base](spec/03-dados-disp
 As regras do evento estão em [`taicor-ai/claude-impact-lab-rio-2`](https://github.com/taicor-ai/claude-impact-lab-rio-2),
 resumidas em [`spec/10`](spec/10-regras-e-entrega.md).
 
+## O que está construído (baseline)
+
+Escopo atual: **motor de classificação por criança** (Deferred Acceptance com 3 vagas reservadas + 2
+alternativas, comparável a 1 vaga) e **painel de convocação da CRE/polo** com log de eventos.
+Produto em [`spec/PRD.md`](spec/PRD.md); contrato técnico em [`spec/11`](spec/11-baseline-tecnico.md);
+auditoria das bases em [`out/auditoria-dados.md`](out/auditoria-dados.md).
+
+```bash
+cp .env.example .env
+make up                      # Postgres 16 + API FastAPI (:8000/docs) + frontend React (:5173)
+make venv && make load       # carrega as bases da SME no Postgres (todos os anos; --anos 2025 para só um)
+make audit                   # regera out/auditoria-dados.md
+make test                    # invariantes do motor
+```
+
+| Pasta | O que é |
+|---|---|
+| [`backend/`](backend/) | FastAPI · motor DA em `app/engine` · ETL (DuckDB) em `app/etl` · comprovação via APIs de governo em `app/integracoes` |
+| [`frontend/`](frontend/) | React + Vite + TS, design system espelhando o `matricula.rio` |
+| [`db/`](db/) | schema SQL (log de eventos append-only) |
+
 ## Tese central
 
 Os três eixos são o **mesmo defeito estrutural em três momentos**: oferta e demanda são tratadas como

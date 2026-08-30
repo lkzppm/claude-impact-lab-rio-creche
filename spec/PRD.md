@@ -146,7 +146,7 @@ credenciais, planejamento por coorte (SINASC × capacidade). Todos descritos em
 | API FastAPI (`backend/app/routers/`) | pronto — fluxo rodada → convocações → eventos → painel validado |
 | Adaptadores de comprovação (`backend/app/integracoes/`) | mock pronto; Conecta (CadÚnico, Bolsa Família, CPF Light) e RMI com contrato real, `pendente` sem credencial |
 | Frontend React com design system do matricula.rio (`frontend/`) | pronto (build/tsc limpos); falta validação visual contra a API |
-| `docker-compose` (db + backend + frontend) | escrito; build em validação |
+| `docker-compose` (db + backend + frontend) | pronto — `make up` sobe os três; validado em 30/08 12h40 |
 
 ### Primeiro resultado sobre dados reais (2025, Berçário Integral, capacidade estimada)
 
