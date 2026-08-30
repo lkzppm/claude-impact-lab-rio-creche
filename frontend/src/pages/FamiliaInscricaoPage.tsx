@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { criterioSimples } from "../familia/criterios";
 import { Link, useSearchParams } from "react-router-dom";
 import { ApiError, getFamiliaInscricao, responderConvocacao } from "../api/client";
 import type { FamiliaConvocacao, FamiliaInscricao, FamiliaResposta } from "../api/types";
@@ -235,27 +236,27 @@ export default function FamiliaInscricaoPage() {
         )}
 
         <section className="fam-sec">
-          <h2>Sua pontuação</h2>
-          <p className="fam-pontos">
-            <strong>{d.pontuacao.total}</strong> de {d.pontuacao.maxima} pontos
-          </p>
+          <h2>O que você informou</h2>
           {declarados.length === 0 ? (
-            <p className="fam-sec-lead">Nenhum critério de prioridade foi declarado nesta inscrição.</p>
+            <p className="fam-sec-lead">Você não marcou nenhuma situação especial da família nesta inscrição.</p>
           ) : (
             <ul className="fam-lista">
-              {declarados.map((c) => (
-                <li key={c.ich_perg_id} className="fam-crit">
-                  <span className="fam-crit-texto">{c.texto}</span>
-                  <span className="fam-crit-pontos">{c.pontos > 0 ? `${c.pontos} pts` : "desempate"}</span>
-                  {c.comprovado === "confirmado" && <span className="pill pill-ok">Confirmado</span>}
-                  {c.comprovado === "nao_encontrado" && <span className="pill pill-warn">Não encontrado</span>}
-                  {c.comprovado === "erro" && <span className="pill pill-danger">Erro na consulta</span>}
-                  {(c.comprovado === "pendente" || c.comprovado == null) && <span className="pill pill-neutral">Em verificação</span>}
-                </li>
-              ))}
+              {declarados.map((c) => {
+                const s = criterioSimples(c.texto);
+                return (
+                  <li key={c.ich_perg_id} className="fam-crit">
+                    <span className="fam-crit-texto">{s.pergunta || c.texto}</span>
+                    {c.comprovado === "confirmado" && <span className="pill pill-ok">Conferido</span>}
+                    {c.comprovado === "nao_encontrado" && <span className="pill pill-warn">Não encontramos</span>}
+                    {c.comprovado === "erro" && <span className="pill pill-warn">Conferimos depois</span>}
+                    {(c.comprovado === "pendente" || c.comprovado == null) &&
+                      (s.comprovacao === "documento" ? <span className="pill pill-warn">Leve o documento</span> : <span className="pill pill-neutral">Vamos conferir</span>)}
+                  </li>
+                );
+              })}
             </ul>
           )}
-          <p className="fam-nota">Verificado automaticamente nas bases do governo (CadÚnico, Bolsa Família, Receita).</p>
+          <p className="fam-nota">CadÚnico e Bolsa Família a gente confere pelo CPF. O resto só vale com o documento mostrado na creche.</p>
         </section>
 
         {d.explicacao && (

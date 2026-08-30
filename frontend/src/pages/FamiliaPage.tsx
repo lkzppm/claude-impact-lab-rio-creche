@@ -72,7 +72,7 @@ export default function FamiliaPage() {
         <FormularioCodigo inicial={lerCodigoSalvo()} />
         <div className="fam-banner fam-banner-info">
           <strong>Ainda não tem inscrição?</strong>
-          <span>Faça o pré-cadastro: em 5 minutos você vê sua pontuação e as creches com mais chance perto de casa.</span>
+          <span>Faça o cadastro: em 5 minutos você vê as creches com mais chance perto de casa.</span>
           <Link className="btn btn-primary fam-btn" to="/familia/pre-cadastro">
             Ainda não tenho inscrição — fazer pré-cadastro
           </Link>
