@@ -353,3 +353,146 @@ class PainelCre(BaseModel):
     confirmadas: int
     em_atraso: int
     lista_espera: int
+
+
+# ----------------------------------------------------------------------------- pré-cadastro da família
+
+class ReguaPergunta(BaseModel):
+    ich_perg_id: int
+    texto: str
+    pontos: int
+    desempate: bool
+
+
+class ReguaFamilia(BaseModel):
+    ano: int
+    maxima: int
+    perguntas: list[ReguaPergunta]
+
+
+class GeoEndereco(BaseModel):
+    cep: str
+    logradouro: str | None
+    bairro: str | None
+    cidade: str | None
+    uf: str | None
+    lat: float | None
+    lon: float | None
+    fonte: str
+
+
+class SugestoesIn(BaseModel):
+    cep: str | None = None
+    lat: float | None = None
+    lon: float | None = None
+    grupamento: str
+    horario: str
+    respostas: dict[str, bool] = Field(default_factory=dict)
+    ano: int | None = None
+
+
+class PontuacaoItem(BaseModel):
+    ich_perg_id: int
+    texto: str
+    pontos: int
+
+
+class PontuacaoEstimada(BaseModel):
+    total: int
+    maxima: int
+    itens: list[PontuacaoItem]
+
+
+class CasaOut(BaseModel):
+    lat: float
+    lon: float
+    bairro: str | None
+    fonte: str
+
+
+class UnidadeSugerida(BaseModel):
+    codigo: str
+    nome: str | None
+    bairro: str | None
+    lat: float
+    lon: float
+    distancia_km: float
+    vagas: int
+    corte: int | None
+    taxa_pct: float | None                   # % de crianças com até a sua pontuação que conseguiram vaga aqui
+    n_base: int                              # quantos casos sustentam a taxa
+    chance: str                              # alta | media | baixa | sem_vaga
+    ordem_sugerida: int
+
+
+class SugestoesOut(BaseModel):
+    pontuacao: PontuacaoEstimada
+    regua_ano: int
+    casa: CasaOut | None
+    unidades: list[UnidadeSugerida]
+
+
+class ContatoIn(BaseModel):
+    nome: str = Field(min_length=2)
+    parentesco: str | None = None
+    canal: str = Field(pattern="^(celular|whatsapp|email)$")
+    valor: str = Field(min_length=5)
+    principal: bool = False
+
+
+class ContatoOut(ContatoIn):
+    id: int
+    verificado_em: datetime | None = None
+
+
+class PreCadastroIn(BaseModel):
+    cpf: str = Field(min_length=11)
+    nome_responsavel: str = Field(min_length=3)
+    nome_crianca: str | None = None
+    nascimento_anomes: str = Field(pattern=r"^\d{4}-\d{2}$")
+    grupamento: str
+    horario: str
+    cep: str
+    cep_alternativo: str | None = None
+    lat: float | None = None
+    lon: float | None = None
+    respostas: dict[str, bool] = Field(default_factory=dict)
+    contatos: list[ContatoIn] = Field(min_length=1)
+    escolhas: list[str] = Field(min_length=1, max_length=5)
+    consentimento: bool
+
+
+class PreCadastroCriado(BaseModel):
+    id: int
+    protocolo: str
+    pontuacao: int
+    criado_em: datetime
+    n_escolhas: int
+    n_contatos: int
+
+
+class EscolhaOut(BaseModel):
+    ordem: int
+    codigo: str
+    nome: str | None
+    bairro: str | None
+    distancia_km: float | None
+
+
+class PreCadastroOut(BaseModel):
+    protocolo: str
+    criado_em: datetime
+    nome_responsavel: str
+    nome_crianca: str | None
+    nascimento_anomes: str
+    grupamento: str
+    horario: str
+    cep: str
+    bairro: str | None
+    lat: float | None
+    lon: float | None
+    regua_ano: int
+    pontuacao: int
+    respostas: dict[str, bool]
+    contatos: list[ContatoOut]
+    escolhas: list[EscolhaOut]

@@ -184,3 +184,43 @@ class Comprovacao(Base):
     protocolo: Mapped[str | None] = mapped_column(Text)
     consultado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     payload: Mapped[dict[str, Any] | None] = mapped_column(Json)
+
+
+class PreCadastro(Base):
+    """Pré-cadastro da família (jul–ago): mede demanda antes da inscrição e captura contatos múltiplos.
+    Espelho de db/init/002_pre_cadastro.sql."""
+    __tablename__ = "pre_cadastro"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    protocolo: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
+    cpf_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    nome_responsavel: Mapped[str] = mapped_column(Text, nullable=False)
+    nome_crianca: Mapped[str | None] = mapped_column(Text)
+    nascimento_anomes: Mapped[str] = mapped_column(String(7), nullable=False)
+    grupamento: Mapped[str] = mapped_column(String(32), nullable=False)
+    horario: Mapped[str] = mapped_column(String(16), nullable=False)
+    cep: Mapped[str] = mapped_column(String(8), nullable=False)
+    cep_alternativo: Mapped[str | None] = mapped_column(String(8))
+    bairro: Mapped[str | None] = mapped_column(Text, index=True)
+    lat: Mapped[float | None] = mapped_column(Float)
+    lon: Mapped[float | None] = mapped_column(Float)
+    regua_ano: Mapped[int] = mapped_column(Integer, nullable=False)
+    respostas: Mapped[dict[str, Any]] = mapped_column(Json, nullable=False)
+    pontuacao: Mapped[int] = mapped_column(Integer, nullable=False)
+    escolhas: Mapped[list[dict[str, Any]]] = mapped_column(Json, nullable=False)
+    consentimento_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    contatos: Mapped[list["Contato"]] = relationship(back_populates="pre_cadastro", cascade="all, delete-orphan",
+                                                    order_by="Contato.id")
+
+
+class Contato(Base):
+    __tablename__ = "contato"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    pre_cadastro_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("pre_cadastro.id"), nullable=False, index=True)
+    nome: Mapped[str] = mapped_column(Text, nullable=False)
+    parentesco: Mapped[str | None] = mapped_column(String(16))
+    canal: Mapped[str] = mapped_column(String(16), nullable=False)      # celular | whatsapp | email
+    valor: Mapped[str] = mapped_column(Text, nullable=False)
+    principal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    verificado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    pre_cadastro: Mapped[PreCadastro] = relationship(back_populates="contatos")

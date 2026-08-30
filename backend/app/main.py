@@ -3,7 +3,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import classificacao, convocacoes, familia, health, inscricoes, painel, processos, unidades
+from app.routers import classificacao, convocacoes, familia, geo, health, inscricoes, painel, processos, unidades
 
 settings = get_settings()
 app = FastAPI(
@@ -18,6 +18,6 @@ app.add_middleware(
 )
 
 api = APIRouter(prefix="/api/v1")
-for r in (health, processos, unidades, inscricoes, classificacao, convocacoes, painel, familia):
+for r in (health, processos, unidades, inscricoes, classificacao, convocacoes, painel, familia, geo):
     api.include_router(r.router)
 app.include_router(api)
