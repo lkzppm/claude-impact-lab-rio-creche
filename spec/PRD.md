@@ -63,6 +63,20 @@ Duas peças, uma só base de dados:
    SERPRO; RMI via solicitação de acesso interno da Prefeitura. A pontuação **continua** sendo a da
    resolução; a comprovação só confirma (ou não) o critério declarado — Art. 7º da Res. 542/2025.
 
+4. **Pré-cadastro da família (julho–agosto)** — desenho de uma educadora do time, incorporado em 30/08 à tarde.
+   Antes da inscrição de dezembro, a família informa criança (nascimento → grupamento), CEP, situação
+   (critérios da régua) e **mais de um contato, em mais de um canal** (mãe, pai, avó; celular, WhatsApp,
+   e-mail). Enquanto preenche, vê **em tempo real** a pontuação calculada pelo motor e um **top 5 de
+   creches** — mapa com a casa e as unidades, distância, vagas e a chance real ("no processo de 2025, 71%
+   das crianças com até 51 pontos que escolheram esta creche conseguiram vaga"). Escolhe até 5, em ordem.
+   Efeitos: (a) mede a demanda **antes** de abrir vaga — é o instrumento que a Lei 14.851/2024 exige e o
+   que o Eixo 1 não tem; (b) ataca a escolha às cegas (47% com uma opção, 47,5% fora do bairro);
+   (c) resolve o contato desatualizado na origem, meses antes da convocação; (d) a escola não é afetada.
+
+   **Decisão registrada:** o desenho propunha liberar a escolha só para pontuação > 90. Não foi adotado —
+   a Res. 542/2025 dá a toda família o direito a até 5 opções e 90 pontos é quase inatingível (CadÚnico = 51).
+   Todos escolhem; a sugestão ordena por chance e distância, e a escolha continua sendo da família.
+
 ## 3. O que NÃO muda
 
 - A **tabela de pontuação** (Res. SME 542/2025) e os critérios de desempate. Norma, não parâmetro.
