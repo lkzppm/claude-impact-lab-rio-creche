@@ -97,7 +97,29 @@ do último ano carregado, cria as convocações espalhadas pelos últimos 5 dias
 aconteceu (nada · tentativas · avisada e depois confirmou/recusou/aguarda · recusa direta · parte das vencidas
 já expirada). Tudo passa por `_criar_convocacao`/`_aplicar_transicao` — as mesmas funções da API — com
 `ocorrido_em` no passado (`evento` é append-only, mas aceita a data no INSERT). `--todos` cobre todos os
-grupamentos/turnos; `--limpar` zera as tabelas de operação antes. O PRD §9 registra que a banca vê dados simulados. · `POST /chat`
+grupamentos/turnos; `--limpar` zera as tabelas de operação antes. O PRD §9 registra que a banca vê dados simulados.
+
+### Assistente (chat com tools — `app/agente`)
+
+`POST /chat {area, cre?, ator?, mensagens[]}` → `{resposta, ferramentas[], navegacao?, modelo, tokens, log_id}`. Um turno:
+prompt de sistema por área + laço de tool use (`loop.py`) + log de acesso (`consulta_agente`, append-only: hash da
+pergunta, ferramentas com argumentos, tokens — nunca o texto). Sem `ANTHROPIC_API_KEY` → 503 e o painel segue normal.
+
+- **Ferramentas, todas só leitura** (`ferramentas.py`, reaproveitando as funções dos routers): `resumo_painel`,
+  `painel_unidades`, `listar_convocacoes`, `detalhe_convocacao`, `ficha_inscricao`, `explicacao_resultado`,
+  `buscar_unidades`, `capacidade_unidade`, `resumo_cres`, `rodadas`, `regua`, `apontar_no_painel` e, só no Nível
+  Central, `consulta_sql` (SELECT-only, transação `READ ONLY`, timeout, LIMIT).
+- **Escopo no servidor** (`escopo.py`): na área `cre` toda ferramenta força a CRE do usuário e recusa dado de outra
+  CRE; na `sme`, rede inteira. Nunca se confia no modelo para filtrar.
+- **"Isso já está no painel"** (`secoes.py`): o prompt lista o que cada card da área mostra. Quando a resposta já
+  está num card, o modelo consulta os números, chama `apontar_no_painel {secao, resumo, fila?, unidade?}` (seção
+  validada contra a área, `fila` contra as filas, `unidade` contra a CRE) e, no texto, avisa e pergunta se leva o
+  servidor até lá. A última chamada válida vira `navegacao {secao, pagina, titulo, rota, resumo}` na resposta; o
+  frontend navega, rola até o `data-secao`, destaca e mostra o resumo. Sem card que responda, resposta direta.
+- Configuração: `CHAT_MODEL` (padrão `claude-opus-5`), `CHAT_MAX_TOOLS` (8), `CHAT_MAX_TOKENS`, `CHAT_EFFORT`,
+  `CHAT_TIMEOUT_S`, `CHAT_MAX_HISTORICO`, `CHAT_SQL_TIMEOUT_MS`, `CHAT_SQL_MAX_LINHAS`.
+- Testes sem rede (`tests/test_agente.py`): cliente falso que devolve `tool_use` e depois texto; SQLite em memória
+  com duas CREs para o filtro de território; validação da `consulta_sql`; seções e `navegacao`.
 
 ### Decisões
 

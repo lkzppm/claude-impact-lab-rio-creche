@@ -74,8 +74,11 @@ banco que alimenta as telas (resumo do painel, convocações, ficha da inscriç�
 Nível Central, um SELECT livre em transação `READ ONLY`). Cada consulta feita aparece na conversa ("consultou: resumo
 do painel · 4ª CRE"); na área da CRE o servidor força o território de quem pergunta; dado de criança é anonimizado e
 devolvido agregado por padrão; cada turno grava um log de acesso append-only (`consulta_agente`) sem o texto da
-pergunta. O assistente não registra contato, não confirma matrícula e não altera pontuação — e é opcional: sem
-`ANTHROPIC_API_KEY`, os painéis funcionam sem ele. Detalhes em [`backend/README.md`](backend/README.md#assistente-chat-com-tools--appagente).
+pergunta. Quando a resposta já está num card do painel, o Claude não repete a tela: avisa que o dado está lá e
+pergunta se leva o servidor até ele — aceitou, a página navega, rola até o card, destaca por alguns segundos e o
+resumo aparece no chat (`app/agente/secoes.py` mapeia o que cada card mostra; a ferramenta `apontar_no_painel` é
+validada no servidor). O assistente não registra contato, não confirma matrícula e não altera pontuação — e é
+opcional: sem `ANTHROPIC_API_KEY`, os painéis funcionam sem ele. Detalhes em [`backend/README.md`](backend/README.md#assistente-chat-com-tools--appagente).
 
 **Como o Claude foi usado para construir.** O repositório foi desenvolvido com Claude Code a partir da base de
 conhecimento em `spec/` (o `CLAUDE.md` define a precedência: fonte da SME > documento curado > conhecimento do
