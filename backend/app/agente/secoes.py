@@ -40,6 +40,10 @@ SECOES: tuple[Secao, ...] = (
           "rosca das convocações abertas por urgência (vencidas, vencem em 24 h, no prazo) com o total de abertas no "
           "centro; quantas famílias ainda não foram avisadas (sem aviso); quantas crianças seguram mais de uma vaga; "
           "botão para registrar as vencidas em lote"),
+    Secao("cre.numeros", "cre", "Painel da CRE", "/cre", "Os números da CRE",
+          "quantas crianças a CRE tem (cadastradas em todos os processos da base, inscritas no processo atual e "
+          "em pré-cadastro), quantas unidades, vagas informadas pelas unidades, expectativa de vagas totais "
+          "(informadas + estimadas), vagas livres e lista de espera"),
     Secao("cre.fila_trabalho", "cre", "Painel da CRE", "/cre", "Fila de trabalho",
           "as 8 convocações mais urgentes da CRE, cada uma com a criança, a unidade, o status, o prazo e a próxima ação"),
     Secao("cre.tempo_paradas", "cre", "Painel da CRE", "/cre", "Há quanto tempo as convocações estão paradas",
@@ -58,6 +62,9 @@ SECOES: tuple[Secao, ...] = (
           "crianças com mais de uma vaga reservada ao mesmo tempo, com as unidades e os prazos de cada reserva", ("unidade",)),
     Secao("cre.unidades", "cre", "Unidades", "/cre/unidades", "Unidades",
           "lista das creches e EDIs da CRE, com tipo, bairro e capacidade estimada"),
+    Secao("cre.unidades_ocupacao", "cre", "Unidades", "/cre/unidades", "Mais cheias e mais vazias",
+          "as 8 unidades da CRE com maior e as 8 com menor ocupação — vagas reservadas ÷ vagas do processo; "
+          "só entram unidades com vaga registrada"),
     Secao("cre.unidade_fila", "cre", "Unidade", "/cre/unidades/{unidade}", "Fila de espera",
           "fila de espera de UMA unidade, por grupamento e turno, na ordem do motor, com a situação de cada criança",
           ("unidade",)),
@@ -85,9 +92,13 @@ SECOES: tuple[Secao, ...] = (
           "estado do motor contínuo (ligado/desligado, último ciclo, intervalo) e as rodadas já executadas: ano, tipo, "
           "parâmetros (vagas presas, alternativas) e resumo"),
     Secao("sme.inscricoes", "sme", "Inscrições", "/sme/inscricoes", "Inscrições",
-          "lista de inscrições com filtros por ano, CRE, unidade e grupamento"),
+          "lista paginada de inscrições, com busca pelo código da criança/responsável e filtros por ano, CRE, "
+          "unidade e situação da opção"),
     Secao("sme.unidades", "sme", "Unidades", "/sme/unidades", "Unidades",
           "lista das creches e EDIs da rede, com CRE, tipo, bairro e capacidade estimada"),
+    Secao("sme.unidades_ocupacao", "sme", "Unidades", "/sme/unidades", "Mais cheias e mais vazias",
+          "as 8 unidades da rede com maior e as 8 com menor ocupação — vagas reservadas ÷ vagas do processo; "
+          "só entram unidades com vaga registrada"),
     Secao("sme.unidade_capacidade", "sme", "Unidade", "/sme/unidades/{unidade}", "Capacidade por grupamento e turno",
           "capacidade de UMA unidade por ano, grupamento e turno, com a fonte (estimada ou informada)", ("unidade",)),
     Secao("sme.regua", "sme", "Régua", "/sme/regua", "Régua de pontuação",

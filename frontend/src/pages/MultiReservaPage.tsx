@@ -6,6 +6,8 @@ import { Page, Card, DataTable, Spinner, ErrorBox, EmptyState, Pill, fmtInt, fmt
 import { UnidadeSelect } from "../components/Filters";
 import { useArea } from "../areas/AreaContext";
 
+const PAGE_SIZE = 25;
+
 export default function MultiReservaPage() {
   const [sp, setSp] = useSearchParams();
   const { cre, base } = useArea();
@@ -52,6 +54,7 @@ export default function MultiReservaPage() {
         {q.data && q.data.length > 0 && (
           <DataTable<MultiReservaItem>
             rows={q.data}
+            pageSize={PAGE_SIZE}
             rowKey={(m) => m.inscricao_id}
             rowClass={(m) => (m.horas_mais_antiga >= 72 ? "row-danger" : m.horas_mais_antiga >= 48 ? "row-warn" : undefined)}
             columns={[

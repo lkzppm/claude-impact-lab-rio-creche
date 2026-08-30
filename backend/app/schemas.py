@@ -355,6 +355,33 @@ class PainelUnidade(BaseModel):
     liberadas: int
 
 
+class PainelNumeros(BaseModel):
+    """Os números de um território (CRE ou rede inteira) — quantas crianças, quantas vagas.
+
+    Distinções que importam para não misturar coisa diferente:
+    - `criancas_cadastradas` conta crianças (`aluno_anon`, estável entre anos) com alguma opção numa
+      unidade do território em **qualquer** processo da base; `inscritas` conta só as do processo `ano`.
+    - `pre_cadastros` é outra população: quem se pré-cadastrou (jul–ago) e ainda não tem inscrição. Não
+      dá para cruzar com `inscritas` — o pré-cadastro guarda hash de CPF, a base da SME guarda código
+      anônimo da criança. Por isso os dois números aparecem lado a lado, nunca somados.
+    - `vagas_informadas` é o que as unidades declararam (`capacidade.fonte = 'informada'`);
+      `expectativa_vagas` soma essas às estimadas a partir das matrículas confirmadas do processo
+      anterior (`estimada_confirmados`) — é projeção, não oferta publicada (spec/09, seção 7).
+    """
+    cre: str | None
+    ano: int | None
+    unidades: int
+    criancas_cadastradas: int
+    inscritas: int
+    pre_cadastros: int
+    vagas_informadas: int
+    vagas_estimadas: int
+    expectativa_vagas: int
+    reservadas: int
+    vagas_livres: int
+    lista_espera: int
+
+
 # ----------------------------------------------------------------------------- mapa (drill-down)
 
 class MapaCre(BaseModel):

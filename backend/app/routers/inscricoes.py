@@ -1,7 +1,7 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_db
@@ -14,17 +14,32 @@ router = APIRouter(prefix="/inscricoes", tags=["inscricoes"])
 
 @router.get("", response_model=Pagina[InscricaoOut])
 def listar(ano: int | None = None, unidade: str | None = None, situacao: str | None = None,
+           cre: str | None = None, q: str | None = None,
            page: int = Query(1, ge=1), size: int = Query(50, ge=1, le=500), db: Session = Depends(get_db)):
+    """`q` busca a criança pelo que a base tem: o código anônimo (`aluno_0167497`), o código do
+    responsável, o bairro ou o número da inscrição. A base da SME é anonimizada — não há nome civil
+    (spec/03), então "buscar pelo nome" aqui é buscar por esse código."""
     stmt = select(Inscricao)
     if ano:
         stmt = stmt.where(Inscricao.ano == ano)
-    if unidade or situacao:
+    if unidade or situacao or cre:
         sub = select(Opcao.inscricao_id)
         if unidade:
             sub = sub.where(Opcao.unidade_codigo == unidade)
         if situacao:
             sub = sub.where(Opcao.situacao_origem == situacao)
+        if cre:
+            sub = sub.join(Unidade, Unidade.codigo == Opcao.unidade_codigo).where(Unidade.cre == cre)
         stmt = stmt.where(Inscricao.id.in_(sub))
+    if q and q.strip():
+        termo = q.strip()
+        like = f"%{termo}%"
+        alvos = [Inscricao.aluno_anon.ilike(like), Inscricao.responsavel_anon.ilike(like),
+                 Inscricao.bairro.ilike(like)]
+        so_digitos = termo.lstrip("#")
+        if so_digitos.isdigit():
+            alvos.append(Inscricao.id == int(so_digitos))
+        stmt = stmt.where(or_(*alvos))
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     items = db.scalars(stmt.order_by(Inscricao.id).offset((page - 1) * size).limit(size)).all()
     return Pagina(items=items, total=total, page=page, size=size)
@@ -71,7 +86,7 @@ def confirmar_resposta(inscricao_id: int, ich_perg_id: int, body: RespostaConfir
         raise HTTPException(404, "resposta não encontrada para esta inscrição/pergunta")
     de = r.confirmado
     r.confirmado = body.confirmado
-    db.add(Evento(ocorrido_em=datetime.now(timezone.utc), tipo="resposta_confirmada", inscricao_id=inscricao_id,
+    db.add(Evento(ocorrido_em=datetime.now(UTC), tipo="resposta_confirmada", inscricao_id=inscricao_id,
                   ator=body.ator or "painel-creche", payload={"ich_perg_id": ich_perg_id, "de": de, "para": body.confirmado}))
     db.commit()
     p = db.get(Pergunta, (db.get(Inscricao, inscricao_id).ano, ich_perg_id))

@@ -23,6 +23,7 @@ import type {
   NovaRodada,
   NovoEvento,
   Paginated,
+  PainelNumeros,
   PainelResumo,
   PainelUnidade,
   Pergunta,
@@ -101,8 +102,16 @@ export const informarCapacidade = (codigo: string, body: NovaCapacidade) =>
   put<Capacidade>(`/unidades/${encodeURIComponent(codigo)}/capacidade`, body);
 
 /* ---------- inscrições ---------- */
-export const getInscricoes = (params?: { ano?: number; unidade?: string; situacao?: string; page?: number; size?: number }) =>
-  get<Paginated<Inscricao>>("/inscricoes", params);
+export const getInscricoes = (params?: {
+  ano?: number;
+  unidade?: string;
+  situacao?: string;
+  cre?: string;
+  /** busca pelo código anônimo da criança/responsável, bairro ou nº da inscrição */
+  q?: string;
+  page?: number;
+  size?: number;
+}) => get<Paginated<Inscricao>>("/inscricoes", params);
 export const getInscricao = (id: number) => get<InscricaoDetalhe>(`/inscricoes/${id}`);
 export const getComprovacoes = (id: number) => get<Comprovacao[]>(`/inscricoes/${id}/comprovacoes`);
 export const comprovarInscricao = (id: number) => post<Comprovacao[]>(`/inscricoes/${id}/comprovar`);
@@ -152,6 +161,7 @@ export const getMapa = (params?: { cre?: string; ano?: number }) => get<Mapa>("/
 export const getPainelResumo = (params?: { cre?: string; unidade?: string }) =>
   get<PainelResumo>("/painel/resumo", params);
 export const getPainelUnidades = (params?: { cre?: string }) => get<PainelUnidade[]>("/painel/unidades", params);
+export const getPainelNumeros = (params?: { cre?: string; ano?: number }) => get<PainelNumeros>("/painel/numeros", params);
 export const getMultiReserva = (params?: { cre?: string; unidade?: string; limit?: number }) =>
   get<MultiReservaItem[]>("/painel/multireserva", params);
 

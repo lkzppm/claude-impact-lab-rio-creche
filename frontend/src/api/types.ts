@@ -360,6 +360,23 @@ export interface PainelUnidade {
   aguardando?: number;
 }
 
+/** Os números de um território (CRE ou rede). Ver `PainelNumeros` em backend/app/schemas.py: cada campo
+ *  vem de uma população diferente — pré-cadastro e inscrição NÃO se somam (não há chave em comum). */
+export interface PainelNumeros {
+  cre?: string | null;
+  ano?: number | null;
+  unidades: number;
+  criancas_cadastradas: number;
+  inscritas: number;
+  pre_cadastros: number;
+  vagas_informadas: number;
+  vagas_estimadas: number;
+  expectativa_vagas: number;
+  reservadas: number;
+  vagas_livres: number;
+  lista_espera: number;
+}
+
 export interface GerarConvocacoesResposta {
   rodada_id: number;
   convocacoes_criadas: number;

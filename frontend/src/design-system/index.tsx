@@ -403,6 +403,7 @@ export function DataTable<T>({
   onRowClick,
   selectedKey,
   footer,
+  pageSize,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -411,8 +412,12 @@ export function DataTable<T>({
   onRowClick?: (row: T) => void;
   selectedKey?: string | number | null;
   footer?: ReactNode;
+  /** pagina a lista aqui dentro (para listas que chegam inteiras). A ordenação vale sobre a lista
+   *  toda, não só sobre a página visível. Listas paginadas pelo servidor não usam isto. */
+  pageSize?: number;
 }) {
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
+  const [page, setPage] = useState(1);
 
   const sorted = (() => {
     if (!sort) return rows;
@@ -431,7 +436,13 @@ export function DataTable<T>({
   function toggleSort(col: Column<T>) {
     if (!col.sortValue) return;
     setSort((s) => (s?.key === col.key ? { key: col.key, dir: s.dir === 1 ? -1 : 1 } : { key: col.key, dir: 1 }));
+    setPage(1);
   }
+
+  // a lista pode encolher entre atualizações (o motor fecha uma convocação): não deixe a página fora do fim
+  const paginas = pageSize ? Math.max(1, Math.ceil(rows.length / pageSize)) : 1;
+  const pagina = Math.min(page, paginas);
+  const visiveis = pageSize ? paginar(sorted, pagina, pageSize) : sorted;
 
   return (
     <div className="table-wrap">
@@ -452,7 +463,7 @@ export function DataTable<T>({
           </tr>
         </thead>
         <tbody>
-          {sorted.map((r) => {
+          {visiveis.map((r) => {
             const k = rowKey(r);
             const cls = [rowClass?.(r), onRowClick ? "clickable" : "", selectedKey === k ? "selected" : ""]
               .filter(Boolean)
@@ -470,6 +481,7 @@ export function DataTable<T>({
         </tbody>
       </table>
       {footer && <div className="table-foot">{footer}</div>}
+      {pageSize && <Pagination page={pagina} pageSize={pageSize} total={rows.length} onPageChange={setPage} />}
     </div>
   );
 }
