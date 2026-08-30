@@ -141,6 +141,53 @@ def _aplicar_transicao(db: Session, c: Convocacao, novo: str, ator: str, payload
     return ev
 
 
+def gerar_convocacoes(db: Session, rodada: Rodada, agora: datetime, ator: str = "sistema") -> dict:
+    """Cria uma convocação (`selecionada`) por vaga PRESA da rodada, sem duplicar o que já está na rua.
+
+    Chamada pelo endpoint `/convocacoes/gerar` e pelo motor contínuo (`app/motor.py`), que reclassifica
+    sozinho quando a entrada muda. Como uma rodada nova refaz as alocações do zero, a mesma criança
+    reapareceria com as mesmas vagas: são puladas as alocações de quem já confirmou matrícula, as da mesma
+    unidade/grupamento/turno que a criança já recebeu (aberta, recusada ou vencida — nunca se reconvoca para
+    o mesmo lugar) e as que passariam da cota de reservas abertas da rodada (`vagas_presas`).
+    """
+    cota = int((rodada.parametros or {}).get("vagas_presas") or 3)
+    ja_aloc = set(db.scalars(
+        select(Convocacao.alocacao_id).join(Alocacao, Alocacao.id == Convocacao.alocacao_id)
+        .where(Alocacao.rodada_id == rodada.id)).all())
+    alocs = db.scalars(
+        select(Alocacao).where(Alocacao.rodada_id == rodada.id, Alocacao.status == "alocada",
+                               Alocacao.tipo == "presa")
+        .order_by(Alocacao.inscricao_id, Alocacao.posicao_fila, Alocacao.id)).all()
+    ids = sorted({a.inscricao_id for a in alocs})
+    abertas_por_crianca: dict[int, int] = {}
+    confirmadas: set[int] = set()
+    ocupadas: set[tuple] = set()
+    for lote in range(0, len(ids), 5000):
+        for c in db.scalars(select(Convocacao).where(Convocacao.inscricao_id.in_(ids[lote:lote + 5000]))).all():
+            if c.status == "confirmada":
+                confirmadas.add(c.inscricao_id)
+            if c.status in ABERTAS:
+                abertas_por_crianca[c.inscricao_id] = abertas_por_crianca.get(c.inscricao_id, 0) + 1
+            if c.status != "liberada":
+                ocupadas.add((c.inscricao_id, c.unidade_codigo, c.grupamento, c.horario))
+    prazo = _prazo(agora)
+    novas, puladas = [], 0
+    for a in alocs:
+        if a.id in ja_aloc:
+            continue
+        if (a.inscricao_id in confirmadas
+                or (a.inscricao_id, a.unidade_codigo, a.grupamento, a.horario) in ocupadas
+                or abertas_por_crianca.get(a.inscricao_id, 0) >= cota):
+            puladas += 1
+            continue
+        novas.append(_criar_convocacao(db, a, agora, prazo))
+        abertas_por_crianca[a.inscricao_id] = abertas_por_crianca.get(a.inscricao_id, 0) + 1
+    db.flush()
+    for c in novas:
+        _registrar_selecao(db, c, agora, rodada.id, ator=ator)
+    return {"criadas": len(novas), "ja_existentes": len(ja_aloc), "puladas": puladas, "prazo_fim": prazo}
+
+
 def expirar_vencidas(db: Session, cre: str | None = None, unidade: str | None = None, ator: str = "sistema",
                      agora: datetime | None = None) -> list[int]:
     """Registra `expirada` em toda convocação aberta com prazo vencido no recorte. Devolve os ids."""
@@ -205,19 +252,13 @@ def _repassada_para(db: Session, convocacao_id: int) -> int | None:
 @router.post("/gerar", response_model=dict, status_code=201)
 def gerar(body: GerarConvocacoesIn, db: Session = Depends(get_db)):
     """Cria uma convocação (status `selecionada`) por vaga PRESA da rodada — até `vagas_presas` por criança."""
-    if not db.get(Rodada, body.rodada_id):
+    rodada = db.get(Rodada, body.rodada_id)
+    if not rodada:
         raise HTTPException(404, "rodada não encontrada")
-    ja = set(db.scalars(select(Convocacao.alocacao_id).join(Alocacao).where(Alocacao.rodada_id == body.rodada_id)).all())
-    alocs = db.scalars(select(Alocacao).where(Alocacao.rodada_id == body.rodada_id, Alocacao.status == "alocada",
-                                              Alocacao.tipo == "presa")).all()
-    agora = _agora()
-    prazo = _prazo(agora)
-    novas = [_criar_convocacao(db, a, agora, prazo) for a in alocs if a.id not in ja]
-    db.flush()
-    for c in novas:
-        _registrar_selecao(db, c, agora, body.rodada_id)
+    res = gerar_convocacoes(db, rodada, _agora())
     db.commit()
-    return {"rodada_id": body.rodada_id, "convocacoes_criadas": len(novas), "ja_existentes": len(ja), "prazo_fim": prazo}
+    return {"rodada_id": body.rodada_id, "convocacoes_criadas": res["criadas"], "ja_existentes": res["ja_existentes"],
+            "puladas": res["puladas"], "prazo_fim": res["prazo_fim"]}
 
 
 @router.post("/expirar-vencidas", response_model=ExpirarVencidasOut, status_code=201)

@@ -47,6 +47,9 @@ services:
       OUT_DIR: /out
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost}
       MENSAGERIA_URL: http://mensageria:8100/api/v1
+      # motor contínuo: 0 desliga a rotina de fundo (o ciclo continua em POST /motor/ciclo)
+      MOTOR_INTERVALO_SEGUNDOS: ${MOTOR_INTERVALO_SEGUNDOS:-60}
+      MOTOR_EXPIRAR_VENCIDAS: ${MOTOR_EXPIRAR_VENCIDAS:-0}
     volumes:
       - ./data:/data:ro
       - ./out:/out

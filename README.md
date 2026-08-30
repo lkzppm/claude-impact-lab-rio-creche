@@ -45,7 +45,9 @@ resumidas em [`spec/10`](spec/10-regras-e-entrega.md).
 ## O que está construído (baseline)
 
 Escopo atual: **motor de classificação por criança** (Deferred Acceptance com 3 vagas reservadas + 2
-alternativas, comparável a 1 vaga) e **painel de convocação da CRE/polo** com log de eventos.
+alternativas, comparável a 1 vaga), rodando **24/7** — reclassifica quando a entrada muda, convoca e
+repassa cada vaga liberada ao próximo da fila sozinho — e **painel de convocação da CRE/polo** com log de
+eventos, incluindo o **mapa do território com drill-down** (rede → CRE → creche).
 Produto em [`spec/PRD.md`](spec/PRD.md); contrato técnico em [`spec/11`](spec/11-baseline-tecnico.md);
 auditoria das bases em [`out/auditoria-dados.md`](out/auditoria-dados.md).
 
@@ -60,7 +62,7 @@ make test                    # invariantes do motor
 
 | Pasta | O que é |
 |---|---|
-| [`backend/`](backend/) | FastAPI · motor DA em `app/engine` · ETL (DuckDB) em `app/etl` · comprovação via APIs de governo em `app/integracoes` · assistente de consulta em `app/agente` |
+| [`backend/`](backend/) | FastAPI · motor DA em `app/engine` · rotina contínua do motor em `app/motor.py` · ETL (DuckDB) em `app/etl` · comprovação via APIs de governo em `app/integracoes` · assistente de consulta em `app/agente` |
 | [`frontend/`](frontend/) | React + Vite + TS, design system espelhando o `matricula.rio` |
 | [`db/`](db/) | schema SQL (log de eventos append-only; log de acesso do assistente) |
 

@@ -99,7 +99,7 @@ export default function UnidadeDetalhePage() {
             </div>
             {f && !f.rodada_id && (
               <EmptyState title="Ainda sem classificação para esta unidade">
-                <p>{area === "cre" ? "A classificação é feita pelo Nível Central; quando sair, a fila aparece aqui." : "Rode uma classificação em Classificação."}</p>
+                <p>O motor classifica sozinho, a cada poucos minutos; assim que esta unidade entrar numa rodada, a fila aparece aqui.</p>
               </EmptyState>
             )}
             {f && f.rodada_id && f.itens.length === 0 && <EmptyState title="Ninguém na fila deste grupamento e turno" />}
@@ -242,13 +242,8 @@ export default function UnidadeDetalhePage() {
                   footer={
                     <span>
                       "Estimada" = nº de matrículas confirmadas naquele ano; a base da SME traz ocupação, não vagas ofertadas. Clique em "corrigir" para
-                      informar o número real — fica no histórico com data, hora e quem informou.
-                      {area === "cre" ? " A classificação é feita pelo Nível Central." : (
-                        <>
-                          {" "}
-                          <Link to="/sme/classificacao">Rodar classificação</Link>
-                        </>
-                      )}
+                      informar o número real — fica no histórico com data, hora e quem informou. O motor reclassifica sozinho no
+                      ciclo seguinte, com a vaga corrigida.
                     </span>
                   }
                 />

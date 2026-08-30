@@ -348,6 +348,88 @@ class PainelUnidade(BaseModel):
     liberadas: int
 
 
+# ----------------------------------------------------------------------------- mapa (drill-down)
+
+class MapaCre(BaseModel):
+    """Uma CRE no mapa da rede. `lat`/`lon` = centroide das unidades com coordenada."""
+    cre: str
+    lat: float | None = None
+    lon: float | None = None
+    unidades: int
+    unidades_no_mapa: int
+    vagas: int
+    inscricoes: int
+    alocadas: int
+    lista_espera: int
+    convocadas: int
+    abertas: int
+    confirmadas: int
+    em_atraso: int
+
+
+class MapaUnidade(BaseModel):
+    """Uma creche/EDI no mapa da CRE — todas as unidades da CRE aparecem, mesmo sem convocação."""
+    codigo: str
+    nome: str | None
+    cre: str | None
+    tipo: str | None
+    bairro: str | None
+    lat: float | None = None
+    lon: float | None = None
+    vagas: int
+    inscricoes: int
+    alocadas: int
+    lista_espera: int
+    convocadas: int
+    abertas: int
+    confirmadas: int
+    em_atraso: int
+
+
+class MapaOut(BaseModel):
+    ano: int | None
+    nivel: str                             # rede | cre
+    cre: str | None = None
+    atualizado_em: datetime
+    cres: list[MapaCre] = []
+    unidades: list[MapaUnidade] = []       # preenchido quando `cre` é informada
+
+
+# ----------------------------------------------------------------------------- motor contínuo
+
+class MotorCiclo(BaseModel):
+    em: datetime
+    duracao_ms: int
+    ano: int | None = None
+    rodada_id: int | None = None
+    rodada_criada: bool = False
+    motivo_rodada: str | None = None
+    convocacoes_criadas: int = 0
+    expiradas: int = 0
+    repassadas: int = 0
+    vagas_sem_fila: int = 0
+    erro: str | None = None
+
+
+class MotorEstado(BaseModel):
+    ligado: bool
+    intervalo_s: int
+    expira_vencidas: bool
+    executando: bool
+    iniciado_em: datetime | None = None
+    ultima_execucao: datetime | None = None
+    proxima_execucao: datetime | None = None
+    ciclos: int = 0
+    total_rodadas: int = 0
+    total_convocacoes: int = 0
+    total_expiradas: int = 0
+    total_repassadas: int = 0
+    ultimo_ciclo: MotorCiclo | None = None
+    ultimo_erro: str | None = None
+    rodada_vigente: RodadaOut | None = None
+    vagas_liberadas_pendentes: int = 0     # liberadas ainda sem repasse (o motor pega no próximo ciclo)
+
+
 # ----------------------------------------------------------------------------- visão da família
 
 class RodadaRef(BaseModel):

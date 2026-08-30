@@ -38,6 +38,10 @@ Duas peças, uma só base de dados:
    A família confirma **uma** das reservadas; as outras duas são liberadas **na hora** e voltam ao pool
    para uma rodada restrita (rematch). Recusa ou prazo vencido libera só aquela vaga.
 
+   O motor **roda 24/7** (`backend/app/motor.py`): reclassifica quando a entrada muda, convoca as vagas
+   reservadas e repassa cada vaga liberada ao próximo da fila da unidade, sem depender de alguém apertar
+   um botão. A cascata de liberações acontece em minutos, não no calendário.
+
    O motor também roda com `vagas_presas = 1` (DA clássico, uma vaga por criança) para a simulação
    comparar os dois regimes sobre o processo 2025.
 
@@ -92,29 +96,38 @@ Duas peças, uma só base de dados:
 | Painel | Usuário | O que faz |
 |---|---|---|
 | **Família** (`/familia`, celular) | responsável pela criança | consulta a inscrição pelo código (em produção, CPF via gov.br); vê as 5 opções com resultado e posição; **confirma ou recusa uma reserva na hora**; vê a pontuação critério a critério com a comprovação automática; lê a explicação do resultado |
-| **CRE / polo** (`/cre`) | servidor do polo (usuário principal) | painel do território como **fila de trabalho**: vencidas, vencem em 24 h, sem aviso, crianças com várias reservas (cada número abre a lista, da mais urgente para a menos, com a próxima ação); registra tentativas e desfechos com canal e nome de quem registrou; vaga recusada/vencida mostra **o próximo da fila** e o convoca; fila de espera e capacidade informada por unidade; expiração em lote; ficha da inscrição |
-| **Nível Central SME** (`/sme`) | equipe central | visão da rede por CRE; executa rodadas, compara 1 vaga × 3 reservas, gera convocações; régua do ano (norma, só leitura) |
+| **CRE / polo** (`/cre`) | servidor do polo (usuário principal) | painel do território como **fila de trabalho**: vencidas, vencem em 24 h, sem aviso, crianças com várias reservas (cada número abre a lista, da mais urgente para a menos, com a próxima ação); registra tentativas e desfechos com canal e nome de quem registrou; vaga recusada/vencida mostra **o próximo da fila** e o convoca; **mapa** das creches da CRE (pressão da fila, vencidas, lista de espera, vagas); fila de espera e capacidade informada por unidade; expiração em lote; ficha da inscrição |
+| **Nível Central SME** (`/sme`) | equipe central | visão da rede por CRE com o **estado do motor contínuo** (não há aba "Classificação": o motor roda 24/7); **mapa da rede com drill-down** — CRE → todas as creches da CRE → creche; régua do ano (norma, só leitura) |
 
 ## 5. Fluxos
 
-**Rodada inicial.** Nível Central escolhe `ano`, `grupamento`, `horario`, `vagas_presas` (3) e
-`alternativas` (2) → motor roda por (grupamento, turno) → `rodada` + `alocacao` gravadas com
-`hash_entrada` → resumo: inscrições, crianças com alguma reserva, média de reservas por criança, lista de
-espera, sem opção viável, distribuição por ordem da opção.
+**Rodada inicial.** O **motor contínuo** (`backend/app/motor.py`) roda sozinho, a cada
+`MOTOR_INTERVALO_SEGUNDOS` (padrão 60): classifica o processo vigente quando ainda não há rodada, e
+reclassifica quando a entrada muda — inscrição nova, opção nova, capacidade corrigida pela unidade. Por
+isso **não existe aba "Classificação"** no Nível Central: a tela mostra o estado do motor (última passada,
+o que ele fez, classificação vigente), não um botão de "rodar". Os parâmetros continuam sendo
+`vagas_presas` (3) e `alternativas` (2), e cada rodada grava `rodada` + `alocacao` com `hash_entrada` e o
+resumo: inscrições, crianças com alguma reserva, média de reservas por criança, lista de espera, sem opção
+viável, distribuição por ordem da opção. `POST /classificacao/rodadas` continua existindo (é a função que
+o motor chama) e `POST /motor/ciclo` força um ciclo na hora, para a demonstração.
 
-**Convocação.** "Gerar convocações" cria uma `convocacao` (status `selecionada`, prazo +72 h) por vaga
-reservada e o evento correspondente. O servidor registra `contato_tentado` (repetível),
-`contato_confirmado`, `confirmada`, `recusada`, `expirada`. `confirmada` em uma unidade →
-as outras reservas da mesma criança viram `liberada` automaticamente, com evento.
+**Convocação.** O motor cria uma `convocacao` (status `selecionada`, prazo +72 h) por vaga reservada da
+rodada nova, com o evento correspondente, sem duplicar o que já está na rua — pula quem já confirmou
+matrícula, quem já foi convocado para aquela unidade e o que passaria da cota de reservas abertas. O
+servidor registra `contato_tentado` (repetível), `contato_confirmado`, `confirmada`, `recusada`,
+`expirada`. `confirmada` em uma unidade → as outras reservas da mesma criança viram `liberada`
+automaticamente, com evento.
 
 **Rematch.** Vagas liberadas/recusadas/expiradas voltam ao pool → rodada `tipo = rematch` restrita às
-unidades com vaga e às crianças em lista de espera, mesma régua. **No polo**, o gesto unitário é
-"convocar o próximo da fila": a vaga liberada vai para a 1ª criança da lista de espera daquela
-unidade/grupamento/turno, na `posicao_fila` do motor, pulando quem já confirmou ou já segura 3 reservas —
-evento `selecionada_da_lista`, o mesmo nome que a SME usa hoje. Uma vaga liberada só é repassada uma vez.
+unidades com vaga e às crianças em lista de espera, mesma régua. **No dia a dia isso não espera rodada
+nenhuma**: a cada ciclo o motor pega toda vaga liberada ainda sem repasse e convoca a 1ª criança da lista
+de espera daquela unidade/grupamento/turno, na `posicao_fila` do motor, pulando quem já confirmou ou já
+segura 3 reservas — evento `selecionada_da_lista` (o mesmo nome que a SME usa hoje), ator `motor`. Uma
+vaga liberada só é repassada uma vez. O polo continua podendo fazer o gesto unitário ("convocar o próximo
+da fila") sem esperar o ciclo.
 
 **Expiração.** O polo registra "prazo vencido" uma a uma ou em lote (todas as vencidas do recorte). Como
-rotina automática (`EXPIRACAO_AUTOMATICA_MINUTOS`, ator `sistema`) fica desligada na demonstração, para as
+passo automático do motor (`MOTOR_EXPIRAR_VENCIDAS`, ator `motor`) fica desligado na demonstração, para as
 vencidas aparecerem no painel.
 
 **Comprovação.** `POST /inscricoes/{id}/comprovar` consulta os provedores configurados
