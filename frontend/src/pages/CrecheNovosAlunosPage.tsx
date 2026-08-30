@@ -1,8 +1,14 @@
 import { useMemo, useState } from "react";
-import { Page, Card, DataTable, Pill, Toast, Pagination, paginar } from "../design-system";
+import { MessageCircleQuestion, PhoneCall, UserX } from "lucide-react";
+import { Page, Card, DataTable, Pill, Toast, Pagination, paginar, fmtDateTime } from "../design-system";
 import { useToast } from "../components/useToast";
 import { AvancarFluxoWizard } from "../creche/AvancarFluxoWizard";
 import { ResultadoContato, registrarResultadoContato, situacaoMensageria } from "../creche/contato";
+import {
+  PRAZO_1A_PERGUNTA_VISITA_DIAS,
+  PRAZO_2A_PERGUNTA_E_LIGACAO_DIAS,
+  PRAZO_PERDA_VAGA_DIAS,
+} from "../creche/fluxoConvocacao";
 import {
   Contato,
   NOVOS_ALUNOS_EXEMPLO,
@@ -13,6 +19,7 @@ import {
   ligarHoje,
   ordenarAprovadosAlfabetico,
   ordenarConvocados,
+  ordenarPerderamVaga,
 } from "../creche/mock";
 
 function ContatosCell({ principal, outros }: { principal: Contato; outros: Contato[] }) {
@@ -70,6 +77,9 @@ function CardConvocado({ aluno, onAvancar }: { aluno: NovoAluno; onAvancar: (a: 
       <span className="aluno-card-meta">{SEGMENTO_LABEL[aluno.segmento]}</span>
       <span className="aluno-card-meta">Contato: {aluno.contatoPrincipal.nome}</span>
       <Pill tone={urgente ? "danger" : "info"}>Faltam {aluno.prazoDiasRestantes} dia(s)</Pill>
+      {aluno.confirmacaoVisita === "sim" && <Pill tone="ok">Confirmou que vai à visita</Pill>}
+      {aluno.confirmacaoVisita === "nao" && <Pill tone="warn">Disse que não vai</Pill>}
+      {aluno.confirmacaoVisita == null && aluno.ligacaoTentada && <Pill tone="warn">Sem resposta — ligação feita</Pill>}
       <button type="button" className="btn btn-secondary btn-sm" onClick={() => onAvancar(aluno)}>
         Avançar fluxo
       </button>
@@ -87,11 +97,13 @@ export default function CrecheNovosAlunosPage() {
   const [paginaConvocados, setPaginaConvocados] = useState(1);
   const [paginaAprovados, setPaginaAprovados] = useState(1);
   const [paginaLigar, setPaginaLigar] = useState(1);
+  const [paginaPerdeuVaga, setPaginaPerdeuVaga] = useState(1);
   const [buscaAprovados, setBuscaAprovados] = useState("");
   const [buscaLigar, setBuscaLigar] = useState("");
   const { message, show } = useToast();
 
   const convocados = useMemo(() => ordenarConvocados(alunos.filter((a) => a.status === "convocado")), [alunos]);
+  const perderamVaga = useMemo(() => ordenarPerderamVaga(alunos), [alunos]);
 
   const aprovados = useMemo(() => {
     const termo = buscaAprovados.trim().toLowerCase();
@@ -198,6 +210,35 @@ export default function CrecheNovosAlunosPage() {
         )}
       </Card>
 
+      <Card title="Cronograma de comparecimento" actions={<span className="text-sm muted">3 dias úteis para confirmar a vaga</span>}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", paddingBottom: 12, borderBottom: "1px solid var(--mr-grey-200)" }}>
+            <MessageCircleQuestion size={20} style={{ color: "var(--info)" }} aria-hidden="true" />
+            <div>
+              <strong>Dia {PRAZO_1A_PERGUNTA_VISITA_DIAS}</strong>
+              <p className="text-sm muted">Mensageria pergunta ao responsável se ele vai à visita confirmar a vaga</p>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", paddingBottom: 12, borderBottom: "1px solid var(--mr-grey-200)" }}>
+            <PhoneCall size={20} style={{ color: "var(--warn)" }} aria-hidden="true" />
+            <div>
+              <strong>Dia {PRAZO_2A_PERGUNTA_E_LIGACAO_DIAS}</strong>
+              <p className="text-sm muted">Pergunta repetida; se ainda sem resposta, a escola liga para o contato principal</p>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <UserX size={20} style={{ color: "var(--danger)" }} aria-hidden="true" />
+            <div>
+              <strong>Dia {PRAZO_PERDA_VAGA_DIAS}</strong>
+              <p className="text-sm muted">
+                Sem confirmação de presença, a criança perde a vaga nesta escola e entra no reparelhamento com outra
+                unidade — se a família não responder em nenhum dos 3 contatos obrigatórios em 2 dias, a inscrição é encerrada.
+              </p>
+            </div>
+          </div>
+        </div>
+      </Card>
+
       <Card title={`Convocados (${convocados.length})`}>
         {convocados.length === 0 ? (
           <p className="muted">Nenhum convocado aguardando comparecimento nesta unidade.</p>
@@ -255,6 +296,32 @@ export default function CrecheNovosAlunosPage() {
         )}
         {!aprovadosAbertos && <p className="text-sm muted">Em ordem alfabética — clique em "Mostrar" para ver a lista.</p>}
       </Card>
+
+      {perderamVaga.length > 0 && (
+        <Card title={`Perderam a vaga (${perderamVaga.length})`} flush>
+          <p className="text-sm muted" style={{ padding: "0 16px" }}>
+            Não confirmaram presença em 3 dias úteis. Aparecem aqui pelos últimos 3 dias enquanto o reparelhamento com
+            outra escola está em andamento.
+          </p>
+          <DataTable
+            rows={paginar(perderamVaga, paginaPerdeuVaga, TAMANHO_PAGINA_GALERIA)}
+            rowKey={(a) => a.id}
+            columns={[
+              { key: "nome", header: "Criança", render: (a) => a.nome },
+              { key: "segmento", header: "Segmento", render: (a) => SEGMENTO_LABEL[a.segmento] },
+              { key: "contato", header: "Contato", render: (a) => a.contatoPrincipal.nome },
+              {
+                key: "status",
+                header: "Status",
+                render: (a) => <Pill tone="danger">Vaga perdida{a.perdeuVagaEm ? ` — ${fmtDateTime(a.perdeuVagaEm)}` : ""}</Pill>,
+              },
+            ]}
+            footer={
+              <Pagination page={paginaPerdeuVaga} pageSize={TAMANHO_PAGINA_GALERIA} total={perderamVaga.length} onPageChange={setPaginaPerdeuVaga} />
+            }
+          />
+        </Card>
+      )}
 
       {alunoEmFluxo && (
         <AvancarFluxoWizard aluno={alunoEmFluxo} onFechar={() => setAlunoEmFluxo(null)} onAprovado={aoAprovar} onPrazoAdiado={aoAdiarPrazo} />

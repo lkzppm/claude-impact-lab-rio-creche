@@ -11,7 +11,7 @@ import {
   emAtraso,
   verificados,
 } from "../creche/mock";
-import { ESTAGIO_ATRASO_LABEL, estagioAtraso, perdeuVagaHaMenosDe } from "../creche/fluxoAtrasoDocumento";
+import { ESTAGIO_ATRASO_LABEL, estagioAtraso } from "../creche/fluxoAtrasoDocumento";
 
 export default function CrecheDocumentosPage() {
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>(RESPONSAVEIS_EXEMPLO);
@@ -30,11 +30,6 @@ export default function CrecheDocumentosPage() {
     return termo ? base.filter((r) => r.nome.toLowerCase().includes(termo)) : base;
   }, [responsaveis, buscaAtraso]);
   const jaVerificados = useMemo(() => verificados(responsaveis), [responsaveis]);
-  const perderamVaga = useMemo(
-    () => responsaveis.filter((r) => perdeuVagaHaMenosDe(r)).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
-    [responsaveis],
-  );
-  const [paginaPerdeuVaga, setPaginaPerdeuVaga] = useState(1);
 
   function abrirWizard(responsavelId?: string) {
     setPreselecionado(responsavelId ?? null);
@@ -170,31 +165,6 @@ export default function CrecheDocumentosPage() {
           />
         )}
       </Card>
-
-      {perderamVaga.length > 0 && (
-        <Card title={`Perderam a vaga (${perderamVaga.length})`} flush>
-          <p className="text-sm muted" style={{ padding: "0 16px" }}>
-            Mais de 7 dias de atraso na verificação de documento. Fica visível aqui por 7 dias e depois some da lista.
-          </p>
-          <DataTable
-            rows={paginar(perderamVaga, paginaPerdeuVaga, TAMANHO_PAGINA_GALERIA)}
-            rowKey={(r) => r.id}
-            columns={[
-              { key: "nome", header: "Responsável", render: (r) => r.nome },
-              { key: "crianca", header: "Criança", render: (r) => r.crianca },
-              { key: "telefone", header: "Telefone", render: (r) => r.telefone },
-              {
-                key: "status",
-                header: "Status",
-                render: (r) => <Pill tone="danger">Vaga perdida{r.perdeuVagaEm ? ` — ${fmtDateTime(r.perdeuVagaEm)}` : ""}</Pill>,
-              },
-            ]}
-            footer={
-              <Pagination page={paginaPerdeuVaga} pageSize={TAMANHO_PAGINA_GALERIA} total={perderamVaga.length} onPageChange={setPaginaPerdeuVaga} />
-            }
-          />
-        </Card>
-      )}
 
       {wizardAberto && (
         <VerificarResponsavelWizard

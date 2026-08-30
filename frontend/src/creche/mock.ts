@@ -47,6 +47,26 @@ export const PERIODO_GESTAO_VAGA_ABERTO = true;
 /** TODO: vem de `processo` no banco (ex.: `processo.prazo_gestao_vagas`). Mock por enquanto. */
 export const PRAZO_GESTAO_VAGAS = "2026-09-15T23:59:00-03:00";
 
+/**
+ * Cronograma oficial do processo, definido pelo Nível Central (não pela unidade). Em produção
+ * vem da tabela `processo` (datas por `ano` + `ich_perg_id`/etapa — spec/01-contexto-e-legislacao.md);
+ * aqui é mock só para a unidade acompanhar os prazos que não controla.
+ */
+export interface EtapaCronogramaCentral {
+  chave: string;
+  label: string;
+  data: string;
+}
+
+export const CRONOGRAMA_CENTRAL_EXEMPLO: EtapaCronogramaCentral[] = [
+  { chave: "mudanca_vagas_esperadas", label: "Mudança no número de vagas esperadas por segmento", data: "2026-09-01T00:00:00-03:00" },
+  { chave: "inicio_pre_inscricao", label: "Início da pré-inscrição", data: "2026-09-10T00:00:00-03:00" },
+  { chave: "fim_pre_inscricao", label: "Fim da pré-inscrição", data: "2026-09-25T23:59:00-03:00" },
+  { chave: "vagas_oficiais_ano", label: "Divulgação das vagas oficiais do ano", data: "2026-10-01T00:00:00-03:00" },
+  { chave: "inicio_inscricao", label: "Início da inscrição", data: "2026-10-05T00:00:00-03:00" },
+  { chave: "fim_inscricao", label: "Fim da inscrição", data: "2026-10-20T23:59:00-03:00" },
+];
+
 /* ---------------------------- Verificação de documentos ---------------------------- */
 
 export type StatusVerificacao = "pendente" | "atrasado" | "verificado";
@@ -67,10 +87,6 @@ export interface Responsavel {
   pequenosCariocas: boolean | null;
   /** dias desde o vencimento do prazo de verificação (1 dia = 1 dia útil após o prazo). */
   diasAtraso?: number;
-  /** true se a criança perdeu a vaga por atraso > 7 dias. */
-  perdeuVaga?: boolean;
-  /** ISO date de quando a vaga foi perdida. */
-  perdeuVagaEm?: string | null;
 }
 
 const hojeMaisDias = (dias: number) => {
@@ -99,8 +115,6 @@ export const RESPONSAVEIS_EXEMPLO: Responsavel[] = [
     irmaoNaRede: null,
     pequenosCariocas: null,
     diasAtraso: i % 5 === 0 ? 8 : 2 + i,
-    perdeuVaga: i % 5 === 0,
-    perdeuVagaEm: i % 5 === 0 ? hojeMaisDias(-5) : undefined,
   })),
   ...Array.from({ length: 11 }, (_, i) => ({
     id: `r-verificado-extra-${i}`,
@@ -144,13 +158,18 @@ export const TAMANHO_PAGINA_GALERIA = 10;
 
 /* ---------------------------------- Novos alunos ---------------------------------- */
 
-/** "recusado" tira a criança da lista de convocados desta unidade (fluxo de recusa). */
-export type StatusNovoAluno = "convocado" | "aprovado" | "recusado";
+/**
+ * "recusado" tira a criança da lista de convocados desta unidade (fluxo de recusa, resposta manual).
+ * "perdeu_vaga" é o fim do cronograma de comparecimento (`fluxoConvocacao.ts`) — não confirmou
+ * presença em 3 dias úteis. Dispara o reparelhamento com outra escola.
+ */
+export type StatusNovoAluno = "convocado" | "aprovado" | "recusado" | "perdeu_vaga";
 
 export const STATUS_NOVO_ALUNO_LABEL: Record<StatusNovoAluno, string> = {
   convocado: "Convocado",
   aprovado: "Aprovado",
   recusado: "Recusado",
+  perdeu_vaga: "Perdeu a vaga",
 };
 
 /** Prazo total, em dias, que a família tem para comparecer após a convocação. */
@@ -176,8 +195,14 @@ export interface NovoAluno {
   prazoDiasRestantes: number;
   /** resultado da última ligação registrada (não atendeu / aceitou visita / recusou) */
   ultimoContato?: "nao_atendeu" | "aceitou_visita" | "recusou" | null;
+  /** resposta da pergunta "vai à visita?" feita nos dias 1 e 2 do cronograma de comparecimento */
+  confirmacaoVisita?: "sim" | "nao" | null;
+  /** true quando a escola já tentou ligar para o contato principal (dia 2, sem resposta) */
+  ligacaoTentada?: boolean;
   aprovadoPor?: string | null;
   aprovadoEm?: string | null;
+  /** ISO date de quando a vaga foi perdida por não comparecimento; só relevante em "perdeu_vaga" */
+  perdeuVagaEm?: string | null;
 }
 
 export const NOVOS_ALUNOS_EXEMPLO: NovoAluno[] = [
@@ -252,6 +277,32 @@ export const NOVOS_ALUNOS_EXEMPLO: NovoAluno[] = [
     status: "convocado",
     prazoDiasRestantes: 2,
   },
+  {
+    id: "a7",
+    nome: "Bernardo Castro",
+    segmento: "bercario",
+    unidadeCodigo: UNIDADE_EXEMPLO.codigo,
+    contatoPrincipal: { nome: "Vanessa Castro (mãe)", telefone: "(21) 99123-4509" },
+    outrosContatos: [],
+    status: "perdeu_vaga",
+    prazoDiasRestantes: 0,
+    confirmacaoVisita: null,
+    ligacaoTentada: true,
+    perdeuVagaEm: hojeMaisDias(-1),
+  },
+  {
+    id: "a8",
+    nome: "Clara Menezes",
+    segmento: "maternal_2",
+    unidadeCodigo: UNIDADE_EXEMPLO.codigo,
+    contatoPrincipal: { nome: "Diego Menezes (pai)", telefone: "(21) 99123-4510" },
+    outrosContatos: [],
+    status: "perdeu_vaga",
+    prazoDiasRestantes: 0,
+    confirmacaoVisita: "nao",
+    ligacaoTentada: true,
+    perdeuVagaEm: hojeMaisDias(-2),
+  },
   // registros extras só para demonstrar a paginação (10 por página) nas galerias de convocados e aprovados
   ...Array.from({ length: 11 }, (_, i) => ({
     id: `a-convocado-extra-${i}`,
@@ -284,6 +335,13 @@ export function ordenarConvocados(lista: NovoAluno[]): NovoAluno[] {
 
 export function ordenarAprovadosAlfabetico(lista: NovoAluno[]): NovoAluno[] {
   return [...lista].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
+/** Quem perdeu a vaga por não comparecimento, mais recente primeiro. */
+export function ordenarPerderamVaga(lista: NovoAluno[]): NovoAluno[] {
+  return lista
+    .filter((a) => a.status === "perdeu_vaga")
+    .sort((a, b) => (b.perdeuVagaEm ?? "").localeCompare(a.perdeuVagaEm ?? ""));
 }
 
 /**

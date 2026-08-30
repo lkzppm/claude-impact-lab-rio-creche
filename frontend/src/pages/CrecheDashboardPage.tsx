@@ -1,8 +1,9 @@
-import { ClipboardList, FileCheck2, Users, AlertCircle, Clock, Trash2 } from "lucide-react";
+import { ClipboardList, FileCheck2, Users, AlertCircle, ShieldAlert, CalendarClock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { Page, Card, StackedBar, BarList, Donut, Hero, fmtInt } from "../design-system";
+import { Page, Card, StackedBar, BarList, Donut, Hero, fmtInt, fmtDateTime } from "../design-system";
 import type { Fatia, Segmento } from "../design-system";
 import {
+  CRONOGRAMA_CENTRAL_EXEMPLO,
   NOVOS_ALUNOS_EXEMPLO,
   RESPONSAVEIS_EXEMPLO,
   SEGMENTO_LABEL,
@@ -10,7 +11,7 @@ import {
   VAGAS_POR_SEGMENTO,
   contarPorStatus,
 } from "../creche/mock";
-import { PRAZO_AVISO_ATRASO_DIAS, PRAZO_PERDA_CRITERIOS_DIAS, PRAZO_PERDA_VAGA_DIAS } from "../creche/fluxoAtrasoDocumento";
+import { PRAZO_AVISO_ATRASO_DIAS, PRAZO_PERDA_CRITERIOS_DIAS } from "../creche/fluxoAtrasoDocumento";
 
 const ATALHOS = [
   {
@@ -60,11 +61,41 @@ export default function CrecheDashboardPage() {
     { label: "Verificados", value: verificado, tone: "ok" },
   ];
 
+  const hoje = new Date().toISOString();
+
   return (
     <Page
       title={`Painel — ${UNIDADE_EXEMPLO.nome}`}
       subtitle="Vagas por segmento, convocados aguardando comparecimento e a fila de verificação de documentos."
     >
+      <Card
+        title="Cronograma oficial do processo"
+        actions={<span className="text-sm muted">definido pelo Nível Central</span>}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          {CRONOGRAMA_CENTRAL_EXEMPLO.map((etapa, i) => {
+            const passou = etapa.data < hoje;
+            return (
+              <div
+                key={etapa.chave}
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  alignItems: "center",
+                  padding: "10px 0",
+                  borderBottom: i < CRONOGRAMA_CENTRAL_EXEMPLO.length - 1 ? "1px solid var(--mr-grey-200)" : undefined,
+                  opacity: passou ? 0.55 : 1,
+                }}
+              >
+                <CalendarClock size={18} style={{ color: passou ? "var(--mr-grey-300)" : "var(--info)" }} aria-hidden="true" />
+                <span style={{ flex: 1 }}>{etapa.label}</span>
+                <strong className="text-sm">{fmtDateTime(etapa.data)}</strong>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
       <Card title="Para hoje">
         <div className="para-hoje">
           <Donut
@@ -87,27 +118,20 @@ export default function CrecheDashboardPage() {
         </div>
       </Card>
 
-      <Card title="Cronograma de escalação — Atraso na verificação de documento">
+      <Card title="Cronograma de verificação de documento" actions={<span className="text-sm muted">não afeta a vaga da criança</span>}>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ display: "flex", gap: 12, alignItems: "center", paddingBottom: 12, borderBottom: "1px solid var(--mr-grey-200)" }}>
             <AlertCircle size={20} style={{ color: "var(--warn)" }} aria-hidden="true" />
             <div>
               <strong>Dia {PRAZO_AVISO_ATRASO_DIAS}</strong>
-              <p className="text-sm muted">Aviso enviado ao responsável; começa contagem regressiva</p>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 12, alignItems: "center", paddingBottom: 12, borderBottom: "1px solid var(--mr-grey-200)" }}>
-            <Clock size={20} style={{ color: "var(--danger)" }} aria-hidden="true" />
-            <div>
-              <strong>Dia {PRAZO_PERDA_CRITERIOS_DIAS}</strong>
-              <p className="text-sm muted">Critérios "irmão na rede" e "Pequenos Cariocas" deixam de contar na pontuação</p>
+              <p className="text-sm muted">Prazo para ir à unidade verificar o documento vence; aviso enviado ao responsável</p>
             </div>
           </div>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <Trash2 size={20} style={{ color: "var(--danger)" }} aria-hidden="true" />
+            <ShieldAlert size={20} style={{ color: "var(--danger)" }} aria-hidden="true" />
             <div>
-              <strong>Dia {PRAZO_PERDA_VAGA_DIAS}</strong>
-              <p className="text-sm muted">Criança perde a vaga; visível na galeria "Perdeu a vaga" por {PRAZO_PERDA_VAGA_DIAS} dias</p>
+              <strong>Dia {PRAZO_PERDA_CRITERIOS_DIAS}</strong>
+              <p className="text-sm muted">Critérios "irmão na rede" e "Pequenos Cariocas" deixam de contar na pontuação</p>
             </div>
           </div>
         </div>
