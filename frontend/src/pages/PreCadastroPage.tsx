@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Baby, Building2, Check, ChevronDown, ChevronUp, Clock, FileCheck, Home, Mail, MapPin, MessageCircle, Phone, Send, Sun, Users, X,
+  ArrowLeft, ArrowRight, Baby, Building2, Check, ChevronDown, ChevronUp, Clock, FileCheck, Home, Mail, MapPin, MessageCircle, Phone, Send, Sun, Users, X,
 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
@@ -40,6 +40,7 @@ interface Rascunho {
   cpf: string;
   nomeResponsavel: string;
   consentimento: boolean;
+  etapa: number;
 }
 
 const VAZIO: Rascunho = {
@@ -61,6 +62,7 @@ const VAZIO: Rascunho = {
   cpf: "",
   nomeResponsavel: "",
   consentimento: false,
+  etapa: 1,
 };
 
 function lerRascunho(): Rascunho {
@@ -169,8 +171,6 @@ export default function PreCadastroPage() {
   const [verifErro, setVerifErro] = useState<string | null>(null);
   const [verifCarregando, setVerifCarregando] = useState(false);
   const [tentouEnviar, setTentouEnviar] = useState(false);
-  const secCreches = useRef<HTMLElement>(null);
-  const secEnviar = useRef<HTMLElement>(null);
   const [destacada, setDestacada] = useState<string | null>(null);
   function focarUnidade(codigo: string) {
     setDestacada(codigo);
@@ -332,16 +332,36 @@ export default function PreCadastroPage() {
 
   // validação final — em palavras simples, apontando o passo
   const cepOk = (geo != null && geo.lat != null && geo.lon != null) || (cepDigitos.length === 8 && r.semLocalizacao);
-  const pendencias: string[] = [];
-  if (!nascAnoMes) pendencias.push("Passo 1: a data de nascimento da criança");
-  if (!r.grupamento) pendencias.push("Passo 1: a turma da criança");
-  if (!r.horario) pendencias.push("Passo 1: o horário");
-  if (!cpfValido(r.cpf)) pendencias.push("Passo 1: o seu CPF");
-  if (!cepOk) pendencias.push(cepDigitos.length === 8 ? "Passo 3: confira o CEP (ou marque “continuar mesmo assim”)" : "Passo 3: o CEP da sua casa");
-  if (contatosValidos.length < MIN_CONTATOS) pendencias.push("Passo 5: 3 contatos completos, com nome e número");
-  if (r.escolhas.length < 1) pendencias.push("Passo 4: escolha pelo menos 1 creche");
-  if (r.nomeResponsavel.trim().length < 3) pendencias.push("Passo 6: o seu nome");
-  if (!r.consentimento) pendencias.push("Passo 6: marque que autoriza o uso dos dados");
+  const pend: { passo: number; texto: string }[] = [];
+  if (!nascAnoMes) pend.push({ passo: 1, texto: "a data de nascimento da criança" });
+  if (!r.grupamento) pend.push({ passo: 1, texto: "a turma da criança" });
+  if (!r.horario) pend.push({ passo: 1, texto: "o horário" });
+  if (!cpfValido(r.cpf)) pend.push({ passo: 1, texto: "o seu CPF" });
+  if (!cepOk) pend.push({ passo: 3, texto: cepDigitos.length === 8 ? "confira o CEP (ou marque “continuar mesmo assim”)" : "o CEP da sua casa" });
+  if (r.escolhas.length < 1) pend.push({ passo: 4, texto: "escolha pelo menos 1 creche" });
+  if (contatosValidos.length < MIN_CONTATOS) pend.push({ passo: 5, texto: "3 contatos completos, com nome e número" });
+  if (r.nomeResponsavel.trim().length < 3) pend.push({ passo: 6, texto: "o seu nome" });
+  if (!r.consentimento) pend.push({ passo: 6, texto: "marque que autoriza o uso dos dados" });
+  const pendencias = pend.map((x) => `Passo ${x.passo}: ${x.texto}`);
+  const pendenciasDoPasso = (n: number) => pend.filter((x) => x.passo === n).map((x) => x.texto);
+
+  // uma etapa por tela: só avança com o passo completo
+  const TOTAL = 6;
+  const etapa = Math.min(Math.max(1, r.etapa || 1), TOTAL);
+  const [tentouAvancar, setTentouAvancar] = useState(false);
+  const irPara = (n: number) => {
+    set("etapa", Math.min(Math.max(1, n), TOTAL));
+    setTentouAvancar(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  function avancar() {
+    if (pendenciasDoPasso(etapa).length) {
+      setTentouAvancar(true);
+      return;
+    }
+    irPara(etapa + 1);
+  }
+  const TITULOS = ["A criança", "Sua família", "Onde você mora", "Escolha as creches", "Como falar com você", "Enviar"];
 
   const enviar = useMutation({
     mutationFn: (body: PreCadastroIn) => criarPreCadastro(body),
@@ -378,7 +398,6 @@ export default function PreCadastroPage() {
     });
   }
 
-  const passosFeitos = [!!nascAnoMes && cpfOk, true, cepOk, r.escolhas.length > 0, contatosValidos.length >= MIN_CONTATOS, r.nomeResponsavel.trim().length >= 3 && r.consentimento];
 
   /* ---------- sucesso ---------- */
   if (enviado) {
@@ -444,444 +463,517 @@ export default function PreCadastroPage() {
         <p className="fam-eyebrow">
           Vaga em creche · <span className={`fam-fase-pill fam-fase-${FASE}`}>{FASE_INFO[FASE].rotulo}</span>
         </p>
-        <h1 className="fam-h1">Vamos achar uma creche perto de casa</h1>
-        <p className="fam-lead">São 6 passos. Leva uns 5 minutos. Pode parar e voltar depois: o que você preencher fica guardado.</p>
+        <ol className="pc-progresso" aria-label={`Passo ${etapa} de ${TOTAL}`}>
+          {TITULOS.map((t, i) => {
+            const n = i + 1;
+            const feito = pendenciasDoPasso(n).length === 0 && n < etapa;
+            return (
+              <li key={t} className={`pc-progresso-item ${n === etapa ? "atual" : ""} ${feito ? "feito" : ""}`}>
+                <button type="button" onClick={() => n < etapa && irPara(n)} disabled={n > etapa} aria-current={n === etapa ? "step" : undefined} aria-label={`Passo ${n}: ${t}`}>
+                  {feito ? <Check size={16} aria-hidden="true" /> : n}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        <h1 className="fam-h1">
+          Passo {etapa} de {TOTAL}: {TITULOS[etapa - 1]}
+        </h1>
+        {etapa === 1 && <p className="fam-lead">Leva uns 5 minutos. Pode parar e voltar depois: o que você preencher fica guardado.</p>}
 
-        {/* 1. A criança */}
+        {etapa === 1 && (
         <section className="fam-sec pc-sec">
-          <h2>
-            <span className="pc-num">1</span> A criança
-          </h2>
-          <label className="fam-label" htmlFor="nascimento">
-            Quando a criança nasceu?
-          </label>
-          <input id="nascimento" type="date" className="fam-input" value={r.nascimento} min={MIN_NASC} max={HOJE} onChange={(e) => set("nascimento", e.target.value)} required />
-          {r.nascimento && idade.meses != null && !idade.grupamento && (
-            <p className="fam-erro" role="alert">
-              Com essa data, a criança não está na idade de creche (de 0 a 3 anos). Confira a data.
-            </p>
-          )}
-          {idade.grupamento && !r.grupamentoManual && (
-            <p className="pc-ok">
-              <Baby size={20} aria-hidden="true" /> Turma: <strong>{idade.grupamento}</strong>
-              <button type="button" className="pc-link" onClick={() => set("grupamentoManual", true)}>
-                Mudar
-              </button>
-            </p>
-          )}
-          {(r.grupamentoManual || (!idade.grupamento && r.nascimento)) && (
+            <h2>
+              <span className="pc-num">1</span> A criança
+            </h2>
+            <label className="fam-label" htmlFor="nascimento">
+              Quando a criança nasceu?
+            </label>
+            <input id="nascimento" type="date" className="fam-input" value={r.nascimento} min={MIN_NASC} max={HOJE} onChange={(e) => set("nascimento", e.target.value)} required />
+            {r.nascimento && idade.meses != null && !idade.grupamento && (
+              <p className="fam-erro" role="alert">
+                Com essa data, a criança não está na idade de creche (de 0 a 3 anos). Confira a data.
+              </p>
+            )}
+            {idade.grupamento && !r.grupamentoManual && (
+              <p className="pc-ok">
+                <Baby size={20} aria-hidden="true" /> Turma: <strong>{idade.grupamento}</strong>
+                <button type="button" className="pc-link" onClick={() => set("grupamentoManual", true)}>
+                  Mudar
+                </button>
+              </p>
+            )}
+            {(r.grupamentoManual || (!idade.grupamento && r.nascimento)) && (
+              <fieldset className="pc-radios">
+                <legend className="fam-label">Turma</legend>
+                {GRUPAMENTOS.map((g) => (
+                  <label key={g} className={`pc-radio ${r.grupamento === g ? "on" : ""}`}>
+                    <input type="radio" name="grupamento" checked={r.grupamento === g} onChange={() => set("grupamento", g)} />
+                    {g}
+                  </label>
+                ))}
+              </fieldset>
+            )}
+  
             <fieldset className="pc-radios">
-              <legend className="fam-label">Turma</legend>
-              {GRUPAMENTOS.map((g) => (
-                <label key={g} className={`pc-radio ${r.grupamento === g ? "on" : ""}`}>
-                  <input type="radio" name="grupamento" checked={r.grupamento === g} onChange={() => set("grupamento", g)} />
-                  {g}
-                </label>
-              ))}
+              <legend className="fam-label">Que horário você precisa?</legend>
+              <div className="pc-opcoes-grandes">
+                {[
+                  { v: "Integral", rotulo: "Dia todo", sub: "manhã e tarde", Icone: Sun },
+                  { v: "Parcial", rotulo: "Meio período", sub: "só manhã ou só tarde", Icone: Clock },
+                ].map(({ v, rotulo, sub, Icone }) => (
+                  <label key={v} className={`pc-opcao-grande ${r.horario === v ? "on" : ""}`}>
+                    <input type="radio" name="horario" checked={r.horario === v} onChange={() => set("horario", v)} />
+                    <Icone size={28} aria-hidden="true" />
+                    <strong>{rotulo}</strong>
+                    <small>{sub}</small>
+                  </label>
+                ))}
+              </div>
             </fieldset>
-          )}
-
-          <fieldset className="pc-radios">
-            <legend className="fam-label">Que horário você precisa?</legend>
-            <div className="pc-opcoes-grandes">
-              {[
-                { v: "Integral", rotulo: "Dia todo", sub: "manhã e tarde", Icone: Sun },
-                { v: "Parcial", rotulo: "Meio período", sub: "só manhã ou só tarde", Icone: Clock },
-              ].map(({ v, rotulo, sub, Icone }) => (
-                <label key={v} className={`pc-opcao-grande ${r.horario === v ? "on" : ""}`}>
-                  <input type="radio" name="horario" checked={r.horario === v} onChange={() => set("horario", v)} />
-                  <Icone size={28} aria-hidden="true" />
-                  <strong>{rotulo}</strong>
-                  <small>{sub}</small>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <label className="fam-label" htmlFor="nomeCrianca">
-            Nome da criança <span className="pc-opcional">(se quiser)</span>
-          </label>
-          <input id="nomeCrianca" className="fam-input" value={r.nomeCrianca} onChange={(e) => set("nomeCrianca", e.target.value)} autoComplete="off" />
-
-          <label className="fam-label" htmlFor="cpf">
-            O seu CPF (de quem cuida da criança)
-          </label>
-          <input id="cpf" className="fam-input" inputMode="numeric" placeholder="000.000.000-00" value={r.cpf} onChange={(e) => set("cpf", mascaraCpf(e.target.value))} />
-          {r.cpf && cpfDigitos.length === 11 && !cpfOk && <p className="fam-erro">Esse CPF não existe. Confira os números.</p>}
-          {cpfOk && verifCarregando && <p className="fam-ajuda">Conferindo o CPF…</p>}
-          {cpfOk && verif && !verifCarregando && (
-            <p className="pc-ok">
-              <Check size={20} aria-hidden="true" /> CPF conferido. Veja o passo 2.
-            </p>
-          )}
-          {cpfOk && verifErro && <p className="fam-erro">{verifErro}</p>}
-          {!cpfOk && <p className="fam-ajuda">Com o CPF, a gente confere o CadÚnico e o Bolsa Família sozinho. Você não precisa levar papel disso.</p>}
-        </section>
-
-        {/* 2. Sua família */}
+  
+            <label className="fam-label" htmlFor="nomeCrianca">
+              Nome da criança <span className="pc-opcional">(se quiser)</span>
+            </label>
+            <input id="nomeCrianca" className="fam-input" value={r.nomeCrianca} onChange={(e) => set("nomeCrianca", e.target.value)} autoComplete="off" />
+  
+            <label className="fam-label" htmlFor="cpf">
+              O seu CPF (de quem cuida da criança)
+            </label>
+            <input id="cpf" className="fam-input" inputMode="numeric" placeholder="000.000.000-00" value={r.cpf} onChange={(e) => set("cpf", mascaraCpf(e.target.value))} />
+            {r.cpf && cpfDigitos.length === 11 && !cpfOk && <p className="fam-erro">Esse CPF não existe. Confira os números.</p>}
+            {cpfOk && verifCarregando && <p className="fam-ajuda">Conferindo o CPF…</p>}
+            {cpfOk && verif && !verifCarregando && (
+              <p className="pc-ok">
+                <Check size={20} aria-hidden="true" /> CPF conferido. Veja o passo 2.
+              </p>
+            )}
+            {cpfOk && verifErro && <p className="fam-erro">{verifErro}</p>}
+            {!cpfOk && <p className="fam-ajuda">Com o CPF, a gente confere o CadÚnico e o Bolsa Família sozinho. Você não precisa levar papel disso.</p>}
+            {tentouAvancar && pendenciasDoPasso(1).length > 0 && (
+              <div className="pc-aviso" role="alert">
+                <p>
+                  <strong>Ainda falta:</strong>
+                </p>
+                <ul>
+                  {pendenciasDoPasso(1).map((t) => (
+                    <li key={t}>{t}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        )}
+        {etapa === 2 && (
         <section className="fam-sec pc-sec">
-          <h2>
-            <span className="pc-num">2</span> Sua família
-          </h2>
-          <p className="fam-sec-lead">Responda o que for verdade. Isso ajuda a sua criança a ter prioridade na fila.</p>
-          {regua.isLoading && <Spinner label="Carregando as perguntas…" />}
-          {regua.isError && <p className="fam-erro">Não deu para carregar as perguntas agora.</p>}
-          {regua.data && (
-            <>
-              <h3 className="pc-h3">
-                <Check size={18} aria-hidden="true" /> Conferido pelo CPF
-              </h3>
-              {!cpfOk && <p className="fam-ajuda">Escreva o CPF no passo 1 para conferir sozinho.</p>}
-              {cpfOk && verifCarregando ? (
-                <div className="pc-verif-loading" role="status" aria-live="polite">
-                  <Spinner label="Conferindo CadÚnico e Bolsa Família…" />
-                  <ul className="pc-skeleton" aria-hidden="true">
-                    <li />
-                    <li />
+            <h2>
+              <span className="pc-num">2</span> Sua família
+            </h2>
+            <p className="fam-sec-lead">Responda o que for verdade. Isso ajuda a sua criança a ter prioridade na fila.</p>
+            {regua.isLoading && <Spinner label="Carregando as perguntas…" />}
+            {regua.isError && <p className="fam-erro">Não deu para carregar as perguntas agora.</p>}
+            {regua.data && (
+              <>
+                <h3 className="pc-h3">
+                  <Check size={18} aria-hidden="true" /> Conferido pelo CPF
+                </h3>
+                {!cpfOk && <p className="fam-ajuda">Escreva o CPF no passo 1 para conferir sozinho.</p>}
+                {cpfOk && verifCarregando ? (
+                  <div className="pc-verif-loading" role="status" aria-live="polite">
+                    <Spinner label="Conferindo CadÚnico e Bolsa Família…" />
+                    <ul className="pc-skeleton" aria-hidden="true">
+                      <li />
+                      <li />
+                    </ul>
+                  </div>
+                ) : (
+                  <ul className="pc-criterios">
+                    {perguntas.automaticas.map((p) => {
+                      const v = verif?.verificados.find((x) => x.ich_perg_id === p.ich_perg_id);
+                      const estado = !cpfOk || !v ? "aguardando" : v.resultado === "confirmado" ? "sim" : v.resultado === "nao_encontrado" ? "nao" : "erro";
+                      return (
+                        <li key={p.ich_perg_id}>
+                          <div className={`pc-quest pc-quest-auto ${estado === "sim" ? "on" : ""}`}>
+                            <span className="pc-quest-icone" aria-hidden="true">
+                              <p.s.Icone size={24} />
+                            </span>
+                            <span className="pc-quest-texto">{p.s.pergunta}</span>
+                            <span className="pc-quest-estado">
+                              {estado === "aguardando" && <span className="pill pill-neutral">Vamos conferir</span>}
+                              {estado === "sim" && <span className="pill pill-ok">Sim, encontramos</span>}
+                              {estado === "nao" && <span className="pill pill-neutral">Não encontramos</span>}
+                              {estado === "erro" && <span className="pill pill-warn">Conferimos depois</span>}
+                            </span>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
-                </div>
-              ) : (
+                )}
+  
+                <h3 className="pc-h3">
+                  <FileCheck size={18} aria-hidden="true" /> Marque o que for verdade
+                </h3>
+                <p className="fam-ajuda">
+                  O que você marcar aqui precisa de <strong>documento</strong>, que você mostra na creche depois. A gente te diz qual.
+                </p>
                 <ul className="pc-criterios">
-                  {perguntas.automaticas.map((p) => {
-                    const v = verif?.verificados.find((x) => x.ich_perg_id === p.ich_perg_id);
-                    const estado = !cpfOk || !v ? "aguardando" : v.resultado === "confirmado" ? "sim" : v.resultado === "nao_encontrado" ? "nao" : "erro";
+                  {perguntas.manuais.map((p) => {
+                    const k = String(p.ich_perg_id);
+                    const on = !!r.respostas[k];
                     return (
-                      <li key={p.ich_perg_id}>
-                        <div className={`pc-quest pc-quest-auto ${estado === "sim" ? "on" : ""}`}>
+                      <li key={k}>
+                        <label className={`pc-quest ${on ? "on" : ""}`}>
+                          <input type="checkbox" checked={on} onChange={(e) => set("respostas", { ...r.respostas, [k]: e.target.checked })} />
                           <span className="pc-quest-icone" aria-hidden="true">
                             <p.s.Icone size={24} />
                           </span>
-                          <span className="pc-quest-texto">{p.s.pergunta}</span>
-                          <span className="pc-quest-estado">
-                            {estado === "aguardando" && <span className="pill pill-neutral">Vamos conferir</span>}
-                            {estado === "sim" && <span className="pill pill-ok">Sim, encontramos</span>}
-                            {estado === "nao" && <span className="pill pill-neutral">Não encontramos</span>}
-                            {estado === "erro" && <span className="pill pill-warn">Conferimos depois</span>}
+                          <span className="pc-quest-texto">
+                            {p.s.pergunta}
+                            {on && (
+                              <span className={`pc-quest-como pc-quest-como-${p.s.comprovacao}`}>
+                                {p.s.comprovacao === "documento" ? `Leve na creche: ${p.s.documento}` : ROTULO_COMPROVACAO[p.s.comprovacao]}
+                              </span>
+                            )}
                           </span>
-                        </div>
+                          <span className="pc-quest-check" aria-hidden="true">
+                            {on ? <Check size={22} /> : null}
+                          </span>
+                        </label>
                       </li>
                     );
                   })}
                 </ul>
-              )}
-
-              <h3 className="pc-h3">
-                <FileCheck size={18} aria-hidden="true" /> Marque o que for verdade
-              </h3>
-              <p className="fam-ajuda">
-                O que você marcar aqui precisa de <strong>documento</strong>, que você mostra na creche depois. A gente te diz qual.
-              </p>
-              <ul className="pc-criterios">
-                {perguntas.manuais.map((p) => {
-                  const k = String(p.ich_perg_id);
-                  const on = !!r.respostas[k];
-                  return (
-                    <li key={k}>
-                      <label className={`pc-quest ${on ? "on" : ""}`}>
-                        <input type="checkbox" checked={on} onChange={(e) => set("respostas", { ...r.respostas, [k]: e.target.checked })} />
-                        <span className="pc-quest-icone" aria-hidden="true">
-                          <p.s.Icone size={24} />
-                        </span>
-                        <span className="pc-quest-texto">
-                          {p.s.pergunta}
-                          {on && (
-                            <span className={`pc-quest-como pc-quest-como-${p.s.comprovacao}`}>
-                              {p.s.comprovacao === "documento" ? `Leve na creche: ${p.s.documento}` : ROTULO_COMPROVACAO[p.s.comprovacao]}
-                            </span>
-                          )}
-                        </span>
-                        <span className="pc-quest-check" aria-hidden="true">
-                          {on ? <Check size={22} /> : null}
-                        </span>
-                      </label>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          )}
-        </section>
-
-        {/* 3. Onde mora */}
-        <section className="fam-sec pc-sec">
-          <h2>
-            <span className="pc-num">3</span> Onde você mora
-          </h2>
-          <label className="fam-label" htmlFor="cep">
-            CEP da sua casa
-          </label>
-          <input
-            id="cep"
-            className="fam-input"
-            inputMode="numeric"
-            placeholder="00000-000"
-            value={r.cep}
-            onChange={(e) => {
-              set("cep", mascaraCep(e.target.value));
-              set("semLocalizacao", false);
-            }}
-          />
-          <p className="fam-ajuda">O CEP está na conta de luz ou de água. Não sabe? Ligue 1746.</p>
-          {geoCarregando && <p className="fam-ajuda">Procurando o endereço…</p>}
-          {geo && !geoErro && (
-            <p className="pc-ok">
-              <MapPin size={20} aria-hidden="true" /> {[geo.logradouro, geo.bairro].filter(Boolean).join(", ") || geo.cep}
-            </p>
-          )}
-          {geoErro && (
-            <div className="pc-aviso">
-              <p>{geoErro}</p>
-              {geo && (
-                <label className="pc-check">
-                  <input type="checkbox" checked={r.semLocalizacao} onChange={(e) => set("semLocalizacao", e.target.checked)} />
-                  Continuar mesmo assim (mostramos as creches do bairro)
-                </label>
-              )}
-            </div>
-          )}
-          <label className="fam-label" htmlFor="cepAlt">
-            Outro CEP <span className="pc-opcional">(trabalho, casa da avó — se quiser)</span>
-          </label>
-          <input id="cepAlt" className="fam-input" inputMode="numeric" placeholder="00000-000" value={r.cepAlternativo} onChange={(e) => set("cepAlternativo", mascaraCep(e.target.value))} />
-        </section>
-
-        {/* 4. Creches */}
-        <section className="fam-sec pc-sec" ref={secCreches}>
-          <h2>
-            <span className="pc-num">4</span> Escolha as creches
-          </h2>
-          <p className="fam-sec-lead">
-            Escolha <strong>até 5</strong>. A primeira é a que você mais quer. As de cima são as que têm mais chance perto da sua casa.
-          </p>
-          {!podeSugerir && <p className="fam-ajuda">Preencha a data de nascimento e o horário (passo 1) para ver as creches.</p>}
-          {podeSugerir && cepDigitos.length < 8 && <p className="fam-ajuda">Escreva o CEP (passo 3) para ver as creches perto de casa.</p>}
-          {sug.isFetching && !sug.data && <Spinner label="Procurando creches…" />}
-          {sug.isError && <p className="fam-erro">Não deu para buscar as creches agora.</p>}
-
-          {unidades.length > 0 && (
-            <>
-              <MapaCreches casa={casa} unidades={unidades} escolhidas={r.escolhas} onSelecionar={focarUnidade} casaAproximada={casaAproximada} />
-              {casaAproximada && (
-                <p className="fam-ajuda">
-                  <Home size={16} aria-hidden="true" /> A casa no mapa é mais ou menos, pelo bairro.
+              </>
+            )}
+            {tentouAvancar && pendenciasDoPasso(2).length > 0 && (
+              <div className="pc-aviso" role="alert">
+                <p>
+                  <strong>Ainda falta:</strong>
                 </p>
-              )}
-
-              {r.escolhas.length > 0 && (
-                <div className="pc-escolhas">
-                  <h3 className="pc-h3">Suas escolhas ({r.escolhas.length} de 5)</h3>
-                  <ol className="pc-escolhas-lista">
-                    {r.escolhas.map((c, i) => (
-                      <li key={c}>
-                        <span className="pc-escolha-n">{i + 1}ª</span>
-                        <span className="pc-escolha-nome">{nomeUnidade(c)}</span>
-                        <span className="pc-escolha-acoes">
-                          <button type="button" aria-label="Subir" onClick={() => mover(i, -1)} disabled={i === 0}>
-                            <ChevronUp size={18} aria-hidden="true" />
-                          </button>
-                          <button type="button" aria-label="Descer" onClick={() => mover(i, 1)} disabled={i === r.escolhas.length - 1}>
-                            <ChevronDown size={18} aria-hidden="true" />
-                          </button>
-                          <button type="button" aria-label="Tirar" onClick={() => remover(c)}>
-                            <X size={18} aria-hidden="true" />
-                          </button>
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-
-              <ul className="pc-unidades">
-                {top5.map((u) => (
-                  <CardUnidade key={u.codigo} u={u} escolhida={r.escolhas.includes(u.codigo)} destacada={destacada === u.codigo} cheio={r.escolhas.length >= 5} onEscolher={escolher} onRemover={remover} destaque />
-                ))}
-              </ul>
-              {resto.length > 0 && (
-                <details className="pc-mais">
-                  <summary>Ver mais creches perto ({resto.length})</summary>
-                  <ul className="pc-unidades">
-                    {resto.map((u) => (
-                      <CardUnidade key={u.codigo} u={u} escolhida={r.escolhas.includes(u.codigo)} destacada={destacada === u.codigo} cheio={r.escolhas.length >= 5} onEscolher={escolher} onRemover={remover} />
-                    ))}
-                  </ul>
-                </details>
-              )}
-            </>
-          )}
-          {podeSugerir && sug.data && unidades.length === 0 && <p className="fam-ajuda">Não achamos creches. Confira o CEP e a data de nascimento.</p>}
-        </section>
-
-        {/* 5. Contatos */}
-        <section className="fam-sec pc-sec">
-          <h2>
-            <span className="pc-num">5</span> Como falar com você
-          </h2>
-          <div className="pc-aviso pc-aviso-forte">
-            <Phone size={22} aria-hidden="true" />
-            <span>
-              Quando sair a vaga, temos <strong>3 dias</strong> para falar com você. Se ninguém atender, a vaga vai para outra criança. Por isso pedimos{" "}
-              <strong>3 contatos</strong>.
-            </span>
-          </div>
-          <div className="pc-passos-contato" aria-label={`${Math.min(contatosValidos.length, MIN_CONTATOS)} de ${MIN_CONTATOS} contatos completos`}>
-            {[0, 1, 2].map((i) => (
-              <span key={i} className={`pc-passo-contato ${contatosValidos.length > i ? "ok" : ""}`}>
-                {contatosValidos.length > i ? <Check size={18} aria-hidden="true" /> : i + 1}
-              </span>
-            ))}
-            <span className="pc-passos-contato-texto">{contatosValidos.length >= MIN_CONTATOS ? "Contatos completos" : `Faltam ${MIN_CONTATOS - contatosValidos.length}`}</span>
-          </div>
-          <ul className="pc-contatos">
-            {r.contatos.map((c, i) => (
-              <li key={i} className={`pc-contato ${contatoOk(c) ? "ok" : ""}`}>
-                <div className="pc-contato-titulo">
-                  <Users size={20} aria-hidden="true" /> Contato {i + 1}
-                  {c.principal && <span className="pill pill-info">Principal</span>}
-                </div>
-                <div className="pc-contato-grid">
-                  <label>
-                    <span className="fam-label">Nome</span>
-                    <input className="fam-input" value={c.nome} onChange={(e) => setContato(i, { nome: e.target.value })} autoComplete="off" />
-                  </label>
-                  <label>
-                    <span className="fam-label">Quem é</span>
-                    <select className="fam-input" value={c.parentesco} onChange={(e) => setContato(i, { parentesco: e.target.value })}>
-                      {PARENTESCOS.map((p) => (
-                        <option key={p} value={p}>
-                          {p}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <div className="pc-canais" role="radiogroup" aria-label="Como falar">
-                  {CANAIS.map(({ v, rotulo, Icone }) => (
-                    <label key={v} className={`pc-canal ${c.canal === v ? "on" : ""}`}>
-                      <input type="radio" name={`canal-${i}`} checked={c.canal === v} onChange={() => setContato(i, { canal: v, valor: "" })} />
-                      <Icone size={20} aria-hidden="true" />
-                      {rotulo}
-                    </label>
+                <ul>
+                  {pendenciasDoPasso(2).map((t) => (
+                    <li key={t}>{t}</li>
                   ))}
-                </div>
-                <input
-                  className="fam-input"
-                  aria-label={c.canal === "email" ? "E-mail" : "Número com DDD"}
-                  inputMode={c.canal === "email" ? "email" : "tel"}
-                  placeholder={c.canal === "email" ? "nome@exemplo.com" : "(21) 99999-9999"}
-                  value={c.valor}
-                  onChange={(e) => setContato(i, { valor: c.canal === "email" ? e.target.value : mascaraTelefone(e.target.value) })}
-                />
-                {c.valor && !contatoOk(c) && <p className="fam-erro">{c.canal === "email" ? "Falta um pedaço do e-mail." : "Falta número. Coloque o DDD e o número todo."}</p>}
-                <div className="pc-contato-acoes">
-                  {!c.principal && (
-                    <button type="button" className="pc-link" onClick={() => setContato(i, { principal: true })}>
-                      Falar com esta pessoa primeiro
-                    </button>
-                  )}
-                  {r.contatos.length > MIN_CONTATOS && (
-                    <button type="button" className="pc-link" onClick={() => removerContato(i)}>
-                      Tirar
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-          <button type="button" className="btn btn-secondary fam-btn" onClick={addContato}>
-            + Mais um contato
-          </button>
-        </section>
-
-        {/* 6. Enviar */}
-        <section className="fam-sec pc-sec" ref={secEnviar}>
-          <h2>
-            <span className="pc-num">6</span> Enviar
-          </h2>
-          <label className="fam-label" htmlFor="nomeResp">
-            O seu nome
-          </label>
-          <input id="nomeResp" className="fam-input" value={r.nomeResponsavel} onChange={(e) => set("nomeResponsavel", e.target.value)} autoComplete="name" />
-          <ul className="pc-resumo">
-            <li>
-              <span>Criança</span>
-              <strong>
-                {r.nomeCrianca || "—"} · {r.nascimento ? fmtDataBr(r.nascimento) : "—"}
-              </strong>
-            </li>
-            <li>
-              <span>Turma e horário</span>
-              <strong>
-                {r.grupamento || "—"} · {r.horario === "Integral" ? "Dia todo" : "Meio período"}
-              </strong>
-            </li>
-            <li>
-              <span>Creches</span>
-              <strong>{r.escolhas.length} escolhida{r.escolhas.length === 1 ? "" : "s"}</strong>
-            </li>
-            <li>
-              <span>Contatos</span>
-              <strong>{contatosValidos.length}</strong>
-            </li>
-          </ul>
-
-          {documentosParaLevar.length > DOCUMENTOS_BASE.length && (
-            <div className="pc-aviso">
-              <p>
-                <strong>Você marcou coisas que precisam de documento.</strong> Depois de enviar, mostramos a lista do que levar na creche.
+                </ul>
+              </div>
+            )}
+          </section>
+        )}
+        {etapa === 3 && (
+        <section className="fam-sec pc-sec">
+            <h2>
+              <span className="pc-num">3</span> Onde você mora
+            </h2>
+            <label className="fam-label" htmlFor="cep">
+              CEP da sua casa
+            </label>
+            <input
+              id="cep"
+              className="fam-input"
+              inputMode="numeric"
+              placeholder="00000-000"
+              value={r.cep}
+              onChange={(e) => {
+                set("cep", mascaraCep(e.target.value));
+                set("semLocalizacao", false);
+              }}
+            />
+            <p className="fam-ajuda">O CEP está na conta de luz ou de água. Não sabe? Ligue 1746.</p>
+            {geoCarregando && <p className="fam-ajuda">Procurando o endereço…</p>}
+            {geo && !geoErro && (
+              <p className="pc-ok">
+                <MapPin size={20} aria-hidden="true" /> {[geo.logradouro, geo.bairro].filter(Boolean).join(", ") || geo.cep}
               </p>
-            </div>
-          )}
-
-          <label className="pc-check pc-consent">
-            <input type="checkbox" checked={r.consentimento} onChange={(e) => set("consentimento", e.target.checked)} />
-            <span>
-              Deixo a Prefeitura usar estes dados <strong>só para a vaga em creche</strong> e conferir minha situação no CadÚnico e no Bolsa Família. Posso pedir para
-              ver, corrigir ou apagar meus dados quando quiser.
-            </span>
-          </label>
-
-          {tentouEnviar && pendencias.length > 0 && (
-            <div className="pc-aviso" role="alert">
-              <p>
-                <strong>Ainda falta:</strong>
-              </p>
-              <ul>
-                {pendencias.map((p) => (
-                  <li key={p}>{p}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {enviar.isError && (
-            <p className="fam-erro" role="alert">
-              Não deu para enviar: {enviar.error instanceof Error ? enviar.error.message : "erro desconhecido"}
+            )}
+            {geoErro && (
+              <div className="pc-aviso">
+                <p>{geoErro}</p>
+                {geo && (
+                  <label className="pc-check">
+                    <input type="checkbox" checked={r.semLocalizacao} onChange={(e) => set("semLocalizacao", e.target.checked)} />
+                    Continuar mesmo assim (mostramos as creches do bairro)
+                  </label>
+                )}
+              </div>
+            )}
+            <label className="fam-label" htmlFor="cepAlt">
+              Outro CEP <span className="pc-opcional">(trabalho, casa da avó — se quiser)</span>
+            </label>
+            <input id="cepAlt" className="fam-input" inputMode="numeric" placeholder="00000-000" value={r.cepAlternativo} onChange={(e) => set("cepAlternativo", mascaraCep(e.target.value))} />
+            {tentouAvancar && pendenciasDoPasso(3).length > 0 && (
+              <div className="pc-aviso" role="alert">
+                <p>
+                  <strong>Ainda falta:</strong>
+                </p>
+                <ul>
+                  {pendenciasDoPasso(3).map((t) => (
+                    <li key={t}>{t}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        )}
+        {etapa === 4 && (
+        <section className="fam-sec pc-sec">
+            <h2>
+              <span className="pc-num">4</span> Escolha as creches
+            </h2>
+            <p className="fam-sec-lead">
+              Escolha <strong>até 5</strong>. A primeira é a que você mais quer. As de cima são as que têm mais chance perto da sua casa.
             </p>
-          )}
-          <button type="button" className="btn btn-primary fam-btn" onClick={submeter} disabled={enviar.isPending}>
-            <Send size={20} aria-hidden="true" /> {enviar.isPending ? "Enviando…" : "Enviar"}
-          </button>
-          <p className="fam-rodape">Dúvidas? Vá até a creche ou ligue 1746.</p>
-        </section>
+            {!podeSugerir && <p className="fam-ajuda">Preencha a data de nascimento e o horário (passo 1) para ver as creches.</p>}
+            {podeSugerir && cepDigitos.length < 8 && <p className="fam-ajuda">Escreva o CEP (passo 3) para ver as creches perto de casa.</p>}
+            {sug.isFetching && !sug.data && <Spinner label="Procurando creches…" />}
+            {sug.isError && <p className="fam-erro">Não deu para buscar as creches agora.</p>}
+  
+            {unidades.length > 0 && (
+              <>
+                <MapaCreches casa={casa} unidades={unidades} escolhidas={r.escolhas} onSelecionar={focarUnidade} casaAproximada={casaAproximada} />
+                {casaAproximada && (
+                  <p className="fam-ajuda">
+                    <Home size={16} aria-hidden="true" /> A casa no mapa é mais ou menos, pelo bairro.
+                  </p>
+                )}
+  
+                {r.escolhas.length > 0 && (
+                  <div className="pc-escolhas">
+                    <h3 className="pc-h3">Suas escolhas ({r.escolhas.length} de 5)</h3>
+                    <ol className="pc-escolhas-lista">
+                      {r.escolhas.map((c, i) => (
+                        <li key={c}>
+                          <span className="pc-escolha-n">{i + 1}ª</span>
+                          <span className="pc-escolha-nome">{nomeUnidade(c)}</span>
+                          <span className="pc-escolha-acoes">
+                            <button type="button" aria-label="Subir" onClick={() => mover(i, -1)} disabled={i === 0}>
+                              <ChevronUp size={18} aria-hidden="true" />
+                            </button>
+                            <button type="button" aria-label="Descer" onClick={() => mover(i, 1)} disabled={i === r.escolhas.length - 1}>
+                              <ChevronDown size={18} aria-hidden="true" />
+                            </button>
+                            <button type="button" aria-label="Tirar" onClick={() => remover(c)}>
+                              <X size={18} aria-hidden="true" />
+                            </button>
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+  
+                <ul className="pc-unidades">
+                  {top5.map((u) => (
+                    <CardUnidade key={u.codigo} u={u} escolhida={r.escolhas.includes(u.codigo)} destacada={destacada === u.codigo} cheio={r.escolhas.length >= 5} onEscolher={escolher} onRemover={remover} destaque />
+                  ))}
+                </ul>
+                {resto.length > 0 && (
+                  <details className="pc-mais">
+                    <summary>Ver mais creches perto ({resto.length})</summary>
+                    <ul className="pc-unidades">
+                      {resto.map((u) => (
+                        <CardUnidade key={u.codigo} u={u} escolhida={r.escolhas.includes(u.codigo)} destacada={destacada === u.codigo} cheio={r.escolhas.length >= 5} onEscolher={escolher} onRemover={remover} />
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </>
+            )}
+            {podeSugerir && sug.data && unidades.length === 0 && <p className="fam-ajuda">Não achamos creches. Confira o CEP e a data de nascimento.</p>}
+            {tentouAvancar && pendenciasDoPasso(4).length > 0 && (
+              <div className="pc-aviso" role="alert">
+                <p>
+                  <strong>Ainda falta:</strong>
+                </p>
+                <ul>
+                  {pendenciasDoPasso(4).map((t) => (
+                    <li key={t}>{t}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        )}
+        {etapa === 5 && (
+        <section className="fam-sec pc-sec">
+            <h2>
+              <span className="pc-num">5</span> Como falar com você
+            </h2>
+            <div className="pc-aviso pc-aviso-forte">
+              <Phone size={22} aria-hidden="true" />
+              <span>
+                Quando sair a vaga, temos <strong>3 dias</strong> para falar com você. Se ninguém atender, a vaga vai para outra criança. Por isso pedimos{" "}
+                <strong>3 contatos</strong>.
+              </span>
+            </div>
+            <div className="pc-passos-contato" aria-label={`${Math.min(contatosValidos.length, MIN_CONTATOS)} de ${MIN_CONTATOS} contatos completos`}>
+              {[0, 1, 2].map((i) => (
+                <span key={i} className={`pc-passo-contato ${contatosValidos.length > i ? "ok" : ""}`}>
+                  {contatosValidos.length > i ? <Check size={18} aria-hidden="true" /> : i + 1}
+                </span>
+              ))}
+              <span className="pc-passos-contato-texto">{contatosValidos.length >= MIN_CONTATOS ? "Contatos completos" : `Faltam ${MIN_CONTATOS - contatosValidos.length}`}</span>
+            </div>
+            <ul className="pc-contatos">
+              {r.contatos.map((c, i) => (
+                <li key={i} className={`pc-contato ${contatoOk(c) ? "ok" : ""}`}>
+                  <div className="pc-contato-titulo">
+                    <Users size={20} aria-hidden="true" /> Contato {i + 1}
+                    {c.principal && <span className="pill pill-info">Principal</span>}
+                  </div>
+                  <div className="pc-contato-grid">
+                    <label>
+                      <span className="fam-label">Nome</span>
+                      <input className="fam-input" value={c.nome} onChange={(e) => setContato(i, { nome: e.target.value })} autoComplete="off" />
+                    </label>
+                    <label>
+                      <span className="fam-label">Quem é</span>
+                      <select className="fam-input" value={c.parentesco} onChange={(e) => setContato(i, { parentesco: e.target.value })}>
+                        {PARENTESCOS.map((p) => (
+                          <option key={p} value={p}>
+                            {p}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="pc-canais" role="radiogroup" aria-label="Como falar">
+                    {CANAIS.map(({ v, rotulo, Icone }) => (
+                      <label key={v} className={`pc-canal ${c.canal === v ? "on" : ""}`}>
+                        <input type="radio" name={`canal-${i}`} checked={c.canal === v} onChange={() => setContato(i, { canal: v, valor: "" })} />
+                        <Icone size={20} aria-hidden="true" />
+                        {rotulo}
+                      </label>
+                    ))}
+                  </div>
+                  <input
+                    className="fam-input"
+                    aria-label={c.canal === "email" ? "E-mail" : "Número com DDD"}
+                    inputMode={c.canal === "email" ? "email" : "tel"}
+                    placeholder={c.canal === "email" ? "nome@exemplo.com" : "(21) 99999-9999"}
+                    value={c.valor}
+                    onChange={(e) => setContato(i, { valor: c.canal === "email" ? e.target.value : mascaraTelefone(e.target.value) })}
+                  />
+                  {c.valor && !contatoOk(c) && <p className="fam-erro">{c.canal === "email" ? "Falta um pedaço do e-mail." : "Falta número. Coloque o DDD e o número todo."}</p>}
+                  <div className="pc-contato-acoes">
+                    {!c.principal && (
+                      <button type="button" className="pc-link" onClick={() => setContato(i, { principal: true })}>
+                        Falar com esta pessoa primeiro
+                      </button>
+                    )}
+                    {r.contatos.length > MIN_CONTATOS && (
+                      <button type="button" className="pc-link" onClick={() => removerContato(i)}>
+                        Tirar
+                      </button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <button type="button" className="btn btn-secondary fam-btn" onClick={addContato}>
+              + Mais um contato
+            </button>
+            {tentouAvancar && pendenciasDoPasso(5).length > 0 && (
+              <div className="pc-aviso" role="alert">
+                <p>
+                  <strong>Ainda falta:</strong>
+                </p>
+                <ul>
+                  {pendenciasDoPasso(5).map((t) => (
+                    <li key={t}>{t}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        )}
+        {etapa === 6 && (
+        <section className="fam-sec pc-sec">
+            <h2>
+              <span className="pc-num">6</span> Enviar
+            </h2>
+            <label className="fam-label" htmlFor="nomeResp">
+              O seu nome
+            </label>
+            <input id="nomeResp" className="fam-input" value={r.nomeResponsavel} onChange={(e) => set("nomeResponsavel", e.target.value)} autoComplete="name" />
+            <ul className="pc-resumo">
+              <li>
+                <span>Criança</span>
+                <strong>
+                  {r.nomeCrianca || "—"} · {r.nascimento ? fmtDataBr(r.nascimento) : "—"}
+                </strong>
+              </li>
+              <li>
+                <span>Turma e horário</span>
+                <strong>
+                  {r.grupamento || "—"} · {r.horario === "Integral" ? "Dia todo" : "Meio período"}
+                </strong>
+              </li>
+              <li>
+                <span>Creches</span>
+                <strong>{r.escolhas.length} escolhida{r.escolhas.length === 1 ? "" : "s"}</strong>
+              </li>
+              <li>
+                <span>Contatos</span>
+                <strong>{contatosValidos.length}</strong>
+              </li>
+            </ul>
+  
+            {documentosParaLevar.length > DOCUMENTOS_BASE.length && (
+              <div className="pc-aviso">
+                <p>
+                  <strong>Você marcou coisas que precisam de documento.</strong> Depois de enviar, mostramos a lista do que levar na creche.
+                </p>
+              </div>
+            )}
+  
+            <label className="pc-check pc-consent">
+              <input type="checkbox" checked={r.consentimento} onChange={(e) => set("consentimento", e.target.checked)} />
+              <span>
+                Deixo a Prefeitura usar estes dados <strong>só para a vaga em creche</strong> e conferir minha situação no CadÚnico e no Bolsa Família. Posso pedir para
+                ver, corrigir ou apagar meus dados quando quiser.
+              </span>
+            </label>
+  
+            {tentouEnviar && pendencias.length > 0 && (
+              <div className="pc-aviso" role="alert">
+                <p>
+                  <strong>Ainda falta:</strong>
+                </p>
+                <ul>
+                  {pendencias.map((p) => (
+                    <li key={p}>{p}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {enviar.isError && (
+              <p className="fam-erro" role="alert">
+                Não deu para enviar: {enviar.error instanceof Error ? enviar.error.message : "erro desconhecido"}
+              </p>
+            )}
+            <p className="fam-rodape">Dúvidas? Vá até a creche ou ligue 1746.</p>
+          </section>
+        )}
       </div>
 
-      {/* barra fixa: onde você está nos 6 passos e atalho para enviar */}
-      <div className="pc-barra" aria-live="polite">
-        <div className="pc-barra-passos" aria-label={`${passosFeitos.filter(Boolean).length} de 6 passos prontos`}>
-          {passosFeitos.map((ok, i) => (
-            <span key={i} className={`pc-barra-passo ${ok ? "ok" : ""}`}>
-              {ok ? <Check size={14} aria-hidden="true" /> : i + 1}
-            </span>
-          ))}
-        </div>
-        <button type="button" className="pc-barra-item pc-barra-btn" onClick={() => secCreches.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-          <span>Creches</span>
-          <strong>{r.escolhas.length}/5</strong>
+      {/* barra fixa: voltar / continuar */}
+      <div className="pc-barra pc-barra-nav">
+        <button type="button" className="btn btn-secondary pc-nav-btn" onClick={() => irPara(etapa - 1)} disabled={etapa === 1}>
+          <ArrowLeft size={20} aria-hidden="true" /> Voltar
         </button>
-        <button type="button" className="pc-barra-item pc-barra-btn pc-barra-enviar" onClick={() => secEnviar.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-          <span>Ir para</span>
-          <strong>Enviar</strong>
-        </button>
+        <span className="pc-nav-passo">
+          {etapa} / {TOTAL}
+        </span>
+        {etapa < TOTAL ? (
+          <button type="button" className="btn btn-primary pc-nav-btn" onClick={avancar}>
+            Continuar <ArrowRight size={20} aria-hidden="true" />
+          </button>
+        ) : (
+          <button type="button" className="btn btn-primary pc-nav-btn" onClick={submeter} disabled={enviar.isPending}>
+            <Send size={20} aria-hidden="true" /> {enviar.isPending ? "Enviando…" : "Enviar"}
+          </button>
+        )}
       </div>
       <button
         type="button"
@@ -890,6 +982,7 @@ export default function PreCadastroPage() {
           if (confirm("Apagar tudo e começar de novo?")) {
             setR(VAZIO);
             setGeo(null);
+            setTentouAvancar(false);
             navigate("/familia/pre-cadastro");
           }
         }}
