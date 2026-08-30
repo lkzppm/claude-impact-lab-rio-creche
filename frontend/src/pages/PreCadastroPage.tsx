@@ -9,6 +9,7 @@ import type { Canal, Contato, GeoCep, PreCadastroCriado, PreCadastroIn, Sugestoe
 import { Spinner } from "../design-system";
 import MapaCreches, { COR_CHANCE, ROTULO_CHANCE, fmtKm } from "../components/MapaCreches";
 import { DOCUMENTOS_BASE, ROTULO_COMPROVACAO, criterioSimples } from "../familia/criterios";
+import { FASE, FASE_INFO } from "../familia/fase";
 
 /* Formulário da família — feito para quem tem pouca leitura: frases curtas, uma coisa por vez, botões grandes,
    ícone em tudo. A pontuação da régua NÃO aparece (é conta interna da SME); o que a família precisa saber é
@@ -440,7 +441,9 @@ export default function PreCadastroPage() {
   return (
     <main className="fam pc">
       <div className="fam-wrap">
-        <p className="fam-eyebrow">Vaga em creche</p>
+        <p className="fam-eyebrow">
+          Vaga em creche · <span className={`fam-fase-pill fam-fase-${FASE}`}>{FASE_INFO[FASE].rotulo}</span>
+        </p>
         <h1 className="fam-h1">Vamos achar uma creche perto de casa</h1>
         <p className="fam-lead">São 6 passos. Leva uns 5 minutos. Pode parar e voltar depois: o que você preencher fica guardado.</p>
 
