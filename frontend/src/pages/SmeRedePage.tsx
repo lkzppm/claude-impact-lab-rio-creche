@@ -12,6 +12,7 @@ import {
   EmptyState,
   Pill,
   StackedBar,
+  Breakdown,
   BarList,
   Legenda,
   Hero,
@@ -44,8 +45,8 @@ export default function SmeRedePage() {
     : [];
   const desfechos: Segmento[] = r
     ? [
-        { label: "Ainda abertas", value: abertas, tone: "info" },
-        { label: "Matrículas confirmadas", value: r.confirmadas ?? 0, tone: "ok" },
+        { label: "Matrículas confirmadas", value: r.confirmadas ?? 0, tone: "ok", hint: "a família compareceu e a vaga foi ocupada" },
+        { label: "Ainda abertas", value: abertas, tone: "info", hint: "sem desfecho — a família ainda pode responder" },
         { label: "Recusadas", value: r.recusadas ?? 0, tone: "warn", hint: "a vaga voltou para a fila" },
         { label: "Prazo vencido registrado", value: r.expiradas ?? 0, tone: "danger", hint: "a vaga voltou para a fila" },
       ]
@@ -70,15 +71,18 @@ export default function SmeRedePage() {
             </Card>
             <Card title="Como as convocações estão terminando">
               <p className="text-sm muted" style={{ marginBottom: 12 }}>
-                Cada barra é uma convocação gerada nesta rodada. Quanto maior a parte verde, mais matrículas fecharam; a vermelha é o que
-                venceu sem resposta.
+                Cada convocação gerada nesta rodada está em uma destas quatro situações. Verde é matrícula fechada; laranja e vermelho
+                devolveram a vaga para a fila.
               </p>
-              <StackedBar segmentos={desfechos} ariaLabel="Convocações por desfecho" />
+              <Breakdown segmentos={desfechos} ariaLabel="Convocações por desfecho" />
               {r.tempo_medio_ate_desfecho_h != null && (
-                <p className="text-sm muted" style={{ marginTop: 12 }}>
-                  Da seleção à resposta: <strong>{fmtHoras(r.tempo_medio_ate_desfecho_h)}</strong> em média ({fmtInt(r.n_desfechos ?? 0)} desfechos) — dado que hoje
-                  não existe na SME.
-                </p>
+                <div className="metricas-rodape">
+                  <div className="metrica">
+                    <span className="stat-label">Da seleção à resposta</span>
+                    <span className="metrica-valor">{fmtHoras(r.tempo_medio_ate_desfecho_h)}</span>
+                    <span className="stat-hint">média de {fmtInt(r.n_desfechos ?? 0)} desfechos — dado que hoje não existe na SME</span>
+                  </div>
+                </div>
               )}
             </Card>
           </div>

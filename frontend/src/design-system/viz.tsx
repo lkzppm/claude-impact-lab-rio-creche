@@ -76,6 +76,45 @@ export function StackedBar({
   );
 }
 
+/** Parte-de-um-todo em linhas rotuladas: nome, valor, participação e barra na escala do total.
+   Lê melhor que a barra empilhada quando há fatias pequenas ou rótulos longos — o rótulo fica ao lado do
+   dado e não sobra legenda para decodificar. Aceita `to` para abrir a lista daquela categoria. */
+export function Breakdown({
+  segmentos,
+  altura = 10,
+  ariaLabel,
+}: {
+  segmentos: Fatia[];
+  altura?: number;
+  ariaLabel?: string;
+}) {
+  const total = segmentos.reduce((a, s) => a + s.value, 0);
+  const resumo = segmentos.map((s) => `${s.label}: ${fmt(s.value)} (${pct(s.value, total)}%)`).join(" · ");
+  return (
+    <div className="breakdown" role="img" aria-label={ariaLabel ? `${ariaLabel} — ${resumo}` : resumo}>
+      {segmentos.map((s) => (
+        <div className="breakdown-row" key={s.label}>
+          <span className="breakdown-label">
+            <span className={`viz-swatch tone-${s.tone}`} aria-hidden="true" />
+            {s.to ? <Link to={s.to}>{s.label}</Link> : <span>{s.label}</span>}
+          </span>
+          <span className="breakdown-value">
+            <strong>{fmt(s.value)}</strong>
+            <span className="breakdown-pct">{pct(s.value, total)}%</span>
+          </span>
+          <div className="viz-track breakdown-track" style={{ height: altura }} aria-hidden="true">
+            <div
+              className={`viz-fill tone-${s.tone}`}
+              style={{ width: `${total > 0 ? (s.value / total) * 100 : 0}%`, minWidth: s.value > 0 ? undefined : 0 }}
+            />
+          </div>
+          {s.hint && <span className="breakdown-hint">{s.hint}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Legenda avulsa (para um conjunto de barras que compartilham as séries). */
 export function Legenda({ itens }: { itens: { label: string; tone: VizTone; hint?: string }[] }) {
   return (
@@ -209,42 +248,41 @@ export function Donut({
   };
   return (
     <div className="donut-wrap">
-      <svg
-        className="donut"
-        width={tamanho}
-        height={tamanho}
-        viewBox={`0 0 ${tamanho} ${tamanho}`}
-        role="img"
-        aria-label={ariaLabel ? `${ariaLabel} — ${resumo}` : resumo}
-      >
-        <circle cx={cx} cy={cx} r={r} fill="none" stroke="var(--mr-grey-200)" strokeWidth={espessura} />
-        {total > 0 &&
-          fatias
-            .filter((f) => f.value > 0)
-            .map((f) => {
-              const a0 = ang;
-              const a1 = ang + (f.value / total) * 2 * Math.PI;
-              ang = a1;
-              const cheia = a1 - a0 >= 2 * Math.PI - 1e-6;
-              const d = cheia ? `M ${cx} ${cx - r} A ${r} ${r} 0 1 1 ${cx - 0.01} ${cx - r}` : arco(cx, cx, r, a0, a1);
-              return (
-                <g key={f.label} className={onFatia && f.to ? "donut-fatia clicavel" : "donut-fatia"} onClick={onFatia ? () => onFatia(f) : undefined}>
-                  <title>{`${f.label}: ${fmt(f.value)} (${pct(f.value, total)}%)${f.hint ? ` — ${f.hint}` : ""}`}</title>
-                  {/* respiro de 2 px na cor da superfície entre fatias */}
-                  <path d={d} fill="none" stroke="var(--mr-white)" strokeWidth={espessura + 4} strokeLinecap="butt" />
-                  <path d={d} fill="none" stroke={cor[f.tone]} strokeWidth={espessura} strokeLinecap="butt" />
-                </g>
-              );
-            })}
-        <text x={cx} y={cx - 4} textAnchor="middle" className="donut-centro">
-          {centro}
-        </text>
-        {centroLabel && (
-          <text x={cx} y={cx + 16} textAnchor="middle" className="donut-centro-label">
-            {centroLabel}
-          </text>
-        )}
-      </svg>
+      <div className="donut-fig" style={{ width: tamanho, height: tamanho }}>
+        <svg
+          className="donut"
+          width={tamanho}
+          height={tamanho}
+          viewBox={`0 0 ${tamanho} ${tamanho}`}
+          role="img"
+          aria-label={ariaLabel ? `${ariaLabel} — ${resumo}` : resumo}
+        >
+          <circle cx={cx} cy={cx} r={r} fill="none" stroke="var(--mr-grey-200)" strokeWidth={espessura} />
+          {total > 0 &&
+            fatias
+              .filter((f) => f.value > 0)
+              .map((f) => {
+                const a0 = ang;
+                const a1 = ang + (f.value / total) * 2 * Math.PI;
+                ang = a1;
+                const cheia = a1 - a0 >= 2 * Math.PI - 1e-6;
+                const d = cheia ? `M ${cx} ${cx - r} A ${r} ${r} 0 1 1 ${cx - 0.01} ${cx - r}` : arco(cx, cx, r, a0, a1);
+                return (
+                  <g key={f.label} className={onFatia && f.to ? "donut-fatia clicavel" : "donut-fatia"} onClick={onFatia ? () => onFatia(f) : undefined}>
+                    <title>{`${f.label}: ${fmt(f.value)} (${pct(f.value, total)}%)${f.hint ? ` — ${f.hint}` : ""}`}</title>
+                    {/* respiro de 2 px na cor da superfície entre fatias */}
+                    <path d={d} fill="none" stroke="var(--mr-white)" strokeWidth={espessura + 4} strokeLinecap="butt" />
+                    <path d={d} fill="none" stroke={cor[f.tone]} strokeWidth={espessura} strokeLinecap="butt" />
+                  </g>
+                );
+              })}
+        </svg>
+        {/* centro em HTML sobre o SVG: fica exatamente no meio do furo, sem depender de baseline de texto SVG */}
+        <div className="donut-centro" style={{ width: Math.max(40, tamanho - 2 * espessura - 8) }} aria-hidden="true">
+          <span className="donut-centro-valor">{centro}</span>
+          {centroLabel && <span className="donut-centro-label">{centroLabel}</span>}
+        </div>
+      </div>
       <ul className="viz-legend donut-legend">
         {fatias.map((f) => (
           <li key={f.label} title={f.hint}>

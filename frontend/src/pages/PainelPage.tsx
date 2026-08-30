@@ -16,6 +16,7 @@ import {
   StatusPill,
   Pill,
   StackedBar,
+  Breakdown,
   BarList,
   Meter,
   Hero,
@@ -103,6 +104,7 @@ export default function PainelPage() {
   const r = resumo.data;
   const linhas = (unidades.data ?? []).filter((u) => !unidade || u.unidade_codigo === unidade);
   const lista = (fila: string) => `${base}/convocacoes?fila=${fila}${unidade ? `&unidade=${encodeURIComponent(unidade)}` : ""}`;
+  const porStatus = (status: string) => `${base}/convocacoes?status=${status}${unidade ? `&unidade=${encodeURIComponent(unidade)}` : ""}`;
   const vencidas = r?.vencidas ?? 0;
   const abertas = r?.selecionadas_aguardando.total ?? 0;
   const faixas: Segmento[] = r
@@ -113,12 +115,12 @@ export default function PainelPage() {
         { label: "Mais de 3 dias", value: r.selecionadas_aguardando.faixa_mais_72h, tone: "danger", hint: "parada — agir agora" },
       ]
     : [];
-  const desfechos: Segmento[] = r
+  const desfechos: Fatia[] = r
     ? [
-        { label: "Ainda abertas", value: abertas, tone: "info" },
-        { label: "Matrículas confirmadas", value: r.confirmadas ?? 0, tone: "ok" },
-        { label: "Recusadas", value: r.recusadas ?? 0, tone: "warn", hint: "a vaga voltou para a fila" },
-        { label: "Prazo vencido registrado", value: r.expiradas ?? 0, tone: "danger", hint: "a vaga voltou para a fila" },
+        { label: "Matrículas confirmadas", value: r.confirmadas ?? 0, tone: "ok", hint: "a família compareceu e a vaga foi ocupada", to: porStatus("confirmada") },
+        { label: "Ainda abertas", value: abertas, tone: "info", hint: "sem desfecho — a família ainda pode responder", to: lista("abertas") },
+        { label: "Recusadas", value: r.recusadas ?? 0, tone: "warn", hint: "a vaga voltou para a fila", to: porStatus("recusada") },
+        { label: "Prazo vencido registrado", value: r.expiradas ?? 0, tone: "danger", hint: "a vaga voltou para a fila", to: porStatus("expirada") },
       ]
     : [];
   const maisVencidas = [...linhas].filter((u) => u.em_atraso > 0).sort((a, b) => b.em_atraso - a.em_atraso).slice(0, 8);
@@ -238,31 +240,34 @@ export default function PainelPage() {
               </p>
             </Card>
             <Card title="Como as convocações estão terminando">
-              <StackedBar segmentos={desfechos} ariaLabel="Convocações por desfecho" />
-              <div className="grid-tiles" style={{ marginTop: 16, gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
-                <div>
-                  <div className="stat-label">Tempo até o desfecho</div>
-                  <div className="stat-value" style={{ fontSize: 24 }}>{r.tempo_medio_ate_desfecho_h == null ? "—" : fmtHoras(r.tempo_medio_ate_desfecho_h)}</div>
-                  <div className="stat-hint">média de {fmtInt(r.n_desfechos ?? 0)} desfecho(s)</div>
+              <p className="text-sm muted" style={{ marginBottom: 12 }}>
+                Cada convocação gerada está em uma destas quatro situações. Clique no nome para abrir a lista.
+              </p>
+              <Breakdown segmentos={desfechos} ariaLabel="Convocações por desfecho" />
+              <div className="metricas-rodape">
+                <div className="metrica">
+                  <span className="stat-label">Tempo até o desfecho</span>
+                  <span className="metrica-valor">{r.tempo_medio_ate_desfecho_h == null ? "—" : fmtHoras(r.tempo_medio_ate_desfecho_h)}</span>
+                  <span className="stat-hint">média de {fmtInt(r.n_desfechos ?? 0)} desfecho(s)</span>
                 </div>
-                <div>
-                  <div className="stat-label">Liberadas hoje</div>
-                  <div className="stat-value" style={{ fontSize: 24 }}>{fmtInt(r.vagas_liberadas_hoje ?? 0)}</div>
-                  <div className="stat-hint">voltaram para a fila</div>
+                <div className="metrica">
+                  <span className="stat-label">Liberadas hoje</span>
+                  <span className="metrica-valor">{fmtInt(r.vagas_liberadas_hoje ?? 0)}</span>
+                  <span className="stat-hint">voltaram para a fila</span>
                 </div>
-                <div>
-                  <div className="stat-label">Reservas por criança</div>
-                  <div className="stat-value" style={{ fontSize: 24 }}>
+                <div className="metrica">
+                  <span className="stat-label">Reservas por criança</span>
+                  <span className="metrica-valor">
                     {r.vagas_presas_por_crianca == null ? "—" : r.vagas_presas_por_crianca.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
-                  </div>
+                  </span>
+                  <span className="stat-hint">média, de no máximo 3</span>
                   <Meter share={r.vagas_presas_por_crianca != null ? r.vagas_presas_por_crianca / 3 : 0} tone="neutral" label="média de reservas, de 1 a 3" />
-                  <div className="stat-hint">de no máximo 3</div>
                 </div>
                 {r.inconsistencias > 0 && (
-                  <div>
-                    <div className="stat-label">Inconsistências</div>
-                    <div className="stat-value" style={{ fontSize: 24, color: "var(--danger)" }}>{fmtInt(r.inconsistencias)}</div>
-                    <div className="stat-hint">matriculada e ainda com reserva aberta</div>
+                  <div className="metrica">
+                    <span className="stat-label">Inconsistências</span>
+                    <span className="metrica-valor danger">{fmtInt(r.inconsistencias)}</span>
+                    <span className="stat-hint">matriculada e ainda com reserva aberta</span>
                   </div>
                 )}
               </div>

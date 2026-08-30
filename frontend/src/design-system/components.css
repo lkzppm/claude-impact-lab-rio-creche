@@ -1973,7 +1973,12 @@
   gap: var(--sp-5);
   flex-wrap: wrap;
 }
+.donut-fig {
+  position: relative;
+  flex: none;
+}
 .donut {
+  display: block;
   flex: none;
 }
 .donut-fatia.clicavel {
@@ -1982,17 +1987,35 @@
 .donut-fatia.clicavel:hover path:last-of-type {
   filter: brightness(1.12);
 }
+/* bloco valor + rótulo centrado no furo do donut (largura vem do componente) */
 .donut-centro {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-align: center;
+  pointer-events: none;
+}
+.donut-centro-valor {
   font-size: 34px;
   font-weight: 700;
-  fill: var(--mr-blue-900);
+  line-height: 1;
+  color: var(--mr-blue-900);
+  font-variant-numeric: tabular-nums;
 }
 .donut-centro-label {
   font-size: 11px;
   font-weight: 600;
+  line-height: 1.2;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  fill: var(--mr-ink-soft);
+  color: var(--mr-ink-soft);
 }
 .donut-legend {
   flex-direction: column;
@@ -2003,6 +2026,82 @@
 .donut-legend li {
   gap: var(--sp-2);
 }
+/* breakdown — parte-de-um-todo em linhas: rótulo + valor na mesma linha, barra abaixo, dica abaixo */
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.breakdown-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--sp-3);
+  row-gap: 4px;
+  align-items: baseline;
+}
+.breakdown-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 600;
+}
+.breakdown-label > :last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.breakdown-value {
+  justify-self: end;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.breakdown-value strong {
+  font-size: 20px;
+  line-height: 1.1;
+  color: var(--mr-blue-900);
+}
+.breakdown-pct {
+  font-size: var(--fs-sm);
+  color: var(--mr-ink-soft);
+}
+.breakdown-track {
+  grid-column: 1 / -1;
+}
+.breakdown-hint {
+  grid-column: 1 / -1;
+  font-size: var(--fs-sm);
+  color: var(--mr-ink-muted);
+}
+
+/* faixa de métricas no rodapé de um card, separada por um filete */
+.metricas-rodape {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--sp-3) var(--sp-4);
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--mr-grey-200);
+}
+.metrica {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.metrica-valor {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--mr-blue-900);
+  font-variant-numeric: tabular-nums;
+}
+.metrica-valor.danger {
+  color: var(--danger);
+}
+
 .para-hoje {
   display: grid;
   grid-template-columns: auto 1fr;
