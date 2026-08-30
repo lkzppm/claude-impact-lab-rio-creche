@@ -235,7 +235,7 @@ def audit_unidades(rel: Relatorio, con) -> None:
             "A chave de junção com a QueryA é a coluna 1; sem ela a unidade não é referenciável.",
             "Mantidas na carga com código sintético `SEQ-<seq>`; nunca casam com inscrições.")
     if dup_cod:
-        ex = q("select esc_codigo, count(*) from query_d where esc_codigo is not null group by 1 having count(*) > 1 limit 5")
+        ex = q("select esc_codigo, count(*) from query_d where esc_codigo is not null group by 1 having count(*) > 1 order by 1 limit 5")
         rel.add("D-codigo-dup", "QueryD", "erro", "Códigos de unidade duplicados na QueryD", f"{dup_cod} códigos",
                 f"Exemplos: {ex}", "Na carga fica a linha com endereço preenchido (ou a 1ª); as demais vão para o log.")
     sem_end = one("select count(*) from query_d where logradouro is null and bairro is null and cep is null")
@@ -367,14 +367,12 @@ def audit_query_b_c(rel: Relatorio, con) -> None:
 
 def audit_oferta(rel: Relatorio, con) -> None:
     q = lambda sql: con.execute(sql).fetchall()
-    one = lambda sql: con.execute(sql).fetchone()[0]
     m = rel.metricas.setdefault("ocupacao", {})
 
     por_ano = q("""select ano, count(distinct designacao), sum(valor) filter (where medida='aluno'),
                           count(*) filter (where horario is null and medida='aluno')
                    from ocupacao group by 1 order by 1""")
     m["por_ano"] = [(int(a), int(u), int(al or 0), int(st)) for a, u, al, st in por_ano]
-    sem_turno = [a for a, *_ in m["por_ano"] if _[-1] > 0]
     rel.add("OC-layout", "ocupação", "alerta", "Layout das planilhas de ocupação muda por ano",
             "; ".join(f"{a}: {u} unid., {al:,} alunos" + (" (sem turno)" if st else "") for a, u, al, st in m["por_ano"]),
             "2021 usa TP/TU; 2022 não separa turno; 2023+ usa Integral/Parcial. Nomes de coluna e linhas de cabeçalho variam.",

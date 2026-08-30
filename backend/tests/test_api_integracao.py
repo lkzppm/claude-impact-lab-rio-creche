@@ -8,16 +8,15 @@ confirmação liberando as irmãs, transição inválida, painel, rematch, compr
 e as ferramentas do polo: filas de trabalho, próxima ação, convocar o próximo da fila, fila da unidade,
 capacidade informada, expiração em lote e crianças com várias reservas.
 """
+import os
 import random
 from datetime import datetime, timedelta
 
 import pytest
-from sqlalchemy import text
-
 from app.db import get_sessionmaker
 from app.models import Capacidade, Inscricao, Opcao, Pergunta, Processo, Resposta, Unidade
-
-import os
+from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 
 _URL = os.environ.get("TEST_DATABASE_URL")
 if not _URL:
@@ -32,8 +31,8 @@ except Exception:  # noqa: BLE001
 
 @pytest.fixture(scope="module")
 def cliente():
-    from fastapi.testclient import TestClient
     from app.main import app
+    from fastapi.testclient import TestClient
     S = _S
     for t in ["evento", "convocacao", "alocacao", "rodada", "comprovacao", "resposta", "opcao", "inscricao",
               "capacidade", "pergunta", "processo", "unidade"]:
@@ -103,7 +102,7 @@ def test_fluxo_completo(cliente):
     assert d["respostas"][0]["texto"] and d["opcoes"][0]["unidade_nome"] and d["pontuacao"] in (0, 51)
     assert "capacidade" in c.get("/api/v1/unidades/U1").json()
 
-    with pytest.raises(Exception):
+    with pytest.raises(DBAPIError):  # trigger append-only da tabela evento
         _S.execute(text("DELETE FROM evento")); _S.commit()
     _S.rollback()
 

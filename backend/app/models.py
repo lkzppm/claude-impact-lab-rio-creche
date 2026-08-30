@@ -5,8 +5,17 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import (
-    JSON, BigInteger, Boolean, DateTime, Float, ForeignKey, Integer, String, Text,
-    UniqueConstraint, func,
+    JSON,
+    BigInteger,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -239,7 +248,7 @@ class PreCadastro(Base):
     verificacoes: Mapped[list[dict[str, Any]] | None] = mapped_column(Json)
     consentimento_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    contatos: Mapped[list["Contato"]] = relationship(back_populates="pre_cadastro", cascade="all, delete-orphan",
+    contatos: Mapped[list[Contato]] = relationship(back_populates="pre_cadastro", cascade="all, delete-orphan",
                                                     order_by="Contato.id")
 
 

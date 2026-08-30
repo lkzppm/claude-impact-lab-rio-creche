@@ -5,7 +5,7 @@ o acesso é pelo CPF do responsável validado no gov.br / matricula.rio.
 """
 from __future__ import annotations
 
-from datetime import timezone
+from datetime import UTC
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select, text
@@ -15,8 +15,19 @@ from app.db import get_db
 from app.models import Alocacao, Comprovacao, Convocacao, Inscricao, Opcao, Pergunta, Resposta, Rodada, Unidade
 from app.routers.classificacao import _texto_explicacao
 from app.routers.convocacoes import ABERTAS, _agora, registrar_evento
-from app.schemas import (ComprovacaoOut, EventoIn, EventoRegistrado, FamiliaConvocacao, FamiliaCriterio,
-                         FamiliaInscricao, FamiliaOpcao, FamiliaPontuacao, FamiliaResposta, FamiliaVisao, RodadaRef)
+from app.schemas import (
+    ComprovacaoOut,
+    EventoIn,
+    EventoRegistrado,
+    FamiliaConvocacao,
+    FamiliaCriterio,
+    FamiliaInscricao,
+    FamiliaOpcao,
+    FamiliaPontuacao,
+    FamiliaResposta,
+    FamiliaVisao,
+    RodadaRef,
+)
 
 router = APIRouter(prefix="/familia", tags=["familia"])
 
@@ -136,7 +147,7 @@ def visao(codigo: str = Query(..., min_length=1), ano: int | None = None, db: Se
     for c in convs:
         prazo = c.prazo_fim
         if prazo is not None and prazo.tzinfo is None:
-            prazo = prazo.replace(tzinfo=timezone.utc)
+            prazo = prazo.replace(tzinfo=UTC)
         horas = round((prazo - agora).total_seconds() / 3600, 1) if prazo else None
         u = unidades.get(c.unidade_codigo)
         out_convs.append(FamiliaConvocacao(id=c.id, unidade_codigo=c.unidade_codigo, unidade_nome=u.nome if u else None,
@@ -200,11 +211,26 @@ import secrets
 
 from app import geo as _geo
 from app.engine.scoring import ItemRegua, pontuar
-from app.models import Capacidade, Contato, PreCadastro
+from app.models import Contato, PreCadastro
 from app.routers.geo import centroide_bairro_factory
-from app.schemas import (CasaOut, ContatoOut, CriterioVerificado, EscolhaOut, PontuacaoEstimada, PontuacaoItem,
-                         PreCadastroCriado, PreCadastroIn, PreCadastroOut, ReguaFamilia, ReguaPergunta, SugestoesIn,
-                         SugestoesOut, UnidadeSugerida, VerificacaoOut, VerificarIn)
+from app.schemas import (
+    CasaOut,
+    ContatoOut,
+    CriterioVerificado,
+    EscolhaOut,
+    PontuacaoEstimada,
+    PontuacaoItem,
+    PreCadastroCriado,
+    PreCadastroIn,
+    PreCadastroOut,
+    ReguaFamilia,
+    ReguaPergunta,
+    SugestoesIn,
+    SugestoesOut,
+    UnidadeSugerida,
+    VerificacaoOut,
+    VerificarIn,
+)
 
 RAIO_KM = 5.0
 N_SUGESTOES = 15

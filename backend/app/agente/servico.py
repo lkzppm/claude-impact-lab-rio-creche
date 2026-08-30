@@ -1,10 +1,12 @@
 """Um turno do assistente: monta prompt + ferramentas para o escopo, roda o laço e grava o log de acesso."""
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import logging
 import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -85,8 +87,6 @@ def _registrar(db: Session, escopo: Escopo, modelo_pedido: str, pergunta: str, t
         return linha.id
     except Exception:  # noqa: BLE001
         log.exception("falha ao gravar consulta_agente (área=%s cre=%s)", escopo.area, escopo.cre)
-        try:
+        with contextlib.suppress(Exception):
             db.rollback()
-        except Exception:  # noqa: BLE001
-            pass
         return None

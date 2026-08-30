@@ -22,7 +22,7 @@ import asyncio
 import logging
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import func, select
@@ -176,7 +176,7 @@ def executar_ciclo(db: Session, agora: datetime | None = None) -> Ciclo:
     """Uma passada do motor. Nunca levanta: erro vira `ciclo.erro` e o motor continua vivo."""
     cfg = get_settings()
     t0 = time.perf_counter()
-    agora = agora or datetime.now(timezone.utc)
+    agora = agora or datetime.now(UTC)
     c = Ciclo(em=agora)
     ESTADO.executando = True
     try:
@@ -237,13 +237,13 @@ async def rodar() -> None:
     ESTADO.ligado = True
     ESTADO.intervalo_s = cfg.motor_intervalo_segundos
     ESTADO.expira_vencidas = cfg.motor_expirar_vencidas
-    ESTADO.iniciado_em = datetime.now(timezone.utc)
+    ESTADO.iniciado_em = datetime.now(UTC)
     ESTADO.proxima_execucao = ESTADO.iniciado_em + timedelta(seconds=cfg.motor_atraso_inicial_segundos)
     try:
         await asyncio.sleep(cfg.motor_atraso_inicial_segundos)   # deixa o banco subir
         while True:
             await asyncio.to_thread(ciclo_com_sessao)
-            ESTADO.proxima_execucao = datetime.now(timezone.utc) + timedelta(seconds=cfg.motor_intervalo_segundos)
+            ESTADO.proxima_execucao = datetime.now(UTC) + timedelta(seconds=cfg.motor_intervalo_segundos)
             await asyncio.sleep(cfg.motor_intervalo_segundos)
     finally:
         ESTADO.ligado = False

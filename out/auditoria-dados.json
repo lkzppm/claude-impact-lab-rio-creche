@@ -1,6 +1,6 @@
 {
-  "gerado_em": "2026-08-30 11:29",
-  "duracao_s": 8.121422052383423,
+  "gerado_em": "2026-08-30 15:05",
+  "duracao_s": 7.998389959335327,
   "metricas": {
     "arquivos": {
       "QueryA": {
@@ -789,7 +789,7 @@
       "severidade": "erro",
       "titulo": "Códigos de unidade duplicados na QueryD",
       "valor": "56 códigos",
-      "detalhe": "Exemplos: [('0204015', 2), ('04054', 2), ('0411803', 2), ('07040', 2), ('10062', 2)]",
+      "detalhe": "Exemplos: [('01001', 2), ('01002', 2), ('01005', 2), ('0101001', 2), ('0102004', 2)]",
       "tratamento": "Na carga fica a linha com endereço preenchido (ou a 1ª); as demais vão para o log."
     },
     {

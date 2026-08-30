@@ -5,8 +5,9 @@ testes entra um chamador falso. Sem ANTHROPIC_API_KEY, `AssistenteIndisponivel` 
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from functools import lru_cache
-from typing import Any, Callable
+from typing import Any
 
 from app.agente.loop import ErroModelo
 from app.config import Settings, get_settings

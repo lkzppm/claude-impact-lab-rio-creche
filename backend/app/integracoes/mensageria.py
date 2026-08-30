@@ -21,14 +21,16 @@ Sem dependência nova: `urllib` da biblioteca padrão, como em `conecta.py`.
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import logging
 import os
 import urllib.error
 import urllib.request
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any
 
 log = logging.getLogger("creche.mensageria")
 
@@ -74,10 +76,8 @@ def _chamar(metodo: str, caminho: str, corpo: dict | None = None) -> dict[str, A
             return json.loads(r.read().decode() or "{}")
     except urllib.error.HTTPError as exc:
         texto = exc.read().decode(errors="replace")[:300]
-        try:
+        with contextlib.suppress(ValueError, AttributeError):
             texto = json.loads(texto).get("detail", texto)
-        except (ValueError, AttributeError):
-            pass
         log.warning("mensageria %s %s → HTTP %s: %s", metodo, caminho, exc.code, texto)
         return _falha(f"HTTP {exc.code} — {texto}")
     except urllib.error.URLError as exc:

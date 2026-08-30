@@ -200,7 +200,8 @@ def main(argv: list[str] | None = None) -> int:
             cur.execute("""SELECT (SELECT count(*) FROM inscricao), (SELECT count(*) FROM opcao),
                                   (SELECT count(*) FROM resposta), (SELECT count(*) FROM unidade),
                                   (SELECT count(*) FROM capacidade)""")
-            print("[load] no Postgres: inscricao=%s opcao=%s resposta=%s unidade=%s capacidade=%s" % tuple(f"{x:,}" for x in cur.fetchone()))
+            ins, opc, resp, uni, cap = (f"{x:,}" for x in cur.fetchone())
+            print(f"[load] no Postgres: inscricao={ins} opcao={opc} resposta={resp} unidade={uni} capacidade={cap}")
     print(f"[load] concluído em {time.time()-t0:.0f}s")
     return 0
 

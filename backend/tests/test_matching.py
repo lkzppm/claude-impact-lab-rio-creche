@@ -2,9 +2,13 @@ import random
 from datetime import datetime
 
 import pytest
-
 from app.engine.matching import (
-    STATUS_ALOCADA, STATUS_LISTA_ESPERA, STATUS_SEM_OPCAO, Inscricao, alocar, verificar_invariantes,
+    STATUS_ALOCADA,
+    STATUS_LISTA_ESPERA,
+    STATUS_SEM_OPCAO,
+    Inscricao,
+    alocar,
+    verificar_invariantes,
 )
 from app.engine.scoring import ItemRegua, pontuar
 

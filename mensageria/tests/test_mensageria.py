@@ -13,12 +13,11 @@ import json
 import logging
 
 import pytest
-from fastapi.testclient import TestClient
-
 from app import destinos, idempotencia
 from app.config import get_settings
 from app.main import app
 from app.provedores.registry import _construir
+from fastapi.testclient import TestClient
 
 CLIENTE = TestClient(app)
 NUMERO = "+5521999998888"

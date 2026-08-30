@@ -1,6 +1,6 @@
 # Auditoria das bases da SME
 
-Gerada em 2026-08-30 11:29 por `backend/app/etl/audit.py` em 8 s. Base anonimizada: **ordem de grandeza, não número oficial**.
+Gerada em 2026-08-30 15:05 por `backend/app/etl/audit.py` em 8 s. Base anonimizada: **ordem de grandeza, não número oficial**.
 
 **3 erros · 24 alertas · 17 informações.** Erro = quebra junção/regra; alerta = exige decisão (documentada na coluna Tratamento); info = característica a registrar.
 
@@ -22,7 +22,7 @@ Gerada em 2026-08-30 11:29 por `backend/app/etl/audit.py` em 8 s. Base anonimiza
 
 | Sev. | Área | Achado | Valor | Detalhe | Tratamento |
 |---|---|---|---|---|---|
-| **erro** | QueryD | Códigos de unidade duplicados na QueryD | 56 códigos | Exemplos: [('0204015', 2), ('04054', 2), ('0411803', 2), ('07040', 2), ('10062', 2)] | Na carga fica a linha com endereço preenchido (ou a 1ª); as demais vão para o log. |
+| **erro** | QueryD | Códigos de unidade duplicados na QueryD | 56 códigos | Exemplos: [('01001', 2), ('01002', 2), ('01005', 2), ('0101001', 2), ('0102004', 2)] | Na carga fica a linha com endereço preenchido (ou a 1ª); as demais vão para o log. |
 | **erro** | arquivo | QueryD: arquivo SEM linha de cabeçalho | 408;NULL;EDI INFANTE DE SAGRES;3;NULL;NULL;NULL;NULL;NULL | Ler com header=True perde a primeira unidade e nomeia colunas com dados. | Lido com header=false e nomes explícitos (readers.QUERYD_COLS). |
 | **erro** | localização | Planilhas .xlsx perderam o zero à esquerda dos códigos de unidade | junção crua 150/872 → normalizada 852 | QueryA usa '0734802'; a planilha traz 734802 (célula numérica). Junção literal casa só unidades sem zero. | Toda tabela ganha `codigo_norm = ltrim(codigo, '0')`; é a chave entre CSV e xlsx. Lat/long, CRE e polo vêm por ela. |
 | **alerta** | QueryA | Crianças com mais de uma inscrição no mesmo processo | 38,765 | Pode ser reinscrição legítima (fluxo contínuo) ou colisão nome+nascimento sem CPF/DNV/NIS (gap reconhecido pela SME). | Cada inscrição é tratada como uma linha própria; a contagem por criança é aproximada. |

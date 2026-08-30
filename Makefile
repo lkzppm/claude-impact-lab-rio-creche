@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 PIP := .venv/bin/pip
 
-.PHONY: venv audit load seed api mensageria test test-mensageria up down logs db migrate
+.PHONY: venv audit load seed api mensageria lint test test-integracao test-mensageria ci up down logs db migrate
 
 venv:            ## cria o venv e instala o backend em modo editável
 	python3 -m venv .venv && $(PIP) install -e "backend[dev]"
@@ -21,8 +21,20 @@ api:             ## API em modo dev
 mensageria:      ## serviço de mensageria em modo dev (porta 8100)
 	cd mensageria && ../$(PY) -m uvicorn app.main:app --reload --port 8100
 
+lint:            ## ruff no backend e na mensageria (mesma regra do CI, ruff.toml na raiz)
+	$(PY:python=ruff) check backend/app backend/tests mensageria/app mensageria/tests
+
 test:            ## testes do motor
 	cd backend && ../$(PY) -m pytest -q
+
+test-integracao: ## teste ponta a ponta contra um Postgres de TESTE (cria creche_test no container db e o trunca)
+	docker compose exec -T db psql -U creche -d postgres -q -c "DROP DATABASE IF EXISTS creche_test" -c "CREATE DATABASE creche_test"
+	for f in db/init/*.sql; do docker compose exec -T db psql -U creche -d creche_test -q -v ON_ERROR_STOP=1 < $$f; done
+	cd backend && TEST_DATABASE_URL=postgresql+psycopg://creche:creche@localhost:5432/creche_test ../$(PY) -m pytest -q
+
+ci:              ## o que o GitHub Actions roda, localmente: lint + testes + typecheck/build do frontend
+	$(MAKE) lint test test-mensageria
+	cd frontend && npm run build
 
 test-mensageria: ## testes do serviço de mensageria (não tocam a rede: tudo no provedor mock)
 	cd mensageria && ../$(PY) -m pytest -q

@@ -6,22 +6,33 @@ o log de acesso (consulta_agente) e a rota (503 sem chave, 422 sem CRE, 200 com 
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
-
 from app.agente import ferramentas as fer
 from app.agente import sql as sql_livre
 from app.agente.escopo import Escopo, ForaDoEscopo
 from app.agente.loop import ErroModelo, conversar
 from app.agente.servico import preparar_historico, responder
-from app.models import (Alocacao, Base, Capacidade, ConsultaAgente, Convocacao, Evento, Inscricao, Opcao, Pergunta,
-                        Processo, Resposta, Rodada, Unidade)
-
+from app.models import (
+    Alocacao,
+    Base,
+    Capacidade,
+    ConsultaAgente,
+    Convocacao,
+    Evento,
+    Inscricao,
+    Opcao,
+    Pergunta,
+    Processo,
+    Resposta,
+    Rodada,
+    Unidade,
+)
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 # ----------------------------------------------------------------------------- cliente falso
 
@@ -171,7 +182,7 @@ def db() -> Session:
     engine = create_engine("sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False}, future=True)
     Base.metadata.create_all(engine)
     S = sessionmaker(bind=engine, expire_on_commit=False)()
-    agora = datetime.now(timezone.utc)
+    agora = datetime.now(UTC)
     S.add(Processo(ano=2025, prm_id=195, descricao="teste"))
     S.add_all([Pergunta(ano=2025, ich_perg_id=1, perg_id=1, texto="CadÚnico", pontuacao=51, criterio_desempate=False, ordem=1)])
     S.add_all([Unidade(codigo="U1", nome="EDI UM", cre="4", bairro="PENHA"), Unidade(codigo="U2", nome="EDI DOIS", cre="4", bairro="MARÉ"),
@@ -350,9 +361,9 @@ def test_servico_grava_log_mesmo_quando_o_modelo_falha(db):
 
 @pytest.fixture
 def cliente(db, monkeypatch):
-    from fastapi.testclient import TestClient
     from app.db import get_db
     from app.main import app
+    from fastapi.testclient import TestClient
 
     app.dependency_overrides[get_db] = lambda: db
     yield TestClient(app), monkeypatch

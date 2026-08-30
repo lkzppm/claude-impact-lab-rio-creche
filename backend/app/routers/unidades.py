@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
@@ -52,7 +52,7 @@ def informar_capacidade(codigo: str, body: CapacidadeIn, db: Session = Depends(g
     else:
         cap = Capacidade(ano=body.ano, unidade_codigo=codigo, grupamento=grup, horario=hor, vagas=body.vagas, fonte="informada")
         db.add(cap)
-    db.add(Evento(ocorrido_em=datetime.now(timezone.utc), tipo="capacidade_informada", unidade_codigo=codigo,
+    db.add(Evento(ocorrido_em=datetime.now(UTC), tipo="capacidade_informada", unidade_codigo=codigo,
                   ator=body.ator or "polo",
                   payload={"ano": body.ano, "grupamento": grup, "horario": hor, "de": de, "para": body.vagas,
                            "fonte_anterior": fonte_anterior}))

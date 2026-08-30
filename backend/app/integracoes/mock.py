@@ -6,7 +6,7 @@ de criança: a base é anonimizada e o hash só decide o desfecho.
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.integracoes.base import DadosInscricao, ResultadoComprovacao
 
@@ -21,7 +21,7 @@ def _protocolo(salt: str, chave: str) -> str:
 
 
 def _agora() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class MockCadUnico:

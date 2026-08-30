@@ -7,8 +7,20 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import (chat, classificacao, convocacoes, familia, geo, health, inscricoes, mensagens, motor,
-                         painel, processos, unidades)
+from app.routers import (
+    chat,
+    classificacao,
+    convocacoes,
+    familia,
+    geo,
+    health,
+    inscricoes,
+    mensagens,
+    motor,
+    painel,
+    processos,
+    unidades,
+)
 
 log = logging.getLogger("creche")
 settings = get_settings()

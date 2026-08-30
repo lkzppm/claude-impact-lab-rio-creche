@@ -21,7 +21,7 @@ import random
 import sys
 import time
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select, text
 
@@ -68,7 +68,7 @@ def main(argv: list[str] | None = None) -> int:
 
     grup = None if args.todos else args.grupamento
     hor = None if args.todos else args.horario
-    agora = datetime.now(timezone.utc)
+    agora = datetime.now(UTC)
 
     # 1. rodadas (a de 1 vaga entra antes para a de 3 reservas ser a "última", que o painel usa)
     if not args.sem_comparacao:

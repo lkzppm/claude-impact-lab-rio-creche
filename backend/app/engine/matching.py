@@ -214,7 +214,7 @@ def verificar_invariantes(inscricoes: list[Inscricao], capacidade: dict[str, int
 
     # 1. cota por criança
     contagem: dict[int, int] = {}
-    for u, fila in saida.fila_por_unidade.items():
+    for fila in saida.fila_por_unidade.values():
         for cid in fila:
             contagem[cid] = contagem.get(cid, 0) + 1
     for cid, n in contagem.items():

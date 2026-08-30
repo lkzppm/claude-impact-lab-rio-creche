@@ -23,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import idempotencia, servico, templates
 from app.config import get_settings
 from app.provedores import panorama, validar
-from app.schemas import (LoteEnvio, LoteResultado, PedidoEnvio, PedidoRecusado, ResultadoEnvio, Saude)
+from app.schemas import LoteEnvio, LoteResultado, PedidoEnvio, PedidoRecusado, ResultadoEnvio, Saude
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 log = logging.getLogger("mensageria")

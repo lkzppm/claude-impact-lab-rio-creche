@@ -1,15 +1,23 @@
 """Painel da CRE/polo — KPIs calculados em SQL sobre convocacao/alocacao/evento."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.schemas import (MapaCre, MapaOut, MapaUnidade, MultiReservaItem, PainelCre, PainelResumo, PainelUnidade,
-                         SelecionadasAguardando)
+from app.schemas import (
+    MapaCre,
+    MapaOut,
+    MapaUnidade,
+    MultiReservaItem,
+    PainelCre,
+    PainelResumo,
+    PainelUnidade,
+    SelecionadasAguardando,
+)
 
 router = APIRouter(prefix="/painel", tags=["painel"])
 
@@ -81,7 +89,7 @@ def resumo(cre: str | None = None, unidade: str | None = None, db: Session = Dep
     """), params).scalar() or 0
     return PainelResumo(
         filtro={"cre": cre, "unidade": unidade},
-        atualizado_em=datetime.now(timezone.utc),
+        atualizado_em=datetime.now(UTC),
         selecionadas_aguardando=SelecionadasAguardando(
             total=faixas.abertas, faixa_0_24h=faixas.f0, faixa_24_48h=faixas.f1,
             faixa_48_72h=faixas.f2, faixa_mais_72h=faixas.f3),
@@ -267,7 +275,7 @@ def mapa(cre: str | None = None, ano: int | None = None, db: Session = Depends(g
     Com `cre`: **todas** as unidades daquela CRE, inclusive as que ainda não têm convocação — é a lista
     de creches disponíveis no território, com vagas, fila e convocações vencidas."""
     ano = ano or db.execute(text("SELECT MAX(ano) FROM processo")).scalar()
-    agora = datetime.now(timezone.utc)
+    agora = datetime.now(UTC)
     cres = [
         MapaCre(cre=str(r.cre), lat=float(r.lat) if r.lat is not None else None,
                 lon=float(r.lon) if r.lon is not None else None, unidades=int(r.unidades),

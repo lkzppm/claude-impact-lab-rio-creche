@@ -7,9 +7,11 @@ viram `{"erro": ...}` para o modelo — a rota nunca cai por causa de uma ferram
 """
 from __future__ import annotations
 
+import contextlib
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Any, Callable
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
@@ -438,8 +440,6 @@ def executar(db: Session, escopo: Escopo, nome: str, args: dict[str, Any], *, fe
     except (KeyError, TypeError, ValueError) as e:
         return Resultado({"erro": f"argumento inválido: {e}"}, f"{nome} (argumento inválido)")
     except Exception as e:  # noqa: BLE001 — a rota não cai por causa de uma ferramenta
-        try:
+        with contextlib.suppress(Exception):
             db.rollback()
-        except Exception:  # noqa: BLE001
-            pass
         return Resultado({"erro": f"falha ao consultar o banco: {type(e).__name__}"}, f"{nome} (falhou)")

@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app import destinos, idempotencia, registro, templates
 from app.config import get_settings
@@ -27,7 +27,7 @@ class PedidoInvalido(ValueError):
 
 
 def _agora_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 async def enviar(pedido: PedidoEnvio) -> ResultadoEnvio:

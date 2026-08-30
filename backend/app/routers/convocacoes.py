@@ -5,7 +5,7 @@ regras; a API, a visão da família, a rotina de expiração e o seed de demonst
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
@@ -14,9 +14,20 @@ from sqlalchemy.orm import Session, selectinload
 from app.config import get_settings
 from app.db import get_db
 from app.models import Alocacao, Convocacao, Evento, Inscricao, Rodada, Unidade
-from app.schemas import (ConvocacaoDetalhe, ConvocacaoIrma, ConvocacaoOut, ConvocarProximoIn, EventoIn, EventoOut,
-                         EventoRegistrado, ExpirarVencidasIn, ExpirarVencidasOut, GerarConvocacoesIn, Pagina,
-                         ProximoDaFila)
+from app.schemas import (
+    ConvocacaoDetalhe,
+    ConvocacaoIrma,
+    ConvocacaoOut,
+    ConvocarProximoIn,
+    EventoIn,
+    EventoOut,
+    EventoRegistrado,
+    ExpirarVencidasIn,
+    ExpirarVencidasOut,
+    GerarConvocacoesIn,
+    Pagina,
+    ProximoDaFila,
+)
 
 router = APIRouter(prefix="/convocacoes", tags=["convocacoes"])
 
@@ -49,11 +60,11 @@ FILAS = ("vencidas", "vencem_24h", "sem_aviso", "aguardando", "abertas", "trabal
 
 
 def _agora() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _tz(dt: datetime | None) -> datetime | None:
-    return dt if dt is None or dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    return dt if dt is None or dt.tzinfo else dt.replace(tzinfo=UTC)
 
 
 def _prazo(a_partir_de: datetime) -> datetime:

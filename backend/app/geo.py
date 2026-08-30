@@ -15,11 +15,11 @@ import threading
 import time
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 
 UA = "InscricaoCreche-SME-Rio/0.1 (hackathon; contato: eventos@taicor.ai)"
 TIMEOUT = 4.0
-_cache: dict[str, "Endereco"] = {}
+_cache: dict[str, Endereco] = {}
 _lock = threading.Lock()
 _ultimo_nominatim = 0.0
 
