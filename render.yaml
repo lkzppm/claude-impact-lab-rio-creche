@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: creche-mensageria
+    runtime: docker
+    dockerfilePath: ./mensageria/Dockerfile
+    dockerContext: ./mensageria
+    plan: free
+    envVars:
+      - key: MENSAGERIA_WHATSAPP
+        value: mock
+      - key: MENSAGERIA_EMAIL
+        value: mock
+      - key: MENSAGERIA_SMS
+        value: mock
+      - key: CORS_ORIGINS
+        sync: false
+
+  - type: web
+    name: creche-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: MENSAGERIA_URL
+        sync: false
+      - key: MOTOR_INTERVALO_SEGUNDOS
+        value: "60"
+      - key: MOTOR_EXPIRAR_VENCIDAS
+        value: "0"
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CHAT_MODEL
+        value: claude-opus-5
+      - key: CHAT_MAX_TOOLS
+        value: "8"

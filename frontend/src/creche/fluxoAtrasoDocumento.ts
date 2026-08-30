@@ -33,6 +33,10 @@
  * função todo dia não deveria reenviar o aviso nem reaplicar a perda de critérios.
  */
 
+import { enviarMensagem } from "../api/client";
+import { UNIDADE_EXEMPLO } from "./mock";
+import { telefoneParaWhatsapp } from "./telefone";
+
 export type EstagioAtraso = "aviso_enviado" | "criterios_em_risco";
 
 /** dia em que o aviso de atraso é enviado pela mensageria */
@@ -52,29 +56,62 @@ export function estagioAtraso(diasAtraso: number): EstagioAtraso | null {
   return null;
 }
 
-/** Etapa 1 do cronograma — dia 1 de atraso. Ver `spec/creche/mensageria.md` (`atraso_documento_dia1`). */
-function avisarAtraso(responsavelId: string) {
-  // TODO: POST /api/v1/creche/mensageria/enviar { responsavel_id, template: "atraso_documento_dia1" }
-  // grava em `evento` (tipo = mensageria_enviada); idempotente por (responsavel_id, template).
-  console.info("avisarAtraso", responsavelId);
+interface ResponsavelParaAviso {
+  id: string;
+  nome: string;
+  crianca: string;
+  telefone: string;
+}
+
+/**
+ * Etapa 1 do cronograma — dia 1 de atraso. Chama a mensageria de verdade (`POST /mensagens/enviar`,
+ * `backend/app/routers/mensagens.py`, que repassa ao container `mensageria/`). O envio nunca lança
+ * exceção — falha de provedor volta como `resultado: "falha"`, sem derrubar quem chamou.
+ *
+ * TODO backend: idempotência por (responsável, template, dia) hoje é responsabilidade de quem
+ * chama esta função; falta um job diário real que rode isto uma vez por responsável em atraso
+ * (não existe still tabela `responsavel`/`evento` para essa unidade no schema atual — ver
+ * `spec/creche/mensageria.md`).
+ */
+async function avisarAtraso(responsavel: ResponsavelParaAviso) {
+  const destino = telefoneParaWhatsapp(responsavel.telefone);
+  if (!destino) return;
+  return enviarMensagem({
+    canal: "whatsapp",
+    destino,
+    template: "atraso_documento_dia1",
+    dados: { responsavel: responsavel.nome, crianca: responsavel.crianca, unidade: UNIDADE_EXEMPLO.nome },
+    referencia: `atraso-documento:${responsavel.id}`,
+    ator: "painel-creche",
+  });
 }
 
 /** Etapa 2 — dia 3 de atraso. Ver `spec/creche/mensageria.md` (`atraso_documento_dia3_perda_criterios`). */
-function aplicarPerdaDeCriterios(responsavelId: string) {
-  // TODO: PATCH /api/v1/responsaveis/{responsavelId} { criterios_perdidos: true }
-  // a pontuação da inscrição passa a ignorar irmao_na_rede e pequenos_cariocas; dispara mensagem
-  // avisando a família da perda dos critérios.
-  console.info("aplicarPerdaDeCriterios", responsavelId);
+async function aplicarPerdaDeCriterios(responsavel: ResponsavelParaAviso) {
+  // TODO: falta endpoint para marcar `resposta.confirmado = false` nos critérios "irmão na rede" e
+  // "Pequenos Cariocas" da inscrição (tabela `resposta`, por `ich_perg_id` da régua do ano — ver
+  // `backend/app/models.py::Resposta`). A pontuação hoje só é recalculada pelo motor de classificação;
+  // não há rota para forçar a perda de um critério isolado a partir do painel da unidade.
+  const destino = telefoneParaWhatsapp(responsavel.telefone);
+  if (!destino) return;
+  return enviarMensagem({
+    canal: "whatsapp",
+    destino,
+    template: "atraso_documento_dia3_perda_criterios",
+    dados: { responsavel: responsavel.nome, crianca: responsavel.crianca, unidade: UNIDADE_EXEMPLO.nome },
+    referencia: `atraso-documento-criterios:${responsavel.id}`,
+    ator: "painel-creche",
+  });
 }
 
 /**
  * Orquestra as duas etapas conforme os dias de atraso — é isto que o job diário chamaria para
  * cada responsável com status "atrasado". Devolve o estágio aplicado (ou `null`).
  */
-export function escalonarAtraso(responsavel: { id: string; diasAtraso: number }): EstagioAtraso | null {
+export async function escalonarAtraso(responsavel: ResponsavelParaAviso & { diasAtraso: number }): Promise<EstagioAtraso | null> {
   const estagio = estagioAtraso(responsavel.diasAtraso);
-  if (estagio === "aviso_enviado") avisarAtraso(responsavel.id);
-  if (estagio === "criterios_em_risco") aplicarPerdaDeCriterios(responsavel.id);
+  if (estagio === "aviso_enviado") await avisarAtraso(responsavel);
+  if (estagio === "criterios_em_risco") await aplicarPerdaDeCriterios(responsavel);
   return estagio;
 }
 

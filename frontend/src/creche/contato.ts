@@ -24,10 +24,29 @@ export function situacaoMensageria(ultimoContato: ResultadoContato | null | unde
   return { label: "Aguardando contato", tone: "neutral" };
 }
 
-export function registrarResultadoContato(alunoId: string, resultado: ResultadoContato) {
-  // TODO: POST /api/v1/creche/novos-alunos/{alunoId}/contato { resultado }
-  // grava em `evento` (tipo = contato_tentado/contato_confirmado/recusado), ator = servidor da creche.
-  // "recusou" também dispara o fluxo de recusa: PATCH status -> recusado — a criança sai da lista
-  // de convocados desta unidade (não aparece mais em "Novos Alunos").
-  console.info("registrarResultadoContato", alunoId, resultado);
+import { registrarEvento } from "../api/client";
+
+const RESULTADO_PARA_TIPO_EVENTO: Record<ResultadoContato, string> = {
+  aceitou_visita: "contato_confirmado",
+  nao_atendeu: "contato_tentado",
+  recusou: "recusada",
+};
+
+/**
+ * Registra o resultado no backend real via `POST /convocacoes/{id}/eventos`
+ * (`backend/app/routers/convocacoes.py`), que já implementa exatamente esta máquina de estados
+ * (`selecionada → contato_tentado → contato_confirmado → confirmada|recusada|expirada`).
+ *
+ * A convocação é identificada pelo `id` numérico da tabela `convocacao` — os dados de exemplo deste
+ * painel (`frontend/src/creche/mock.ts`) usam ids de mock (`"a1"`, `"a2"`, ...) porque ainda não há
+ * seed real de convocações para uma unidade de creche/EDI. Quando o id do aluno vier do backend
+ * (numérico), a chamada abaixo funciona sem alteração; até lá ela é pulada silenciosamente.
+ */
+export async function registrarResultadoContato(alunoId: string, resultado: ResultadoContato) {
+  const idNumerico = Number(alunoId);
+  if (!Number.isInteger(idNumerico)) {
+    console.info("registrarResultadoContato (mock, sem convocação real)", alunoId, resultado);
+    return;
+  }
+  return registrarEvento(idNumerico, { tipo: RESULTADO_PARA_TIPO_EVENTO[resultado], ator: "painel-creche" });
 }

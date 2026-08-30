@@ -130,6 +130,61 @@ TEMPLATES: dict[str, Template] = {
         ),
         opcionais={"responsavel": "responsável"},
     ),
+    # --- painel da creche/EDI: cronograma de verificação de documento (spec/creche/mensageria.md) ---
+    "atraso_documento_dia1": Template(
+        nome="atraso_documento_dia1",
+        assunto="Verificação de documento em atraso — {crianca}",
+        texto=(
+            "Olá, {responsavel}. A verificação do documento de {crianca} está em atraso há 1 dia.\n\n"
+            "Se passarem mais 2 dias sem verificar, {crianca} deixa de contar com os critérios "
+            "\"tem irmão na rede\" e \"Pequenos Cariocas\" na pontuação.\n\n"
+            "Procure a unidade {unidade} para regularizar."
+        ),
+        opcionais={"responsavel": "responsável"},
+    ),
+    "atraso_documento_dia3_perda_criterios": Template(
+        nome="atraso_documento_dia3_perda_criterios",
+        assunto="Critérios de {crianca} não contam mais na pontuação",
+        texto=(
+            "Olá, {responsavel}. Como o documento de {crianca} continua sem verificação, os critérios "
+            "\"irmão na rede\" e \"Pequenos Cariocas\" não contam mais na pontuação da inscrição.\n\n"
+            "Você ainda pode verificar o documento a qualquer momento na unidade {unidade}."
+        ),
+        opcionais={"responsavel": "responsável"},
+    ),
+    # --- painel da creche/EDI: cronograma de convocação (comparecimento presencial) ---
+    "convocacao_confirmacao_visita": Template(
+        nome="convocacao_confirmacao_visita",
+        assunto="Confirme a vaga de {crianca} em {unidade}",
+        texto=(
+            "Olá, {responsavel}! {crianca} foi convocado(a) para a vaga em {unidade}.\n\n"
+            "Você vai à unidade confirmar a matrícula presencialmente? Responda SIM ou NÃO.\n\n"
+            "O prazo é até {prazo}."
+        ),
+        opcionais={"responsavel": "responsável"},
+    ),
+    "convocacao_perda_vaga": Template(
+        nome="convocacao_perda_vaga",
+        assunto="Vaga de {crianca} liberada por falta de confirmação",
+        texto=(
+            "Olá, {responsavel}. Como não recebemos a confirmação de presença de {crianca} em "
+            "{unidade} dentro do prazo, a vaga foi liberada.\n\n"
+            "Vamos tentar uma nova escola para vocês — em breve enviamos uma mensagem perguntando "
+            "se ainda têm interesse."
+        ),
+        opcionais={"responsavel": "responsável"},
+    ),
+    "reparelhamento_interesse": Template(
+        nome="reparelhamento_interesse",
+        assunto="Nova vaga encontrada para {crianca}",
+        texto=(
+            "Olá, {responsavel}. Encontramos uma nova vaga para {crianca} em {nova_unidade}.\n\n"
+            "Você ainda tem interesse em vaga na rede municipal? Responda SIM para continuarmos sua "
+            "inscrição.\n\n"
+            "Se não respondermos até {prazo}, a inscrição será encerrada."
+        ),
+        opcionais={"responsavel": "responsável"},
+    ),
 }
 
 

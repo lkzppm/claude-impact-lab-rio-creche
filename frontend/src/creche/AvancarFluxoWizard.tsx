@@ -1,18 +1,41 @@
 import { useState } from "react";
+import { registrarEvento } from "../api/client";
 import { Button } from "../design-system";
 import { NovoAluno } from "./mock";
 
 type Acao = "aprovar" | "adiar";
 
-function aprovarMatricula(alunoId: string, autorizadoPor: string) {
-  // TODO: POST /api/v1/creche/novos-alunos/{alunoId}/aprovar { autorizado_por: autorizadoPor }
-  // grava em `convocacao` (status -> confirmada) + `evento` (ator = servidor, payload com o nome)
-  console.info("aprovarMatricula", alunoId, autorizadoPor);
+/**
+ * `POST /convocacoes/{id}/eventos` com `tipo: "confirmada"` já é a transição real de aprovação
+ * (`backend/app/routers/convocacoes.py::TRANSICOES`) — o "servidor que autorizou" vai no `payload`
+ * do evento append-only, não em uma coluna própria (não existe uma).
+ *
+ * `alunoId` precisa ser o id numérico de `convocacao`; os dados de exemplo deste painel usam ids
+ * de mock ("a1"...) até existir seed real de convocação para uma unidade de creche/EDI — nesse caso
+ * a chamada é pulada e só o estado local muda (ver `onAprovado` em `CrecheNovosAlunosPage`).
+ */
+async function aprovarMatricula(alunoId: string, autorizadoPor: string) {
+  const id = Number(alunoId);
+  if (!Number.isInteger(id)) {
+    console.info("aprovarMatricula (mock, sem convocação real)", alunoId, autorizadoPor);
+    return;
+  }
+  return registrarEvento(id, { tipo: "confirmada", ator: autorizadoPor, payload: { autorizado_por: autorizadoPor } });
 }
 
-function adiarPrazoComparecimento(alunoId: string) {
-  // TODO: PATCH /api/v1/creche/novos-alunos/{alunoId} { prazo_dias_restantes: +1 }
-  console.info("adiarPrazoComparecimento", alunoId);
+/**
+ * Não existe transição "adiar prazo" isolada na máquina de estados real — o prazo só é reiniciado
+ * (+3 dias) quando a convocação entra em `contato_confirmado` (`_aplicar_transicao`, linha ~119).
+ * Reaproveitamos essa transição: "ainda não compareceu, mas a família confirmou que vem" é
+ * exatamente o que `contato_confirmado` significa no cronograma real.
+ */
+async function adiarPrazoComparecimento(alunoId: string) {
+  const id = Number(alunoId);
+  if (!Number.isInteger(id)) {
+    console.info("adiarPrazoComparecimento (mock, sem convocação real)", alunoId);
+    return;
+  }
+  return registrarEvento(id, { tipo: "contato_confirmado", ator: "painel-creche" });
 }
 
 export function AvancarFluxoWizard({
@@ -29,14 +52,14 @@ export function AvancarFluxoWizard({
   const [acao, setAcao] = useState<Acao>("aprovar");
   const [servidor, setServidor] = useState("");
 
-  function confirmar() {
+  async function confirmar() {
     if (acao === "aprovar") {
       const nome = servidor.trim();
       if (!nome) return;
-      aprovarMatricula(aluno.id, nome);
+      await aprovarMatricula(aluno.id, nome);
       onAprovado(aluno.id, nome);
     } else {
-      adiarPrazoComparecimento(aluno.id);
+      await adiarPrazoComparecimento(aluno.id);
       onPrazoAdiado(aluno.id);
     }
   }

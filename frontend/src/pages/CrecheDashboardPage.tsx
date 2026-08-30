@@ -1,9 +1,10 @@
-import { ClipboardList, FileCheck2, Users, AlertCircle, ShieldAlert, CalendarClock } from "lucide-react";
+import { ClipboardList, FileCheck2, Users, AlertCircle, AlertTriangle, ShieldAlert, CalendarClock, CheckCircle2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { Page, Card, StackedBar, BarList, Donut, Hero, fmtInt, fmtDateTime } from "../design-system";
+import { Page, Card, Button, StackedBar, BarList, Donut, Hero, fmtInt, fmtDateTime } from "../design-system";
 import type { Fatia, Segmento } from "../design-system";
 import {
   CRONOGRAMA_CENTRAL_EXEMPLO,
+  FILA_ESPERA_EXEMPLO,
   NOVOS_ALUNOS_EXEMPLO,
   RESPONSAVEIS_EXEMPLO,
   SEGMENTO_LABEL,
@@ -12,6 +13,7 @@ import {
   contarPorStatus,
 } from "../creche/mock";
 import { PRAZO_AVISO_ATRASO_DIAS, PRAZO_PERDA_CRITERIOS_DIAS } from "../creche/fluxoAtrasoDocumento";
+import { temDescompassoDeVagas, useConfirmacaoDiariaDeVagas } from "../creche/alertasStore";
 
 const ATALHOS = [
   {
@@ -42,6 +44,9 @@ export default function CrecheDashboardPage() {
   const vagasOcupadas = alunosDaUnidade.filter((a) => a.status === "aprovado").length;
   const { atrasado, estaSemana, verificado } = contarPorStatus(RESPONSAVEIS_EXEMPLO);
   const totalResponsaveis = RESPONSAVEIS_EXEMPLO.length;
+  const pessoasNaFila = FILA_ESPERA_EXEMPLO.filter((i) => i.unidadeCodigo === UNIDADE_EXEMPLO.codigo).length;
+  const { precisaConfirmar, confirmar } = useConfirmacaoDiariaDeVagas();
+  const descompasso = temDescompassoDeVagas(totalVagas, vagasOcupadas, pessoasNaFila);
 
   const urgenciaConvocados: Fatia[] = [
     { label: "1 dia até o prazo", value: convocados.filter((a) => a.prazoDiasRestantes <= 1).length, tone: "danger", hint: "risco de perder a vaga", to: "/creche/novos-alunos" },
@@ -68,6 +73,47 @@ export default function CrecheDashboardPage() {
       title={`Painel · ${UNIDADE_EXEMPLO.nome}`}
       subtitle="Vagas por grupamento, convocados aguardando comparecimento e a fila de verificação de documentos."
     >
+      {precisaConfirmar ? (
+        <div className="alert alert-info" style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <CheckCircle2 size={20} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0 }}>
+              Confira se o número de <strong>vagas ocupadas</strong> desta unidade está certo:{" "}
+              <strong>{vagasOcupadas} de {totalVagas}</strong>.
+            </p>
+            <p className="text-sm muted" style={{ margin: "2px 0 0" }}>
+              Confirmação diária — se algo estiver errado, ajuste em Administração de Vagas antes de confirmar.
+            </p>
+          </div>
+          <Button size="sm" onClick={confirmar}>
+            Sim, está certo
+          </Button>
+        </div>
+      ) : (
+        <div className="alert alert-ok" style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <CheckCircle2 size={20} style={{ flexShrink: 0 }} aria-hidden="true" />
+          <p style={{ margin: 0 }}>Vagas ocupadas confirmadas hoje.</p>
+        </div>
+      )}
+
+      {descompasso && (
+        <div className="alert alert-danger" style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <AlertTriangle size={20} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0 }}>
+              <strong>Vagas ocupadas ({vagasOcupadas}) diferentes do total disponível ({totalVagas})</strong> e há{" "}
+              <strong>{pessoasNaFila}</strong> família(s) na fila de espera desta unidade.
+            </p>
+            <p className="text-sm muted" style={{ margin: "2px 0 0" }}>
+              Confira em Administração de Vagas se dá para chamar mais alguém da fila.
+            </p>
+          </div>
+          <Link to="/creche/vagas" className="btn btn-secondary btn-sm">
+            Ver vagas
+          </Link>
+        </div>
+      )}
+
       <Card title="Para hoje">
         <div className="para-hoje">
           <Donut

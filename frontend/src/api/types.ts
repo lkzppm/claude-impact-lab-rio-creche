@@ -457,6 +457,26 @@ export interface Comprovacao {
   consultado_em?: string | null;
 }
 
+/* ---------- mensageria (WhatsApp / e-mail / SMS) ---------- */
+export interface MensagemIn {
+  canal: "whatsapp" | "email" | "sms";
+  destino: string;
+  template: string;
+  dados?: Record<string, unknown>;
+  referencia?: string | null;
+  chave_idem?: string | null;
+  ator?: string;
+}
+
+export type ResultadoEnvio = "enviado" | "simulado" | "pendente" | "falha";
+
+export interface MensagemResultado {
+  resultado: ResultadoEnvio | string;
+  detalhe?: string | null;
+  protocolo?: string | null;
+  id?: string | number | null;
+}
+
 /* ---------- visão da família ---------- */
 export type FamiliaSituacao =
   | "reservas_abertas"

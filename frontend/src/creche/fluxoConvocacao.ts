@@ -35,7 +35,18 @@
  *      a inscrição da família é encerrada — não há novo pareamento.
  */
 
+import { enviarMensagem } from "../api/client";
+import { UNIDADE_EXEMPLO } from "./mock";
+import { telefoneParaWhatsapp } from "./telefone";
+
 export type ConfirmacaoVisita = "sim" | "nao" | null;
+
+interface AlunoParaAviso {
+  id: string;
+  nome: string;
+  contatoPrincipal: { nome: string; telefone: string };
+  prazoLimite?: string;
+}
 
 /** dia em que a mensageria pergunta pela primeira vez se o responsável vai à visita */
 export const PRAZO_1A_PERGUNTA_VISITA_DIAS = 1;
@@ -51,49 +62,86 @@ export const PRAZO_RESPOSTA_REPARELHAMENTO_DIAS = 2;
 /** número de contatos obrigatórios tentados antes de encerrar a inscrição por falta de resposta */
 export const CONTATOS_OBRIGATORIOS_REPARELHAMENTO = 3;
 
-/** Dia 1 e dia 2 (se ainda sem resposta) — pergunta se o responsável vai à visita. */
-function perguntarConfirmacaoVisita(alunoId: string) {
-  // TODO: POST /api/v1/creche/mensageria/enviar { aluno_id: alunoId, template: "convocacao_confirmacao_visita" }
-  // idempotente por dia — não reenvia no mesmo dia; só repete no dia 2 se `confirmacaoVisita` ainda for null.
-  console.info("perguntarConfirmacaoVisita", alunoId);
+/**
+ * Dia 1 e dia 2 (se ainda sem resposta) — pergunta se o responsável vai à visita. Envio real via
+ * `POST /mensagens/enviar` (`backend/app/routers/mensagens.py`); idempotência por dia fica com
+ * `chave_idem` derivada de aluno+dia — reenviar no mesmo dia não gera segunda mensagem.
+ */
+export async function perguntarConfirmacaoVisita(aluno: AlunoParaAviso, dia: number) {
+  const destino = telefoneParaWhatsapp(aluno.contatoPrincipal.telefone);
+  if (!destino) return;
+  return enviarMensagem({
+    canal: "whatsapp",
+    destino,
+    template: "convocacao_confirmacao_visita",
+    dados: { responsavel: aluno.contatoPrincipal.nome, crianca: aluno.nome, unidade: UNIDADE_EXEMPLO.nome, prazo: aluno.prazoLimite ?? "" },
+    referencia: `convocacao-confirmacao:${aluno.id}`,
+    chave_idem: `convocacao-confirmacao:${aluno.id}:dia${dia}`,
+    ator: "painel-creche",
+  });
 }
 
 /** Fim do dia 2, sem resposta ainda — tarefa manual para a escola ligar para o contato principal. */
-function ligarParaContatoPrincipal(alunoId: string) {
-  // TODO: cria tarefa na "Central de mensageria" da unidade (não é mensagem automática).
+export function ligarParaContatoPrincipal(alunoId: string) {
+  // TODO: não existe "central de tarefas" no backend hoje — a ligação continua sendo controlada só
+  // pelo campo `ligacaoTentada` do mock. Quando existir, isto vira POST numa fila de tarefas da unidade.
   console.info("ligarParaContatoPrincipal", alunoId);
 }
 
-/** Fim do dia 3 (prazo total), sem confirmação de presença — perde a vaga nesta escola. */
-function perderVagaPorNaoComparecimento(alunoId: string) {
-  // TODO: PATCH /api/v1/novos-alunos/{alunoId} { status: "perdeu_vaga", perdeu_vaga_em: now }
-  // dispara `iniciarReparelhamento(alunoId)` e mensagem avisando a família da perda da vaga
-  // (`spec/creche/mensageria.md`, `convocacao_perda_vaga`).
-  console.info("perderVagaPorNaoComparecimento", alunoId);
+/**
+ * Fim do dia 3 (prazo total), sem confirmação de presença — perde a vaga nesta escola. Avisa a
+ * família (`convocacao_perda_vaga`) e encadeia `iniciarReparelhamento`.
+ */
+export async function perderVagaPorNaoComparecimento(aluno: AlunoParaAviso) {
+  const destino = telefoneParaWhatsapp(aluno.contatoPrincipal.telefone);
+  if (destino) {
+    await enviarMensagem({
+      canal: "whatsapp",
+      destino,
+      template: "convocacao_perda_vaga",
+      dados: { responsavel: aluno.contatoPrincipal.nome, crianca: aluno.nome, unidade: UNIDADE_EXEMPLO.nome },
+      referencia: `convocacao-perda-vaga:${aluno.id}`,
+      ator: "painel-creche",
+    });
+  }
+  await iniciarReparelhamento(aluno, "a próxima unidade compatível");
 }
 
 /** Orquestra as etapas do cronograma de comparecimento conforme os dias decorridos desde a convocação. */
-export function escalonarConvocacao(aluno: {
-  id: string;
+export async function escalonarConvocacao(aluno: AlunoParaAviso & {
   diasDesdeConvocacao: number;
   confirmacaoVisita: ConfirmacaoVisita;
 }) {
-  const { id, diasDesdeConvocacao, confirmacaoVisita } = aluno;
+  const { diasDesdeConvocacao, confirmacaoVisita } = aluno;
   if (confirmacaoVisita === "sim") return; // já confirmou — nada a escalonar
-  if (diasDesdeConvocacao === PRAZO_1A_PERGUNTA_VISITA_DIAS) perguntarConfirmacaoVisita(id);
+  if (diasDesdeConvocacao === PRAZO_1A_PERGUNTA_VISITA_DIAS) await perguntarConfirmacaoVisita(aluno, diasDesdeConvocacao);
   if (diasDesdeConvocacao === PRAZO_2A_PERGUNTA_E_LIGACAO_DIAS) {
-    perguntarConfirmacaoVisita(id);
-    ligarParaContatoPrincipal(id);
+    await perguntarConfirmacaoVisita(aluno, diasDesdeConvocacao);
+    ligarParaContatoPrincipal(aluno.id);
   }
-  if (diasDesdeConvocacao >= PRAZO_PERDA_VAGA_DIAS) perderVagaPorNaoComparecimento(id);
+  if (diasDesdeConvocacao >= PRAZO_PERDA_VAGA_DIAS) await perderVagaPorNaoComparecimento(aluno);
 }
 
 /** Passo 1 do reparelhamento — pareia com uma nova escola e pergunta se ainda há interesse. */
-export function iniciarReparelhamento(alunoId: string) {
-  // TODO: POST /api/v1/creche/reparelhamento { aluno_id: alunoId } — roda a mesma régua de
-  // classificação para achar a próxima escola compatível; envia `reparelhamento_interesse` para
-  // os até 3 contatos obrigatórios da família.
-  console.info("iniciarReparelhamento", alunoId);
+export async function iniciarReparelhamento(aluno: AlunoParaAviso, novaUnidadeNome: string) {
+  // TODO: não existe endpoint de reparelhamento no backend — a nova unidade compatível precisaria
+  // rodar de novo o motor de classificação (`app/engine/matching.py`) para esta criança. Por ora só
+  // dispara o convite por mensagem; a escolha da unidade é um placeholder de texto.
+  const destino = telefoneParaWhatsapp(aluno.contatoPrincipal.telefone);
+  if (!destino) return;
+  const prazo = new Date();
+  prazo.setDate(prazo.getDate() + PRAZO_RESPOSTA_REPARELHAMENTO_DIAS);
+  return enviarMensagem({
+    canal: "whatsapp",
+    destino,
+    template: "reparelhamento_interesse",
+    dados: {
+      responsavel: aluno.contatoPrincipal.nome, crianca: aluno.nome, nova_unidade: novaUnidadeNome,
+      prazo: prazo.toLocaleDateString("pt-BR"),
+    },
+    referencia: `reparelhamento:${aluno.id}`,
+    ator: "painel-creche",
+  });
 }
 
 /** Algum dos 3 contatos respondeu "sim" dentro do prazo — reconvoca na nova escola. */
