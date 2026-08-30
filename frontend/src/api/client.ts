@@ -16,7 +16,10 @@ import type {
   Inscricao,
   InscricaoDetalhe,
   Mapa,
+  MensagemIn,
+  MensagemResultado,
   MotorEstado,
+  Resposta,
   NovaRodada,
   NovoEvento,
   Paginated,
@@ -103,6 +106,11 @@ export const getInscricoes = (params?: { ano?: number; unidade?: string; situaca
 export const getInscricao = (id: number) => get<InscricaoDetalhe>(`/inscricoes/${id}`);
 export const getComprovacoes = (id: number) => get<Comprovacao[]>(`/inscricoes/${id}/comprovacoes`);
 export const comprovarInscricao = (id: number) => post<Comprovacao[]>(`/inscricoes/${id}/comprovar`);
+export const confirmarResposta = (inscricaoId: number, ichPergId: number, confirmado: boolean, ator?: string) =>
+  request<Resposta>(`/inscricoes/${inscricaoId}/respostas/${ichPergId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ confirmado, ator }),
+  });
 
 /* ---------- classificação ---------- */
 export const getRodadas = () => get<Rodada[]>("/classificacao/rodadas");
@@ -156,6 +164,9 @@ export const responderConvocacao = (id: number, resposta: FamiliaResposta) =>
 
 /* ---------- rede (Nível Central) ---------- */
 export const getPainelCres = (params?: { ano?: number }) => get<PainelCre[]>("/painel/cres", params);
+
+/* ---------- mensageria (WhatsApp / e-mail / SMS) ---------- */
+export const enviarMensagem = (body: MensagemIn) => post<MensagemResultado>("/mensagens/enviar", body);
 
 /* ---------- assistente (chat com tools) ---------- */
 import type { ChatPedido, ChatResposta } from "./types";

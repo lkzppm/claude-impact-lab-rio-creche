@@ -4,6 +4,7 @@ import { Page, Card, DataTable, Pill, Toast, Pagination, paginar, fmtDateTime } 
 import { useToast } from "../components/useToast";
 import { AvancarFluxoWizard } from "../creche/AvancarFluxoWizard";
 import { ResultadoContato, registrarResultadoContato, situacaoMensageria } from "../creche/contato";
+import { registrarAprovacao } from "../creche/ocupacaoStore";
 import {
   PRAZO_1A_PERGUNTA_VISITA_DIAS,
   PRAZO_2A_PERGUNTA_E_LIGACAO_DIAS,
@@ -118,11 +119,13 @@ export default function CrecheNovosAlunosPage() {
   }, [alunos, buscaLigar]);
 
   function aoAprovar(alunoId: string, autorizadoPor: string) {
+    const aluno = alunos.find((a) => a.id === alunoId);
     setAlunos((atual) =>
       atual.map((a) =>
         a.id === alunoId ? { ...a, status: "aprovado", aprovadoPor: autorizadoPor, aprovadoEm: new Date().toISOString() } : a,
       ),
     );
+    if (aluno) registrarAprovacao(aluno.segmento, aluno.nome); // conta na "Administração de Vagas" automaticamente
     setAlunoEmFluxo(null);
     show(`Matrícula aprovada por ${autorizadoPor}.`);
   }

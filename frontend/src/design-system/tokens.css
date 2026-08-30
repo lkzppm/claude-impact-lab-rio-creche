@@ -232,6 +232,11 @@ textarea {
   border-color: var(--ok);
   color: var(--ok);
 }
+.alert-warn {
+  background: var(--warn-soft);
+  border-color: var(--warn);
+  color: var(--warn);
+}
 
 /* definition list */
 .dl {

@@ -1,11 +1,13 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_db
 from app.engine.scoring import ItemRegua, pontuar
-from app.models import Inscricao, Opcao, Pergunta, Unidade
-from app.schemas import InscricaoDetalhe, InscricaoOut, OpcaoOut, Pagina, RespostaOut
+from app.models import Evento, Inscricao, Opcao, Pergunta, Resposta, Unidade
+from app.schemas import InscricaoDetalhe, InscricaoOut, OpcaoOut, Pagina, RespostaConfirmarIn, RespostaOut
 
 router = APIRouter(prefix="/inscricoes", tags=["inscricoes"])
 
@@ -51,6 +53,31 @@ def detalhe(inscricao_id: int, db: Session = Depends(get_db)):
                      pontuacao=regua[r.ich_perg_id].pontuacao if r.ich_perg_id in regua else None) for r in i.respostas),
         key=lambda r: (regua[r.ich_perg_id].ordem or 0) if r.ich_perg_id in regua else 999)
     return out
+
+
+@router.patch("/{inscricao_id}/respostas/{ich_perg_id}", response_model=RespostaOut)
+def confirmar_resposta(inscricao_id: int, ich_perg_id: int, body: RespostaConfirmarIn, db: Session = Depends(get_db)):
+    """Verificação presencial de documento (painel da creche/EDI): a unidade confere o que o
+    responsável declarou na inscrição (`resposta.resposta`) contra o documento físico e marca
+    `confirmado`. Não muda `resposta.resposta` — só se o declarado é dado como comprovado ou não; a
+    pontuação em si é sempre `declarado × régua` (spec/03), então isto não recalcula nada aqui.
+
+    Todo inscrito com algum critério pontuado é chamado para esta verificação — quem não vem corre
+    o risco real: o critério continua contando na pontuação (não é zerado), mas nada aqui garante
+    que ele resistiria a uma auditoria; `confirmado = false` é o sinal de "declarado, não
+    comprovado" que o painel usa para as filas de atraso (`fluxoAtrasoDocumento.ts`)."""
+    r = db.get(Resposta, (inscricao_id, ich_perg_id))
+    if not r:
+        raise HTTPException(404, "resposta não encontrada para esta inscrição/pergunta")
+    de = r.confirmado
+    r.confirmado = body.confirmado
+    db.add(Evento(ocorrido_em=datetime.now(timezone.utc), tipo="resposta_confirmada", inscricao_id=inscricao_id,
+                  ator=body.ator or "painel-creche", payload={"ich_perg_id": ich_perg_id, "de": de, "para": body.confirmado}))
+    db.commit()
+    p = db.get(Pergunta, (db.get(Inscricao, inscricao_id).ano, ich_perg_id))
+    db.refresh(r)
+    return RespostaOut(ich_perg_id=r.ich_perg_id, texto=p.texto if p else None, resposta=r.resposta,
+                       confirmado=r.confirmado, pontuacao=p.pontuacao if p else None)
 
 
 # --- Comprovação via bases oficiais (provedores em app/integracoes) --------------------------------
