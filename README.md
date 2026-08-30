@@ -6,6 +6,56 @@ melhorar o processo de **Inscrição Creche** (`matricula.rio`) em três eixos �
 
 📅 30/08/2026 · VTEX, Botafogo · Rio de Janeiro
 
+**🔗 Aplicação publicada:** <https://creche-frontend-three.vercel.app/> · **🎥 Vídeo demo (60 s):** [`video/demo.mp4`](video/demo.mp4)
+
+---
+
+## A entrega
+
+### Equipe
+
+**Nome da equipe:** _(a definir)_ · **Grupo nº** _(a definir)_
+
+| Membro | GitHub |
+|---|---|
+| Lucas Pacheco | [@lkzppm](https://github.com/lkzppm) |
+| Fausto Santos | — |
+
+### Resumo
+
+A inscrição em creche do Rio trata **oferta e demanda como duas listas independentes**, reconciliadas por
+processo manual e sequencial: a família escolhe até 5 creches, a equipe do polo confere linha a linha, e a
+vaga que a família recusa volta para o fim de um processo humano. O resultado medido na base 2021–2025 é
+um vazamento de **milhares de crianças por ano com vaga ofertada e sem matrícula efetivada**
+([`spec/09`](spec/09-achados-dos-dados.md)).
+
+Construímos o que falta no meio: um **motor de classificação e convocação que roda 24/7**. Ele aplica a
+pontuação da **Res. SME 542/2025 sem alterar um único peso** — a norma é norma —, resolve o encontro entre
+criança e vaga com **aceitação diferida (Deferred Acceptance)** de forma determinística e auditável,
+reclassifica sozinho quando a entrada muda e **repassa cada vaga liberada ao próximo da fila** sem esperar
+uma nova rodada manual. Em cima dele, dois painéis que um servidor não técnico opera sem treino — CRE/polo
+e Nível Central — com **carimbo de tempo em cada evento** (o que hoje não existe), mapa do território com
+drill-down e um **assistente Claude só de leitura** para perguntar ao painel em português.
+
+Nada aqui pede app novo, mudança de norma ou sistema paralelo: encaixa no `matricula.rio`, no WhatsApp e
+nos canais que a prefeitura já opera.
+
+### Links
+
+| | |
+|---|---|
+| 🔗 **Aplicação (frontend)** | <https://creche-frontend-three.vercel.app/> |
+| 🎥 **Vídeo demo (60 s)** | [`video/demo.mp4`](video/demo.mp4) |
+| 📦 **Repositório** | <https://github.com/lkzppm/claude-impact-lab-rio-creche> |
+| 📄 **Produto (PRD)** | [`spec/PRD.md`](spec/PRD.md) |
+| 🏗️ **Contrato técnico** | [`spec/11-baseline-tecnico.md`](spec/11-baseline-tecnico.md) |
+| 🔍 **Auditoria das bases** | [`out/auditoria-dados.md`](out/auditoria-dados.md) |
+
+> **Honestidade sobre o que está publicado:** o link acima serve o **frontend**. O backend, o Postgres e a
+> mensageria **não estão publicados** — o `render.yaml` está pronto, mas subir banco e carga das bases da
+> SME não cabia no tempo do evento. Por isso o **vídeo de 60 s é a demonstração oficial** do sistema
+> completo, e a stack inteira sobe localmente com um comando (`make up`, abaixo).
+
 ---
 
 ## Comece pela spec
@@ -64,7 +114,9 @@ make test                    # invariantes do motor
 |---|---|
 | [`backend/`](backend/) | FastAPI · motor DA em `app/engine` · rotina contínua do motor em `app/motor.py` · ETL (DuckDB) em `app/etl` · comprovação via APIs de governo em `app/integracoes` · assistente de consulta em `app/agente` |
 | [`frontend/`](frontend/) | React + Vite + TS, design system espelhando o `matricula.rio` |
+| [`mensageria/`](mensageria/) | FastAPI à parte: WhatsApp/e-mail/SMS com catálogo versionado, idempotência e log sem conteúdo (padrão `mock`) |
 | [`db/`](db/) | schema SQL (log de eventos append-only; log de acesso do assistente) |
+| [`video/`](video/) | vídeo demo de 60 s (`demo.mp4`) — ver [`video/README.md`](video/README.md) |
 
 ### Como o Claude atua dentro da aplicação
 
