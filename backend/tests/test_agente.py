@@ -391,3 +391,64 @@ def test_rota_responde_com_cliente_falso(cliente):
                                      "resumo": "busca de unidades · 4ª CRE · “EDI” · 2 encontradas", "erro": None}]
     r = c.post("/api/v1/chat", json={"area": "sme", "mensagens": [{"role": "assistant", "content": "só eu"}]})
     assert r.status_code == 422
+
+
+# ----------------------------------------------------------------------------- seções do painel ("me leva até lá")
+
+def test_secoes_no_prompt_por_area():
+    from app.agente import prompts, secoes
+    cre = prompts.sistema(CRE4)[0]["text"]
+    sme = prompts.sistema(SME)[0]["text"]
+    assert "apontar_no_painel" in cre and "`cre.para_hoje`" in cre and "`sme.tabela_cre`" not in cre
+    assert "`sme.tabela_cre`" in sme and "`cre.para_hoje`" not in sme
+    assert {s.area for s in secoes.SECOES} == {"cre", "sme"}
+    assert len({s.id for s in secoes.SECOES}) == len(secoes.SECOES)
+    assert "apontar_no_painel" in fer.catalogo(CRE4) and "apontar_no_painel" in fer.catalogo(SME)
+
+
+def test_apontar_no_painel_valida_secao_fila_e_unidade(db):
+    r = fer.executar(db, CRE4, "apontar_no_painel", {"secao": "cre.para_hoje", "resumo": "1 vencida."})
+    assert r.dados["ok"] and r.dados["rota"] == "/cre" and r.dados["titulo"] == "Para hoje"
+    assert r.resumo == "Para hoje · Painel da CRE"
+    r = fer.executar(db, CRE4, "apontar_no_painel", {"secao": "cre.convocacoes", "fila": "vencidas", "unidade": "U1", "resumo": "x"})
+    assert r.dados["rota"] == "/cre/convocacoes?fila=vencidas&unidade=U1"
+    r = fer.executar(db, CRE4, "apontar_no_painel", {"secao": "cre.unidade_fila", "unidade": "U2", "resumo": "x"})
+    assert r.dados["rota"] == "/cre/unidades/U2"
+    # seção de outra área, fila inválida, unidade de outra CRE, sem resumo, sem unidade: erro para o modelo, sem exceção
+    erro = lambda esc, args: fer.executar(db, esc, "apontar_no_painel", args).dados["erro"]  # noqa: E731
+    assert "seção desconhecida" in erro(CRE4, {"secao": "sme.tabela_cre", "resumo": "x"})
+    assert "fila desconhecida" in erro(CRE4, {"secao": "cre.convocacoes", "fila": "atrasadas", "resumo": "x"})
+    assert "não pertence" in erro(CRE4, {"secao": "cre.unidade_fila", "unidade": "U3", "resumo": "x"})
+    assert "resumo" in erro(CRE4, {"secao": "cre.para_hoje"})
+    assert "precisa do código" in erro(CRE4, {"secao": "cre.unidade_fila", "resumo": "x"})
+    assert "não aceita fila" in erro(SME, {"secao": "sme.tabela_cre", "fila": "vencidas", "resumo": "x"})
+    assert "não encontrada" in erro(SME, {"secao": "sme.unidade_capacidade", "unidade": "U9", "resumo": "x"})
+
+
+def test_rota_devolve_navegacao_quando_o_modelo_aponta(cliente):
+    from app.routers import chat
+    c, mp = cliente
+    chamar = ChamadorFalso(
+        resposta([uso_de_ferramenta("buscar_unidades", {"q": "EDI"}, "a")], "tool_use"),
+        resposta([uso_de_ferramenta("apontar_no_painel", {"secao": "cre.para_hoje", "resumo": "Há 1 convocação vencida na 4ª CRE."}, "b")],
+                 "tool_use"),
+        resposta([texto("Isso já está no painel, no card Para hoje. Quer que eu te leve até lá?")]),
+    )
+    mp.setattr(chat, "chamador", lambda: chamar)
+    r = c.post("/api/v1/chat", json={"area": "cre", "cre": "4", "mensagens": [{"role": "user", "content": "quantas venceram?"}]})
+    assert r.status_code == 200, r.text
+    corpo = r.json()
+    assert corpo["navegacao"] == {"secao": "cre.para_hoje", "pagina": "Painel da CRE", "titulo": "Para hoje", "rota": "/cre",
+                                  "resumo": "Há 1 convocação vencida na 4ª CRE."}
+    assert [f["nome"] for f in corpo["ferramentas"]] == ["buscar_unidades", "apontar_no_painel"]
+    # a ferramenta devolve ao modelo a instrução de perguntar, e o resultado não é erro
+    assert chamar.chamadas[2]["messages"][-1]["content"][0]["is_error"] is False
+
+    # o modelo apontou uma seção de outra área → erro na ferramenta, sem navegação, resposta normal
+    chamar2 = ChamadorFalso(
+        resposta([uso_de_ferramenta("apontar_no_painel", {"secao": "sme.tabela_cre", "resumo": "x"}, "c")], "tool_use"),
+        resposta([texto("Na 4ª CRE há 1 vencida.")]),
+    )
+    mp.setattr(chat, "chamador", lambda: chamar2)
+    r = c.post("/api/v1/chat", json={"area": "cre", "cre": "4", "mensagens": [{"role": "user", "content": "quantas venceram?"}]})
+    assert r.status_code == 200 and r.json()["navegacao"] is None and r.json()["ferramentas"][0]["erro"]

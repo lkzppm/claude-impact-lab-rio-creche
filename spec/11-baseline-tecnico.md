@@ -178,6 +178,13 @@ Chat com ferramentas sobre o mesmo banco, para o servidor perguntar em portuguê
   assistente não altera nada; dados de criança são anonimizados e devolvidos agregados por padrão.
 - Log de acesso `consulta_agente` (append-only): hash da pergunta, ferramentas com argumentos, tokens — não
   guarda o texto da pergunta nem da resposta.
+- **"Isso já está no painel"** (`app/agente/secoes.py`): o prompt lista o que cada card da área mostra (id, página,
+  título). Quando a resposta já está num card, o assistente consulta os números, chama `apontar_no_painel`
+  (`secao`, `resumo`, opcionais `fila`/`unidade`, validados no servidor contra a área e a CRE) e, no texto, diz
+  que o dado está no painel e pergunta se leva o servidor até lá. `POST /chat` devolve `navegacao {secao, pagina,
+  titulo, rota, resumo}`; o frontend mostra "Sim, me leva até lá" / "Não, me responde aqui" — aceitou: navega,
+  espera o card (`data-secao`, `<Card secao=…>`), rola com animação, destaca por 3 s e escreve o resumo no chat;
+  recusou: só o resumo. Se nenhum card responde, o assistente responde direto, sem oferta.
 - Configuração: `ANTHROPIC_API_KEY`, `CHAT_MODEL` (padrão `claude-opus-5`), `CHAT_MAX_TOOLS` (8). Sem chave, a
   rota responde 503 e o painel segue normal.
 

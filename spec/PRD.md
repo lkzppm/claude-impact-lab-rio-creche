@@ -88,7 +88,8 @@ Duas peças, uma só base de dados:
 - Nenhum LLM decide alocação. O único LLM da aplicação é o **assistente de consulta** dos painéis da CRE e do
   Nível Central ("Perguntar ao painel"): ele só lê o banco por ferramentas, mostra o que consultou, não
   registra contato, não confirma matrícula, não muda status nem pontuação — e é restrito, no servidor, ao
-  território de quem pergunta. A explicação do resultado à família continua sendo texto templado do log de
+  território de quem pergunta. Quando a resposta já está num card, ele não repete o painel: avisa que o dado está
+  lá e oferece levar o servidor até o card (a página rola e destaca), com o resumo no chat. A explicação do resultado à família continua sendo texto templado do log de
   decisão.
 
 ## 4. Usuários — três painéis, uma base
@@ -191,7 +192,8 @@ credenciais, planejamento por coorte (SINASC × capacidade). Todos descritos em
 | Ferramentas do polo (`fila=`, próxima ação, convocar próximo da fila, fila da unidade, capacidade informada, expirar em lote, várias reservas, tempo até desfecho) | pronto — cobertas pelo teste de integração e validadas sobre 2025 Berçário Integral |
 | Seed de demonstração (`make seed`) | pronto — 18.967 convocações de 11.788 crianças em 5 dias simulados, 37 s |
 | `docker-compose` (db + backend + frontend) | pronto — `make up` sobe os três; validado em 30/08 12h40 |
-| Assistente "Perguntar ao painel" (`backend/app/agente/`, `POST /chat`, `frontend/src/components/ChatAssistente.tsx`) | pronto — 12 ferramentas só leitura, escopo por CRE no servidor, log de acesso `consulta_agente`; testes sem rede com cliente falso |
+| Assistente "Perguntar ao painel" (`backend/app/agente/`, `POST /chat`, `frontend/src/components/ChatAssistente.tsx`) | pronto — 13 ferramentas só leitura, escopo por CRE no servidor, log de acesso `consulta_agente`; testes sem rede com cliente falso |
+| "Isso já está no painel — quer que eu te leve até lá?" (`app/agente/secoes.py`, `navegacao` em `POST /chat`, `data-secao` nos cards, `components/irAteSecao.ts`) | pronto — 24 seções mapeadas (11 na CRE, 13 no Nível Central); aceitou: navega, rola, destaca e resume no chat; recusou: só o resumo |
 
 ### Primeiro resultado sobre dados reais (2025, Berçário Integral, capacidade estimada)
 

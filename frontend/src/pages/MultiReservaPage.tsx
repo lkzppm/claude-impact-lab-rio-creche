@@ -37,7 +37,7 @@ export default function MultiReservaPage() {
       <div className="filters">
         <UnidadeSelect value={unidade} onChange={setUnidade} cre={cre} />
       </div>
-      <Card flush>
+      <Card flush secao="cre.multireserva">
         {q.isLoading && <Spinner label="Procurando crianças com mais de uma reserva…" />}
         {q.isError && (
           <div style={{ padding: 16 }}>

@@ -68,6 +68,7 @@ export default function MotorCard({ compacto = false, base = "" }: { compacto?: 
   return (
     <Card
       title="Motor de classificação"
+      secao={base === "/sme" ? "sme.motor" : "cre.motor"}
       actions={
         <span className="row" style={{ gap: 8, alignItems: "center" }}>
           {estado}

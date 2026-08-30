@@ -671,9 +671,20 @@ export interface ChatFerramenta {
   erro?: string | null;
 }
 
+/** a resposta já está num card do painel: o chat oferece levar o servidor até lá (rola e destaca) e mostra o resumo */
+export interface ChatNavegacao {
+  /** casa com o `data-secao` do card, ex.: "cre.para_hoje" */
+  secao: string;
+  pagina: string;
+  titulo: string;
+  rota: string;
+  resumo: string;
+}
+
 export interface ChatResposta {
   resposta: string;
   ferramentas: ChatFerramenta[];
+  navegacao?: ChatNavegacao | null;
   modelo: string;
   tokens_entrada?: number;
   tokens_saida?: number;

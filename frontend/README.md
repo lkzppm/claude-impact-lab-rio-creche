@@ -23,8 +23,9 @@ docker run -p 8080:80 creche-frontend
 ## Estrutura
 
 ```
-src/design-system/   tokens.css + componentes (AppHeader com CRE e "Registrando como", Button, Card, StatTile clicável,
-                     StatusPill, DataTable, ConfirmDialog com canal, PrazoBar, rótulos de evento/canal…)
+src/design-system/   tokens.css + componentes (AppHeader com CRE e "Registrando como", Button, Card (com `secao=` para o
+                     assistente), StatTile clicável, StatusPill, DataTable, ConfirmDialog com canal, PrazoBar, viz…)
+src/components/      ChatAssistente ("Perguntar ao painel"), irAteSecao.ts (espera o card, rola e destaca), Filters, useToast
 src/areas/           AreaContext: área atual, CRE escolhida e quem registra (localStorage)
 src/api/             client.ts + types.ts (todas as rotas do backend)
 src/pages/           Família (código → inscrição, responder à reserva)
@@ -33,6 +34,16 @@ src/pages/           Família (código → inscrição, responder à reserva)
                           capacidade informada), ficha da inscrição
                      SME: Rede por CRE, Classificação (rodadas e comparação 1 × 3 reservas), Inscrições, Unidades, Régua
 ```
+
+## Assistente — "Isso já está no painel"
+
+Cada card que o assistente conhece leva um `data-secao` (`<Card secao="cre.para_hoje">`; a lista está em
+`backend/app/agente/secoes.py`). Quando `POST /chat` devolve `navegacao`, o balão do assistente ganha dois botões:
+**Sim, me leva até lá** navega para a rota, espera o card aparecer (`MutationObserver`, até 10 s — a página pode
+ainda estar buscando dados), rola com `scrollIntoView` suave, aplica `.secao-destaque` (anel azul pulsando 3 s;
+sem animação com `prefers-reduced-motion`) e escreve o resumo no chat; **Não, me responde aqui** só escreve o
+resumo. A escolha vira um balão do usuário, então o modelo sabe o que foi decidido. Com o painel aberto em tela
+larga, o conteúdo encosta à esquerda dele (`body.chat-aberto`) para o card destacado ficar inteiro à vista.
 
 ## Painel da CRE — como foi desenhado
 

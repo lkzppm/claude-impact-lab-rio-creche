@@ -66,11 +66,11 @@ export default function SmeRedePage() {
       {resumo.isError && <ErrorBox error={resumo.error} />}
       {r && (
         <>
-          <Card title="Há quanto tempo as convocações estão paradas">
+          <Card title="Há quanto tempo as convocações estão paradas" secao="sme.tempo_paradas">
             <Hero value={fmtInt(abertas)} label="convocações abertas na rede" hint={r.atualizado_em ? `atualizado ${fmtDateTime(r.atualizado_em)}` : undefined} />
             <StackedBar segmentos={faixas} ariaLabel="Convocações abertas por tempo na situação atual" />
           </Card>
-          <Card title="Como as convocações estão terminando">
+          <Card title="Como as convocações estão terminando" secao="sme.desfechos">
             <p className="text-sm muted" style={{ marginBottom: 12 }}>
               Cada convocação gerada nesta rodada está em uma destas quatro situações. Verde é matrícula fechada; laranja e vermelho
               devolveram a vaga para a fila.
@@ -87,7 +87,7 @@ export default function SmeRedePage() {
             )}
           </Card>
 
-          <div className="grid-tiles">
+          <div className="grid-tiles" data-secao="sme.indicadores">
             <StatTile label="Vencidas" value={fmtInt(r.vencidas ?? 0)} tone="danger" hint="prazo passou sem resposta" share={abertas ? (r.vencidas ?? 0) / abertas : 0} />
             <StatTile label="Sem aviso" value={fmtInt(r.sem_aviso ?? r.sem_contato)} tone="warn" hint="família ainda não foi avisada" share={abertas ? (r.sem_aviso ?? r.sem_contato) / abertas : 0} />
             <StatTile label="Aguardando a família" value={fmtInt(r.aguardando_familia ?? 0)} tone="info" hint="avisada, ainda não respondeu" share={abertas ? (r.aguardando_familia ?? 0) / abertas : 0} />
@@ -103,7 +103,7 @@ export default function SmeRedePage() {
         </>
       )}
 
-      <Card title="Convocações por CRE">
+      <Card title="Convocações por CRE" secao="sme.convocacoes_por_cre">
         {cres.isLoading && <Spinner label="Carregando CREs…" />}
         {cres.isError && <ErrorBox error={cres.error} />}
         {cres.data && cres.data.length === 0 && (
@@ -158,7 +158,7 @@ export default function SmeRedePage() {
 
       {linhas.length > 0 && (
         <div className="grid-2">
-          <Card title="Lista de espera por CRE">
+          <Card title="Lista de espera por CRE" secao="sme.lista_espera_cre">
             <p className="text-sm muted" style={{ marginBottom: 12 }}>
               Crianças sem vaga reservada, com posição na fila de alguma unidade da CRE.
             </p>
@@ -168,7 +168,7 @@ export default function SmeRedePage() {
                 .map((c) => ({ label: `${c.cre}ª CRE`, value: c.lista_espera, to: `/cre?cre=${encodeURIComponent(c.cre)}` }))}
             />
           </Card>
-          <Card title="Vagas e inscrições por CRE">
+          <Card title="Vagas e inscrições por CRE" secao="sme.vagas_inscricoes_cre">
             <p className="text-sm muted" style={{ marginBottom: 12 }}>
               Vagas estimadas (matrículas confirmadas no ano) contra inscrições de 1ª opção — onde a fila aperta.
             </p>
@@ -196,7 +196,7 @@ export default function SmeRedePage() {
         </div>
       )}
 
-      <Card title="Tabela por CRE" flush>
+      <Card title="Tabela por CRE" flush secao="sme.tabela_cre">
         {cres.data && cres.data.length > 0 && (
           <DataTable<PainelCre>
             rows={cres.data}
