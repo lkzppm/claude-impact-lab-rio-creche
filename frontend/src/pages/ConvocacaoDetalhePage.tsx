@@ -19,6 +19,7 @@ import {
   prazoTexto,
 } from "../design-system";
 import { useToast } from "../components/useToast";
+import { useBase } from "../areas/AreaContext";
 
 interface Acao {
   tipo: EventoTipo;
@@ -95,6 +96,7 @@ export default function ConvocacaoDetalhePage() {
   const id = Number(idParam);
   const qc = useQueryClient();
   const toast = useToast();
+  const base = useBase();
   const [acao, setAcao] = useState<Acao | null>(null);
 
   const q = useQuery({
@@ -118,7 +120,7 @@ export default function ConvocacaoDetalhePage() {
   });
 
   const c = q.data;
-  const crumbs = [{ label: "Painel", to: "/" }, { label: "Convocações", to: "/convocacoes" }, { label: `#${idParam}` }];
+  const crumbs = [{ label: "Painel", to: base || "/" }, { label: "Convocações", to: `${base}/convocacoes` }, { label: `#${idParam}` }];
 
   if (!Number.isFinite(id)) {
     return (
@@ -156,12 +158,12 @@ export default function ConvocacaoDetalhePage() {
                 <dd>{fmtDateTime(c.atualizada_em)}</dd>
                 <dt>Unidade</dt>
                 <dd>
-                  <Link to={`/unidades/${encodeURIComponent(c.unidade_codigo)}`}>{c.unidade_nome ?? c.unidade_codigo}</Link>
+                  <Link to={`${base}/unidades/${encodeURIComponent(c.unidade_codigo)}`}>{c.unidade_nome ?? c.unidade_codigo}</Link>
                   {c.cre && <span className="muted"> · {c.cre}ª CRE</span>}
                 </dd>
                 <dt>Inscrição</dt>
                 <dd>
-                  <Link to={`/inscricoes/${c.inscricao_id}`}>#{c.inscricao_id} · ver ficha</Link>
+                  <Link to={`${base}/inscricoes/${c.inscricao_id}`}>#{c.inscricao_id} · ver ficha</Link>
                 </dd>
               </dl>
             </Card>
@@ -173,7 +175,7 @@ export default function ConvocacaoDetalhePage() {
                 <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
                   {irmas.map((i) => (
                     <li key={i.id} className="row" style={{ justifyContent: "space-between" }}>
-                      <Link to={`/convocacoes/${i.id}`}>{i.unidade_nome ?? i.unidade_codigo ?? `convocação #${i.id}`}</Link>
+                      <Link to={`${base}/convocacoes/${i.id}`}>{i.unidade_nome ?? i.unidade_codigo ?? `convocação #${i.id}`}</Link>
                       <StatusPill status={i.status} />
                     </li>
                   ))}

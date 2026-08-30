@@ -20,6 +20,7 @@ import {
 import { UnidadeSelect } from "../components/Filters";
 import { ResumoRodada } from "./ClassificacaoPage";
 import { useToast } from "../components/useToast";
+import { useBase } from "../areas/AreaContext";
 
 const PAGE_SIZE = 50;
 
@@ -106,6 +107,7 @@ export default function RodadaDetalhePage() {
   const id = Number(idParam);
   const qc = useQueryClient();
   const toast = useToast();
+  const base = useBase();
 
   const [unidade, setUnidade] = useState("");
   const [status, setStatus] = useState("");
@@ -138,7 +140,7 @@ export default function RodadaDetalhePage() {
   const total = alocs.data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const r = rodada.data;
-  const crumbs = [{ label: "Painel", to: "/" }, { label: "Classificação", to: "/classificacao" }, { label: `#${idParam}` }];
+  const crumbs = [{ label: "Rede", to: base || "/" }, { label: "Classificação", to: `${base}/classificacao` }, { label: `#${idParam}` }];
 
   return (
     <Page
@@ -234,7 +236,7 @@ export default function RodadaDetalhePage() {
                   key: "ficha",
                   header: "",
                   render: (a) => (
-                    <Link to={`/inscricoes/${a.inscricao_id}`} className="text-sm" onClick={(e) => e.stopPropagation()}>
+                    <Link to={`${base}/inscricoes/${a.inscricao_id}`} className="text-sm" onClick={(e) => e.stopPropagation()}>
                       ficha
                     </Link>
                   ),

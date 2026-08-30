@@ -19,14 +19,15 @@ import {
   prazoTexto,
   toneByHoras,
 } from "../design-system";
-import { CreSelect, UnidadeSelect } from "../components/Filters";
+import { UnidadeSelect } from "../components/Filters";
+import { useArea } from "../areas/AreaContext";
 
 const PAGE_SIZE = 50;
 
 export default function ConvocacoesPage() {
   const [sp, setSp] = useSearchParams();
   const navigate = useNavigate();
-  const cre = sp.get("cre") ?? "";
+  const { cre, base } = useArea();
   const unidade = sp.get("unidade") ?? "";
   const status = sp.get("status") ?? "";
   const atrasadas = sp.get("atrasadas") === "1";
@@ -59,11 +60,10 @@ export default function ConvocacoesPage() {
 
   return (
     <Page
-      title="Convocações"
+      title={cre ? `Convocações · ${cre}ª CRE` : "Convocações"}
       subtitle="Cada linha é uma criança chamada para uma vaga. O tempo conta desde a última mudança de situação."
     >
       <div className="filters">
-        <CreSelect value={cre} onChange={(v) => { setParam("cre", v || null); setParam("unidade", null); }} />
         <UnidadeSelect value={unidade} onChange={(v) => setParam("unidade", v || null)} cre={cre} />
         <label className="field">
           <span>Situação</span>
@@ -93,7 +93,7 @@ export default function ConvocacoesPage() {
           <EmptyState title="Nenhuma convocação neste recorte">
             <p>
               Se ainda não há convocações, rode uma classificação e clique em "Gerar convocações" na aba{" "}
-              <Link to="/classificacao">Classificação</Link>.
+              <Link to="/sme/classificacao">Classificação</Link> (Nível Central).
             </p>
           </EmptyState>
         )}
@@ -101,7 +101,7 @@ export default function ConvocacoesPage() {
           <DataTable<Convocacao>
             rows={q.data.items}
             rowKey={(c) => c.id}
-            onRowClick={(c) => navigate(`/convocacoes/${c.id}`)}
+            onRowClick={(c) => navigate(`${base}/convocacoes/${c.id}`)}
             rowClass={(c) => {
               if (STATUS_ENCERRADOS.includes(c.status)) return undefined;
               const t = toneByHoras(c.horas_no_status);

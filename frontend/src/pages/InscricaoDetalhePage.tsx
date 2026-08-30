@@ -17,6 +17,7 @@ import {
   fmtInt,
 } from "../design-system";
 import { useToast } from "../components/useToast";
+import { useArea } from "../areas/AreaContext";
 
 const SITUACAO_TONE: Record<string, "ok" | "warn" | "danger" | "info" | "neutral"> = {
   Confirmado: "ok",
@@ -34,6 +35,7 @@ export default function InscricaoDetalhePage() {
   const id = Number(idParam);
   const qc = useQueryClient();
   const toast = useToast();
+  const { base, area } = useArea();
 
   const q = useQuery({ queryKey: ["inscricao", id], queryFn: () => getInscricao(id), enabled: Number.isFinite(id) });
   const comp = useQuery({ queryKey: ["comprovacoes", id], queryFn: () => getComprovacoes(id), enabled: Number.isFinite(id) });
@@ -51,7 +53,9 @@ export default function InscricaoDetalhePage() {
   });
 
   const i = q.data;
-  const crumbs = [{ label: "Painel", to: "/" }, { label: "Inscrições", to: "/inscricoes" }, { label: i?.aluno_anon ?? `#${idParam}` }];
+  const crumbs = area === "sme"
+    ? [{ label: "Rede", to: "/sme" }, { label: "Inscrições", to: "/sme/inscricoes" }, { label: i?.aluno_anon ?? `#${idParam}` }]
+    : [{ label: "Painel", to: base || "/" }, { label: i?.aluno_anon ?? `#${idParam}` }];
 
   if (!Number.isFinite(id)) {
     return (
@@ -119,7 +123,7 @@ export default function InscricaoDetalhePage() {
                     {
                       key: "unidade",
                       header: "Unidade",
-                      render: (o) => <Link to={`/unidades/${encodeURIComponent(o.unidade_codigo)}`}>{o.unidade_nome ?? o.unidade_codigo}</Link>,
+                      render: (o) => <Link to={`${base}/unidades/${encodeURIComponent(o.unidade_codigo)}`}>{o.unidade_nome ?? o.unidade_codigo}</Link>,
                     },
                     { key: "grup", header: "Grupamento", render: (o) => o.grupamento },
                     { key: "hor", header: "Turno", render: (o) => o.horario },

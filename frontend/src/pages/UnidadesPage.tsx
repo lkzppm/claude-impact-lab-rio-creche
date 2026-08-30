@@ -5,10 +5,13 @@ import { getUnidades } from "../api/client";
 import type { Unidade } from "../api/types";
 import { Page, Card, DataTable, Spinner, ErrorBox, EmptyState, fmtInt } from "../design-system";
 import { CreSelect } from "../components/Filters";
+import { useArea } from "../areas/AreaContext";
 
 export default function UnidadesPage() {
   const navigate = useNavigate();
-  const [cre, setCre] = useState("");
+  const { area, base, cre: creArea } = useArea();
+  const [creLocal, setCre] = useState("");
+  const cre = area === "cre" ? creArea : creLocal;
   const [q, setQ] = useState("");
 
   const query = useQuery({
@@ -17,13 +20,13 @@ export default function UnidadesPage() {
   });
 
   return (
-    <Page title="Unidades" subtitle="Creches e EDIs da rede, com endereço, CRE e capacidade estimada por grupamento e turno.">
+    <Page title={area === "cre" && cre ? `Unidades da ${cre}ª CRE` : "Unidades"} subtitle="Creches e EDIs da rede, com endereço, CRE e capacidade estimada por grupamento e turno.">
       <div className="filters">
         <label className="field" style={{ minWidth: 280 }}>
           <span>Buscar</span>
           <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="nome, bairro ou código" />
         </label>
-        <CreSelect value={cre} onChange={setCre} />
+        {area !== "cre" && <CreSelect value={cre} onChange={setCre} />}
       </div>
       <Card flush>
         {query.isLoading && <Spinner label="Carregando unidades…" />}
@@ -37,12 +40,12 @@ export default function UnidadesPage() {
           <DataTable<Unidade>
             rows={query.data}
             rowKey={(u) => u.codigo}
-            onRowClick={(u) => navigate(`/unidades/${encodeURIComponent(u.codigo)}`)}
+            onRowClick={(u) => navigate(`${base}/unidades/${encodeURIComponent(u.codigo)}`)}
             columns={[
               {
                 key: "nome",
                 header: "Unidade",
-                render: (u) => <Link to={`/unidades/${encodeURIComponent(u.codigo)}`}>{u.nome}</Link>,
+                render: (u) => <Link to={`${base}/unidades/${encodeURIComponent(u.codigo)}`}>{u.nome}</Link>,
                 sortValue: (u) => u.nome,
               },
               { key: "codigo", header: "Código", render: (u) => <code className="text-sm">{u.codigo}</code> },

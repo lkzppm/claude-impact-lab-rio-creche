@@ -5,6 +5,7 @@ import { getInscricoes, getProcessos } from "../api/client";
 import type { Inscricao } from "../api/types";
 import { Page, Card, DataTable, Spinner, ErrorBox, EmptyState, Button, fmtDateTime, fmtInt } from "../design-system";
 import { UnidadeSelect } from "../components/Filters";
+import { useBase } from "../areas/AreaContext";
 
 const PAGE_SIZE = 50;
 
@@ -23,6 +24,7 @@ const SITUACOES = [
 export default function InscricoesPage() {
   const [sp, setSp] = useSearchParams();
   const navigate = useNavigate();
+  const base = useBase();
   const ano = sp.get("ano") ?? "";
   const unidade = sp.get("unidade") ?? "";
   const situacao = sp.get("situacao") ?? "";
@@ -92,14 +94,14 @@ export default function InscricoesPage() {
           <DataTable<Inscricao>
             rows={q.data.items}
             rowKey={(i) => i.id}
-            onRowClick={(i) => navigate(`/inscricoes/${i.id}`)}
+            onRowClick={(i) => navigate(`${base}/inscricoes/${i.id}`)}
             columns={[
               {
                 key: "crianca",
                 header: "Criança",
                 render: (i) => (
                   <div>
-                    <Link to={`/inscricoes/${i.id}`}>
+                    <Link to={`${base}/inscricoes/${i.id}`}>
                       <strong>{i.aluno_anon}</strong>
                     </Link>
                     <div className="text-sm muted">

@@ -3,39 +3,78 @@ import { Link, NavLink } from "react-router-dom";
 import "./tokens.css";
 import "./components.css";
 
-/* ---------- AppHeader ---------- */
-const NAV = [
-  { to: "/", label: "Painel", end: true },
-  { to: "/convocacoes", label: "Convocações" },
-  { to: "/classificacao", label: "Classificação" },
-  { to: "/inscricoes", label: "Inscrições" },
-  { to: "/unidades", label: "Unidades" },
-];
+/* ---------- AppHeader — faixa branca com logos + barra azul (matricula.rio) ---------- */
+import { AREA_LABEL, useArea } from "../areas/AreaContext";
+import { CRES } from "../components/Filters";
+
+const NAV_POR_AREA: Record<string, { to: string; label: string; end?: boolean }[]> = {
+  familia: [
+    { to: "/familia", label: "Minha inscrição", end: true },
+  ],
+  cre: [
+    { to: "/cre", label: "Painel", end: true },
+    { to: "/cre/convocacoes", label: "Convocações" },
+    { to: "/cre/unidades", label: "Unidades" },
+  ],
+  sme: [
+    { to: "/sme", label: "Rede", end: true },
+    { to: "/sme/classificacao", label: "Classificação" },
+    { to: "/sme/inscricoes", label: "Inscrições" },
+    { to: "/sme/unidades", label: "Unidades" },
+    { to: "/sme/regua", label: "Régua" },
+  ],
+};
 
 export function AppHeader() {
+  const { area, cre, setCre } = useArea();
+  const nav = area ? NAV_POR_AREA[area] : [];
   return (
     <header className="app-header">
-      <div className="container">
-        <Link to="/" className="app-brand" aria-label="Inscrição Creche · SME-Rio">
-          <span className="app-brand-mark" aria-hidden="true">
-            IC
-          </span>
-          <span>
-            Inscrição Creche
-            <small>SME-Rio · Retaguarda</small>
-          </span>
-        </Link>
-        <nav aria-label="Principal">
-          <ul className="app-nav">
-            {NAV.map((n) => (
-              <li key={n.to}>
-                <NavLink to={n.to} end={n.end}>
-                  {n.label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
+      <div className="app-logos">
+        <div className="container">
+          <Link to="/" className="app-logo" aria-label="Prefeitura do Rio · Educação — início">
+            <img src="/logo-prefeitura-rio-educacao.png" alt="Prefeitura do Rio · Educação" className="app-logo-pref" />
+          </Link>
+          <img src="/logo-matricula-carioca.png" alt="Matrícula Carioca" className="app-logo-mat" />
+        </div>
+      </div>
+      <div className="app-bar">
+        <div className="container">
+          {area ? (
+            <>
+              <span className="app-area">{AREA_LABEL[area]}</span>
+              <nav aria-label="Principal">
+                <ul className="app-nav">
+                  {nav.map((n) => (
+                    <li key={n.to}>
+                      <NavLink to={n.to} end={n.end}>
+                        {n.label}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+              {area === "cre" && (
+                <label className="app-cre">
+                  <span>CRE</span>
+                  <select value={cre} onChange={(e) => setCre(e.target.value)} aria-label="Escolher a CRE">
+                    <option value="">Escolha…</option>
+                    {CRES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}ª CRE
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <Link to="/" className="app-trocar">
+                Trocar de perfil
+              </Link>
+            </>
+          ) : (
+            <span className="app-area">Inscrição Creche · SME-Rio</span>
+          )}
+        </div>
       </div>
     </header>
   );

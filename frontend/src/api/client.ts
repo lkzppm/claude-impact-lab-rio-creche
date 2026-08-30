@@ -120,3 +120,13 @@ export const registrarEvento = (id: number, body: NovoEvento) =>
 export const getPainelResumo = (params?: { cre?: string; unidade?: string }) =>
   get<PainelResumo>("/painel/resumo", params);
 export const getPainelUnidades = (params?: { cre?: string }) => get<PainelUnidade[]>("/painel/unidades", params);
+
+/* ---------- família ---------- */
+import type { FamiliaInscricao, FamiliaResposta, PainelCre } from "./types";
+export const getFamiliaInscricao = (codigo: string, ano?: number) =>
+  get<FamiliaInscricao>("/familia/inscricao", { codigo, ano });
+export const responderConvocacao = (id: number, resposta: FamiliaResposta) =>
+  post<{ status: string; evento: Evento }>(`/familia/convocacoes/${id}/responder`, { resposta });
+
+/* ---------- rede (Nível Central) ---------- */
+export const getPainelCres = (params?: { ano?: number }) => get<PainelCre[]>("/painel/cres", params);

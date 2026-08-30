@@ -15,10 +15,11 @@ import {
   fmtDateTime,
   Pill,
 } from "../design-system";
-import { CreSelect, UnidadeSelect } from "../components/Filters";
+import { UnidadeSelect } from "../components/Filters";
+import { useArea } from "../areas/AreaContext";
 
 export default function PainelPage() {
-  const [cre, setCre] = useState("");
+  const { cre, base } = useArea();
   const [unidade, setUnidade] = useState("");
 
   const resumo = useQuery({
@@ -37,11 +38,15 @@ export default function PainelPage() {
 
   return (
     <Page
-      title="Painel da CRE / polo"
+      title={cre ? `Painel da ${cre}ª CRE` : "Painel da CRE / polo"}
       subtitle="Cada vaga selecionada tem um relógio. Aqui você vê, por unidade e por criança, o que está parado e o que precisa de ação hoje."
     >
+      {!cre && (
+        <div className="alert alert-info">
+          <strong>Escolha a sua CRE</strong> no menu azul acima para ver só o seu território. Sem CRE escolhida, o painel mostra a rede inteira.
+        </div>
+      )}
       <div className="filters">
-        <CreSelect value={cre} onChange={(v) => { setCre(v); setUnidade(""); }} />
         <UnidadeSelect value={unidade} onChange={setUnidade} cre={cre} />
         {r?.atualizado_em && (
           <span className="text-sm muted" style={{ alignSelf: "center" }}>
@@ -93,7 +98,7 @@ export default function PainelPage() {
         )}
         {unidades.data && linhas.length === 0 && (
           <EmptyState title="Nenhuma unidade neste recorte">
-            <p>Troque o filtro de CRE ou de unidade.</p>
+            <p>Troque a CRE no menu ou o filtro de unidade.</p>
           </EmptyState>
         )}
         {unidades.data && linhas.length > 0 && (
@@ -107,7 +112,7 @@ export default function PainelPage() {
                 header: "Unidade",
                 render: (u) => (
                   <div>
-                    <Link to={`/unidades/${encodeURIComponent(u.unidade_codigo)}`}>{u.unidade_nome}</Link>
+                    <Link to={`${base}/unidades/${encodeURIComponent(u.unidade_codigo)}`}>{u.unidade_nome}</Link>
                     {u.cre && <div className="text-sm muted">{u.cre}ª CRE</div>}
                   </div>
                 ),
@@ -129,7 +134,7 @@ export default function PainelPage() {
                 key: "acao",
                 header: "",
                 render: (u) => (
-                  <Link to={`/convocacoes?unidade=${encodeURIComponent(u.unidade_codigo)}`} className="text-sm">
+                  <Link to={`${base}/convocacoes?unidade=${encodeURIComponent(u.unidade_codigo)}`} className="text-sm">
                     ver convocações
                   </Link>
                 ),

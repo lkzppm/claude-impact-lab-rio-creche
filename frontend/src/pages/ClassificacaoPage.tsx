@@ -18,6 +18,7 @@ import {
 } from "../design-system";
 import { GRUPAMENTOS, HORARIOS } from "../components/Filters";
 import { useToast } from "../components/useToast";
+import { useBase } from "../areas/AreaContext";
 
 export function ResumoRodada({ r }: { r: Rodada }) {
   const s = r.resumo;
@@ -84,9 +85,27 @@ export default function ClassificacaoPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const toast = useToast();
+  const base = useBase();
 
   const processos = useQuery({ queryKey: ["processos"], queryFn: getProcessos });
   const rodadas = useQuery({ queryKey: ["rodadas"], queryFn: getRodadas });
+
+  // rodadas do mesmo ano/grupamento/turno com regimes diferentes (vagas_presas) — para comparar lado a lado
+  const comparacoes = (() => {
+    const grupos = new Map<string, Rodada[]>();
+    for (const r of rodadas.data ?? []) {
+      if (r.tipo !== "inicial") continue;
+      const k = `${r.ano}|${r.parametros?.grupamento ?? "todos"}|${r.parametros?.horario ?? "todos"}`;
+      grupos.set(k, [...(grupos.get(k) ?? []), r]);
+    }
+    return [...grupos.entries()]
+      .map(([k, rs]) => {
+        const porRegime = new Map<number, Rodada>();
+        for (const r of rs) porRegime.set(r.parametros?.vagas_presas ?? 1, r); // fica a mais recente de cada regime
+        return { chave: k, rodadas: [...porRegime.values()].sort((a, b) => (a.parametros?.vagas_presas ?? 1) - (b.parametros?.vagas_presas ?? 1)) };
+      })
+      .filter((g) => g.rodadas.length > 1);
+  })();
 
   const [ano, setAno] = useState<string>("");
   const [grupamento, setGrupamento] = useState("");
@@ -108,7 +127,7 @@ export default function ClassificacaoPage() {
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["rodadas"] });
       toast.show(`Classificação concluída: ${fmtInt(r.resumo?.n_alocadas ?? 0)} crianças com vaga.`);
-      navigate(`/classificacao/${r.id}`);
+      navigate(`${base}/classificacao/${r.id}`);
     },
     onError: (e) => toast.show(`A classificação falhou: ${e instanceof Error ? e.message : String(e)}`),
   });
@@ -186,6 +205,57 @@ export default function ClassificacaoPage() {
         </p>
       </Card>
 
+      {comparacoes.length > 0 && (
+        <Card title="Comparar regimes">
+          <p className="text-sm muted" style={{ marginBottom: 12 }}>
+            Mesmo ano, grupamento e turno, classificados com números diferentes de vagas reservadas por criança. Quanto mais
+            reservas simultâneas, menos crianças distintas recebem oferta na primeira rodada.
+          </p>
+          <div className="stack">
+            {comparacoes.map((g) => {
+              const [ano, grup, hor] = g.chave.split("|");
+              return (
+                <div key={g.chave}>
+                  <div className="stat-label" style={{ marginBottom: 6 }}>
+                    {ano} · {grup} · {hor}
+                  </div>
+                  <div className="table-wrap">
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>Regime</th>
+                          <th className="num">Crianças com oferta</th>
+                          <th className="num">Média de reservas</th>
+                          <th className="num">Lista de espera</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {g.rodadas.map((r) => (
+                          <tr key={r.id}>
+                            <td>
+                              <strong>{r.parametros?.vagas_presas ?? 1}</strong> vaga(s) reservada(s) + {r.parametros?.alternativas ?? 0} alternativa(s)
+                            </td>
+                            <td className="num">{fmtInt(r.resumo?.n_criancas_com_alguma_presa ?? r.resumo?.n_alocadas)}</td>
+                            <td className="num">{r.resumo?.media_presas_por_crianca?.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) ?? "—"}</td>
+                            <td className="num">{fmtInt(r.resumo?.n_lista_espera)}</td>
+                            <td>
+                              <Link to={`${base}/classificacao/${r.id}`} className="text-sm">
+                                ver #{r.id}
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
       <Card title="Classificações já feitas" flush>
         {rodadas.isLoading && <Spinner label="Carregando…" />}
         {rodadas.isError && (
@@ -203,7 +273,7 @@ export default function ClassificacaoPage() {
             rows={[...rodadas.data].sort((a, b) => b.id - a.id)}
             rowKey={(r) => r.id}
             columns={[
-              { key: "id", header: "#", render: (r) => <Link to={`/classificacao/${r.id}`}>#{r.id}</Link>, sortValue: (r) => r.id },
+              { key: "id", header: "#", render: (r) => <Link to={`${base}/classificacao/${r.id}`}>#{r.id}</Link>, sortValue: (r) => r.id },
               { key: "ano", header: "Ano", render: (r) => r.ano, sortValue: (r) => r.ano },
               {
                 key: "recorte",
@@ -229,7 +299,7 @@ export default function ClassificacaoPage() {
                 header: "",
                 render: (r) => (
                   <span className="row">
-                    <Link to={`/classificacao/${r.id}`} className="text-sm">
+                    <Link to={`${base}/classificacao/${r.id}`} className="text-sm">
                       ver alocações
                     </Link>
                     <Button variant="secondary" size="sm" onClick={() => gerar.mutate(r.id)} disabled={gerar.isPending}>

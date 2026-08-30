@@ -281,3 +281,76 @@ export interface Comprovacao {
   protocolo?: string | null;
   consultado_em?: string | null;
 }
+
+/* ---------- visão da família ---------- */
+export type FamiliaSituacao =
+  | "reservas_abertas"
+  | "matricula_confirmada"
+  | "lista_espera"
+  | "sem_opcao_viavel"
+  | "aguardando_classificacao";
+
+export interface FamiliaCriterio {
+  ich_perg_id: number;
+  texto: string;
+  pontos: number;
+  declarado: boolean;
+  comprovado: ComprovacaoResultado | null;
+}
+
+export interface FamiliaOpcao {
+  ordem: number;
+  unidade_codigo: string;
+  unidade_nome?: string | null;
+  bairro?: string | null;
+  situacao_origem?: string | null;
+  resultado: "reservada" | "fila" | "sem_vaga" | null;
+  posicao?: number | null;
+}
+
+export interface FamiliaConvocacao {
+  id: number;
+  unidade_codigo: string;
+  unidade_nome?: string | null;
+  status: string;
+  prazo_fim?: string | null;
+  horas_restantes?: number | null;
+  pode_responder: boolean;
+}
+
+export interface FamiliaInscricao {
+  inscricao: {
+    id: number;
+    ano: number;
+    aluno_anon?: string | null;
+    nascimento_anomes?: string | null;
+    grupamento?: string | null;
+    horario?: string | null;
+    bairro?: string | null;
+    pontuacao: number;
+    data_criacao?: string | null;
+  };
+  pontuacao: { total: number; maxima: number; criterios: FamiliaCriterio[] };
+  opcoes: FamiliaOpcao[];
+  rodada: { id: number; criada_em: string; tipo: string } | null;
+  explicacao: string | null;
+  convocacoes: FamiliaConvocacao[];
+  comprovacoes: Comprovacao[];
+  situacao_resumo: FamiliaSituacao;
+}
+
+export type FamiliaResposta = "confirmar" | "recusar";
+
+/* ---------- visão da rede (Nível Central) ---------- */
+export interface PainelCre {
+  cre: string;
+  unidades: number;
+  vagas: number;
+  inscricoes: number;
+  alocadas: number;
+  convocadas: number;
+  abertas: number;
+  confirmadas: number;
+  em_atraso: number;
+  lista_espera: number;
+}

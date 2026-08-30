@@ -3,12 +3,14 @@ import { Link, useParams } from "react-router-dom";
 import { getUnidade } from "../api/client";
 import type { Capacidade } from "../api/types";
 import { Page, Card, DataTable, Spinner, ErrorBox, EmptyState, Pill, LinkButton, fmtInt } from "../design-system";
+import { useArea } from "../areas/AreaContext";
 
 export default function UnidadeDetalhePage() {
   const { codigo = "" } = useParams();
+  const { base, area } = useArea();
   const q = useQuery({ queryKey: ["unidade", codigo], queryFn: () => getUnidade(codigo), enabled: !!codigo });
   const u = q.data;
-  const crumbs = [{ label: "Painel", to: "/" }, { label: "Unidades", to: "/unidades" }, { label: u?.nome ?? codigo }];
+  const crumbs = [{ label: area === "sme" ? "Rede" : "Painel", to: base || "/" }, { label: "Unidades", to: `${base}/unidades` }, { label: u?.nome ?? codigo }];
 
   const endereco = u ? [u.logradouro, u.numero].filter(Boolean).join(", ") : "";
 
@@ -19,7 +21,7 @@ export default function UnidadeDetalhePage() {
       crumbs={crumbs}
       actions={
         u && (
-          <LinkButton to={`/convocacoes?unidade=${encodeURIComponent(u.codigo)}`} variant="secondary">
+          <LinkButton to={`/cre/convocacoes?unidade=${encodeURIComponent(u.codigo)}`} variant="secondary">
             Ver convocações
           </LinkButton>
         )
@@ -84,7 +86,7 @@ export default function UnidadeDetalhePage() {
                 footer={
                   <span>
                     Capacidade "estimada" = nº de matrículas confirmadas naquele ano. A base da SME traz ocupação, não vagas ofertadas.{" "}
-                    <Link to="/classificacao">Rodar classificação</Link>
+                    <Link to="/sme/classificacao">Rodar classificação</Link>
                   </span>
                 }
               />
