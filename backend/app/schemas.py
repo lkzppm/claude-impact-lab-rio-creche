@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -353,3 +353,33 @@ class PainelCre(BaseModel):
     confirmadas: int
     em_atraso: int
     lista_espera: int
+
+
+# ----------------------------------------------------------------------------- assistente (chat com tools)
+
+class ChatMensagem(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=4000)
+
+
+class ChatPedido(BaseModel):
+    area: Literal["cre", "sme"]
+    cre: str | None = Field(default=None, max_length=16)       # obrigatória na área cre; ignorada na sme
+    ator: str | None = Field(default=None, max_length=120)     # identificação declarada, vai para o log de acesso
+    mensagens: list[ChatMensagem] = Field(min_length=1, max_length=60)
+
+
+class ChatFerramenta(BaseModel):
+    nome: str
+    argumentos: dict[str, Any]
+    resumo: str                            # linha exibida ao servidor: "resumo do painel · 4ª CRE"
+    erro: str | None = None
+
+
+class ChatResposta(BaseModel):
+    resposta: str
+    ferramentas: list[ChatFerramenta]
+    modelo: str
+    tokens_entrada: int = 0
+    tokens_saida: int = 0
+    log_id: int | None = None              # id em consulta_agente (None se o log falhou)

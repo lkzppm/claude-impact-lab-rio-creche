@@ -3,14 +3,15 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import classificacao, convocacoes, familia, health, inscricoes, painel, processos, unidades
+from app.routers import chat, classificacao, convocacoes, familia, health, inscricoes, painel, processos, unidades
 
 settings = get_settings()
 app = FastAPI(
     title="Inscrição Creche — baseline",
     version=settings.versao,
     description="Motor determinístico de classificação por criança (Deferred Acceptance) e painel de "
-                "convocação da CRE/polo com log de eventos append-only. Sem LLM no núcleo.",
+                "convocação da CRE/polo com log de eventos append-only. Sem LLM no núcleo; o assistente "
+                "(POST /chat) só lê o banco.",
 )
 app.add_middleware(
     CORSMiddleware, allow_origins=settings.cors_origins_list, allow_credentials=True,
@@ -18,6 +19,6 @@ app.add_middleware(
 )
 
 api = APIRouter(prefix="/api/v1")
-for r in (health, processos, unidades, inscricoes, classificacao, convocacoes, painel, familia):
+for r in (health, processos, unidades, inscricoes, classificacao, convocacoes, painel, familia, chat):
     api.include_router(r.router)
 app.include_router(api)

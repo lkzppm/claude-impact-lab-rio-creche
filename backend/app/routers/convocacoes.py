@@ -49,8 +49,9 @@ def _enriquecer(c: Convocacao, extra: dict) -> ConvocacaoOut:
         extra.get("nome"), extra.get("cre"), extra.get("aluno_anon"), extra.get("pontuacao"))
     out.n_tentativas = int(extra.get("n_tentativas") or 0)
     ref = c.atualizada_em if c.atualizada_em.tzinfo else c.atualizada_em.replace(tzinfo=timezone.utc)
+    prazo = c.prazo_fim if c.prazo_fim is None or c.prazo_fim.tzinfo else c.prazo_fim.replace(tzinfo=timezone.utc)
     out.horas_no_status = round((_agora() - ref).total_seconds() / 3600, 1)
-    out.atrasada = c.status in ABERTAS and c.prazo_fim is not None and c.prazo_fim < _agora()
+    out.atrasada = c.status in ABERTAS and prazo is not None and prazo < _agora()
     return out
 
 
