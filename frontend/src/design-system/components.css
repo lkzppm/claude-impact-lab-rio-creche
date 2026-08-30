@@ -1407,6 +1407,9 @@
   background: var(--mr-white);
   color: var(--mr-ink);
   font: inherit;
+  cursor: pointer;
+}
+
 /* ChatAssistente — "Perguntar ao painel" (áreas CRE e Nível Central) */
 .chat-fab {
   position: fixed;
@@ -2014,6 +2017,9 @@
 @media (max-width: 720px) {
   .para-hoje {
     grid-template-columns: 1fr;
+  }
+}
+
 .chat-sugestao:hover {
   background: var(--info-soft);
 }
