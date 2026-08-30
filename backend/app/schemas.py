@@ -122,6 +122,13 @@ class RespostaOut(BaseModel):
     pontuacao: int | None = None
 
 
+class RespostaConfirmarIn(BaseModel):
+    """Verificação presencial de documento (painel da creche/EDI): `confirmado = true` quando o
+    responsável comprovou fisicamente o que declarou na inscrição para este critério."""
+    confirmado: bool
+    ator: str | None = None
+
+
 class InscricaoOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int

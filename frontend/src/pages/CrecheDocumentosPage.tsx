@@ -11,7 +11,7 @@ import {
   emAtraso,
   verificados,
 } from "../creche/mock";
-import { ESTAGIO_ATRASO_LABEL, estagioAtraso } from "../creche/fluxoAtrasoDocumento";
+import { ESTAGIO_ATRASO_LABEL, estagioAtraso, escalonarAtraso } from "../creche/fluxoAtrasoDocumento";
 
 export default function CrecheDocumentosPage() {
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>(RESPONSAVEIS_EXEMPLO);
@@ -42,6 +42,11 @@ export default function CrecheDocumentosPage() {
     );
     setWizardAberto(false);
     show("Responsável verificado.");
+  }
+
+  async function aoAvisarAtraso(r: Responsavel) {
+    const resultado = await escalonarAtraso({ id: r.id, nome: r.nome, crianca: r.crianca, telefone: r.telefone, diasAtraso: r.diasAtraso ?? 0 });
+    show(resultado ? `Aviso de atraso enviado a ${r.nome} (WhatsApp).` : "Nenhum aviso pendente para este dia de atraso.");
   }
 
   return (
@@ -126,9 +131,14 @@ export default function CrecheDocumentosPage() {
                 key: "acao",
                 header: "",
                 render: (r) => (
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => abrirWizard(r.id)}>
-                    Verificar
-                  </button>
+                  <div className="row" style={{ gap: 6 }}>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => aoAvisarAtraso(r)}>
+                      Avisar agora
+                    </button>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => abrirWizard(r.id)}>
+                      Verificar
+                    </button>
+                  </div>
                 ),
               },
             ]}

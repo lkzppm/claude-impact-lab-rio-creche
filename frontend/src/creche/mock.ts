@@ -32,6 +32,14 @@ export interface VagasSegmento {
 /** Unidade real da base (4ª CRE, Ramos) — os números abaixo continuam sendo de demonstração. */
 export const UNIDADE_EXEMPLO = { codigo: "0430813", nome: "EDI Armando de Salles Oliveira" };
 
+/**
+ * `ano` e `horario` que a tabela `capacidade` exige (`db/init/001_schema.sql`) e este painel ainda
+ * não expõe como filtro — a unidade de exemplo só tem uma janela de horário. Em produção viriam do
+ * processo ativo e de uma escolha na tela.
+ */
+export const ANO_PROCESSO_EXEMPLO = 2026;
+export const HORARIO_EXEMPLO = "integral";
+
 export const VAGAS_POR_SEGMENTO: VagasSegmento[] = [
   { segmento: "bercario", vagas: 12 },
   { segmento: "maternal_1", vagas: 18 },
@@ -84,8 +92,14 @@ export interface Responsavel {
   statusVerificacao: StatusVerificacao;
   /** ISO date da visita agendada à unidade; null quando não há agendamento (ex.: já em atraso). */
   dataAgendada: string | null;
-  irmaoNaRede: boolean | null;
-  pequenosCariocas: boolean | null;
+  /**
+   * `inscricao.id` real (`GET /inscricoes/{id}`) — é de lá que o wizard de verificação
+   * (`VerificarResponsavelWizard`) busca as respostas declaradas (`irmão na rede`,
+   * `Pequenos Cariocas` e qualquer outro critério da régua do ano) para conferir contra o
+   * documento físico. `null`/ausente nos dados de exemplo abaixo porque ainda não há seed de
+   * inscrição real para uma unidade de creche/EDI — o wizard mostra "sem inscrição vinculada".
+   */
+  inscricaoId?: number | null;
   /** dias desde o vencimento do prazo de verificação (1 dia = 1 dia útil após o prazo). */
   diasAtraso?: number;
 }
@@ -97,13 +111,13 @@ const hojeMaisDias = (dias: number) => {
 };
 
 export const RESPONSAVEIS_EXEMPLO: Responsavel[] = [
-  { id: "r1", nome: "Ana Paula Souza", crianca: "Miguel Souza", segmento: "bercario", telefone: "(21) 99123-4501", statusVerificacao: "atrasado", dataAgendada: null, irmaoNaRede: null, pequenosCariocas: null, diasAtraso: 1 },
-  { id: "r2", nome: "Carlos Eduardo Lima", crianca: "Sofia Lima", segmento: "maternal_1", telefone: "(21) 99123-4502", statusVerificacao: "atrasado", dataAgendada: null, irmaoNaRede: null, pequenosCariocas: null, diasAtraso: 5 },
-  { id: "r3", nome: "Beatriz Nunes", crianca: "Davi Nunes", segmento: "maternal_2", telefone: "(21) 99123-4503", statusVerificacao: "pendente", dataAgendada: hojeMaisDias(1), irmaoNaRede: null, pequenosCariocas: null },
-  { id: "r4", nome: "Felipe Andrade", crianca: "Helena Andrade", segmento: "bercario", telefone: "(21) 99123-4504", statusVerificacao: "pendente", dataAgendada: hojeMaisDias(3), irmaoNaRede: null, pequenosCariocas: null },
-  { id: "r7", nome: "Marcela Vieira", crianca: "Pedro Vieira", segmento: "maternal_1", telefone: "(21) 99123-4507", statusVerificacao: "pendente", dataAgendada: hojeMaisDias(5), irmaoNaRede: null, pequenosCariocas: null },
-  { id: "r5", nome: "Juliana Ramos", crianca: "Théo Ramos", segmento: "maternal_1", telefone: "(21) 99123-4505", statusVerificacao: "verificado", dataAgendada: null, irmaoNaRede: true, pequenosCariocas: false },
-  { id: "r6", nome: "Rodrigo Farias", crianca: "Laura Farias", segmento: "maternal_2", telefone: "(21) 99123-4506", statusVerificacao: "verificado", dataAgendada: null, irmaoNaRede: false, pequenosCariocas: true },
+  { id: "r1", nome: "Ana Paula Souza", crianca: "Miguel Souza", segmento: "bercario", telefone: "(21) 99123-4501", statusVerificacao: "atrasado", dataAgendada: null, inscricaoId: null, diasAtraso: 1 },
+  { id: "r2", nome: "Carlos Eduardo Lima", crianca: "Sofia Lima", segmento: "maternal_1", telefone: "(21) 99123-4502", statusVerificacao: "atrasado", dataAgendada: null, inscricaoId: null, diasAtraso: 5 },
+  { id: "r3", nome: "Beatriz Nunes", crianca: "Davi Nunes", segmento: "maternal_2", telefone: "(21) 99123-4503", statusVerificacao: "pendente", dataAgendada: hojeMaisDias(1), inscricaoId: null },
+  { id: "r4", nome: "Felipe Andrade", crianca: "Helena Andrade", segmento: "bercario", telefone: "(21) 99123-4504", statusVerificacao: "pendente", dataAgendada: hojeMaisDias(3), inscricaoId: null },
+  { id: "r7", nome: "Marcela Vieira", crianca: "Pedro Vieira", segmento: "maternal_1", telefone: "(21) 99123-4507", statusVerificacao: "pendente", dataAgendada: hojeMaisDias(5), inscricaoId: null },
+  { id: "r5", nome: "Juliana Ramos", crianca: "Théo Ramos", segmento: "maternal_1", telefone: "(21) 99123-4505", statusVerificacao: "verificado", dataAgendada: null, inscricaoId: null },
+  { id: "r6", nome: "Rodrigo Farias", crianca: "Laura Farias", segmento: "maternal_2", telefone: "(21) 99123-4506", statusVerificacao: "verificado", dataAgendada: null, inscricaoId: null },
   // registros extras só para demonstrar a paginação (10 por página) nas três galerias
   ...Array.from({ length: 11 }, (_, i) => ({
     id: `r-atraso-extra-${i}`,
@@ -113,8 +127,7 @@ export const RESPONSAVEIS_EXEMPLO: Responsavel[] = [
     telefone: `(21) 9${8000 + i}-0000`,
     statusVerificacao: "atrasado" as StatusVerificacao,
     dataAgendada: null,
-    irmaoNaRede: null,
-    pequenosCariocas: null,
+    inscricaoId: null as number | null,
     diasAtraso: i % 5 === 0 ? 8 : 2 + i,
   })),
   ...Array.from({ length: 11 }, (_, i) => ({
@@ -125,8 +138,7 @@ export const RESPONSAVEIS_EXEMPLO: Responsavel[] = [
     telefone: `(21) 9${9000 + i}-0000`,
     statusVerificacao: "verificado" as StatusVerificacao,
     dataAgendada: null,
-    irmaoNaRede: i % 2 === 0,
-    pequenosCariocas: i % 2 !== 0,
+    inscricaoId: null as number | null,
   })),
 ];
 
@@ -363,4 +375,52 @@ export function ligarHoje(alunos: NovoAluno[]) {
       outrosContatos: a.outrosContatos,
       ultimoContato: a.ultimoContato ?? null,
     }));
+}
+
+/* ------------------------------- Fila de espera ------------------------------- */
+
+/** Quantos primeiros da fila a galeria mostra por padrão (fica atrás do botão "Ver fila de espera"). */
+export const TAMANHO_GALERIA_FILA = 10;
+
+export interface ItemFilaEspera {
+  /** posição na fila desta unidade — 1 é o próximo a ser convocado quando surgir vaga. */
+  posicao: number;
+  crianca: string;
+  responsavel: string;
+  segmento: Segmento;
+  telefone: string;
+  unidadeCodigo: string;
+}
+
+/**
+ * Fila de espera ao final do ciclo de cadastro: quem ficou em `alocacao.status = 'lista_espera'`
+ * depois da classificação, na ordem de `posicao_fila`.
+ *
+ * TODO backend: em produção vem de `GET /unidades/{codigo}/fila` (`FilaUnidade`,
+ * `backend/app/routers/unidades.py`) — a fila já existe no motor de classificação (CRE/polo); esta
+ * lista é o recorte por unidade que falta expor para o painel da creche/EDI (spec/11-baseline-tecnico.md
+ * só cobre os painéis Família, CRE e SME hoje).
+ */
+export const FILA_ESPERA_EXEMPLO: ItemFilaEspera[] = [
+  { posicao: 1, crianca: "Larissa Prado", responsavel: "Cristina Prado", segmento: "bercario", telefone: "(21) 99123-4601", unidadeCodigo: UNIDADE_EXEMPLO.codigo },
+  { posicao: 2, crianca: "Enzo Barbosa", responsavel: "Diego Barbosa", segmento: "maternal_1", telefone: "(21) 99123-4602", unidadeCodigo: UNIDADE_EXEMPLO.codigo },
+  { posicao: 3, crianca: "Maitê Correia", responsavel: "Renata Correia", segmento: "maternal_2", telefone: "(21) 99123-4603", unidadeCodigo: UNIDADE_EXEMPLO.codigo },
+  { posicao: 4, crianca: "Heitor Moraes", responsavel: "Paulo Moraes", segmento: "bercario", telefone: "(21) 99123-4604", unidadeCodigo: UNIDADE_EXEMPLO.codigo },
+  { posicao: 5, crianca: "Alice Teixeira", responsavel: "Fernanda Teixeira", segmento: "maternal_1", telefone: "(21) 99123-4605", unidadeCodigo: UNIDADE_EXEMPLO.codigo },
+  { posicao: 6, crianca: "Bento Cardoso", responsavel: "Lucas Cardoso", segmento: "maternal_2", telefone: "(21) 99123-4606", unidadeCodigo: UNIDADE_EXEMPLO.codigo },
+  { posicao: 7, crianca: "Cecília Ramos", responsavel: "Vanessa Ramos", segmento: "bercario", telefone: "(21) 99123-4607", unidadeCodigo: UNIDADE_EXEMPLO.codigo },
+  { posicao: 8, crianca: "Davi Lucca Pinto", responsavel: "Rafael Pinto", segmento: "maternal_1", telefone: "(21) 99123-4608", unidadeCodigo: UNIDADE_EXEMPLO.codigo },
+  { posicao: 9, crianca: "Elisa Guimarães", responsavel: "Camila Guimarães", segmento: "maternal_2", telefone: "(21) 99123-4609", unidadeCodigo: UNIDADE_EXEMPLO.codigo },
+  { posicao: 10, crianca: "Gael Nogueira", responsavel: "Bruno Nogueira", segmento: "bercario", telefone: "(21) 99123-4610", unidadeCodigo: UNIDADE_EXEMPLO.codigo },
+  { posicao: 11, crianca: "Isabela Rocha", responsavel: "Aline Rocha", segmento: "maternal_1", telefone: "(21) 99123-4611", unidadeCodigo: UNIDADE_EXEMPLO.codigo },
+  { posicao: 12, crianca: "João Miguel Dias", responsavel: "Thiago Dias", segmento: "maternal_2", telefone: "(21) 99123-4612", unidadeCodigo: UNIDADE_EXEMPLO.codigo },
+  { posicao: 1, crianca: "Aluno de outra unidade", responsavel: "Responsável de outra unidade", segmento: "bercario", telefone: "(21) 90000-0001", unidadeCodigo: "EDI-OUTRA-UNIDADE" },
+];
+
+/** Próximos `limite` da fila desta unidade, ordenados por posição — a galeria só mostra os primeiros. */
+export function proximosDaFila(lista: ItemFilaEspera[], unidadeCodigo: string, limite: number = TAMANHO_GALERIA_FILA): ItemFilaEspera[] {
+  return lista
+    .filter((i) => i.unidadeCodigo === unidadeCodigo)
+    .sort((a, b) => a.posicao - b.posicao)
+    .slice(0, limite);
 }

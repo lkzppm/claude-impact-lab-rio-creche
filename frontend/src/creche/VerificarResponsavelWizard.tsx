@@ -1,23 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { ApiError, confirmarResposta, getInscricao } from "../api/client";
+import type { Resposta } from "../api/types";
 import { Button } from "../design-system";
 import { Responsavel } from "./mock";
 
-function salvarIrmaoNaRede(responsavelId: string, valor: boolean) {
-  // TODO: PATCH /api/v1/responsaveis/{responsavelId} { irmao_na_rede: valor }
-  // grava na tabela `responsavel` (a modelar) — hoje é só um valor local de exemplo.
-  console.info("salvarIrmaoNaRede", responsavelId, valor);
-}
-
-function salvarPequenosCariocas(responsavelId: string, valor: boolean) {
-  // TODO: PATCH /api/v1/responsaveis/{responsavelId} { pequenos_cariocas: valor }
-  console.info("salvarPequenosCariocas", responsavelId, valor);
-}
-
+/**
+ * Verificação presencial de documento: chama-se TODO inscrito com algum critério pontuado — quem
+ * não vem, o critério declarado continua contando na pontuação (ninguém perde ponto por faltar),
+ * mas fica sem confirmação física, e é isso que alimenta o cronograma de atraso
+ * (`fluxoAtrasoDocumento.ts`: dia 1 avisa, dia 3 os critérios saem da pontuação).
+ *
+ * As opções aqui **não são digitadas pela creche** — vêm de `GET /inscricoes/{id}` (`respostas`),
+ * o que a família já marcou no formulário de inscrição. A creche só confere contra o documento
+ * físico e confirma ou não cada item (`PATCH /inscricoes/{id}/respostas/{ich_perg_id}`).
+ */
 function concluirVerificacao(responsavelId: string) {
-  // TODO: PATCH /api/v1/responsaveis/{responsavelId} { documentos_verificados: true, verificado_em, verificado_por }
-  const RESULTADO_VERIFICACAO_EXEMPLO = { documentos_verificados: true };
-  console.info("concluirVerificacao", responsavelId, RESULTADO_VERIFICACAO_EXEMPLO);
-  return RESULTADO_VERIFICACAO_EXEMPLO;
+  // TODO: falta uma tabela `responsavel` para marcar `documentos_verificados`/`verificado_em` no
+  // nível da unidade — hoje "verificado" só existe como status local deste painel (`mock.ts`); a
+  // fonte de verdade real por critério já é `resposta.confirmado`, gravada acima.
+  console.info("concluirVerificacao", responsavelId);
 }
 
 export function VerificarResponsavelWizard({
@@ -35,14 +36,39 @@ export function VerificarResponsavelWizard({
   const [responsavelId, setResponsavelId] = useState(preselecionado?.id ?? "");
   const [busca, setBusca] = useState(preselecionado?.nome ?? "");
   const [sugestoesAbertas, setSugestoesAbertas] = useState(false);
-  const [irmaoNaRede, setIrmaoNaRede] = useState(preselecionado?.irmaoNaRede ?? false);
-  const [pequenosCariocas, setPequenosCariocas] = useState(preselecionado?.pequenosCariocas ?? false);
+  const [respostas, setRespostas] = useState<Resposta[]>([]);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   const responsavel = responsaveis.find((r) => r.id === responsavelId);
   const jaVerificado = responsavel?.statusVerificacao === "verificado";
 
   const termo = busca.trim().toLowerCase();
   const sugestoes = termo.length > 0 ? responsaveis.filter((r) => r.nome.toLowerCase().includes(termo)).slice(0, 8) : [];
+
+  useEffect(() => {
+    if (!responsavel?.inscricaoId) {
+      setRespostas([]);
+      setErro(null);
+      return;
+    }
+    let cancelado = false;
+    setCarregando(true);
+    setErro(null);
+    getInscricao(responsavel.inscricaoId)
+      .then((i) => {
+        if (!cancelado) setRespostas(i.respostas);
+      })
+      .catch((e) => {
+        if (!cancelado) setErro(e instanceof ApiError ? e.message : "Não foi possível carregar as respostas da inscrição.");
+      })
+      .finally(() => {
+        if (!cancelado) setCarregando(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [responsavel?.inscricaoId]);
 
   function aoDigitarNome(valor: string) {
     setBusca(valor);
@@ -55,9 +81,17 @@ export function VerificarResponsavelWizard({
     setResponsavelId(r.id);
     setBusca(r.nome);
     setSugestoesAbertas(false);
-    // já verificado: mostra o que foi preenchido; pendente: começa do zero
-    setIrmaoNaRede(r.irmaoNaRede ?? false);
-    setPequenosCariocas(r.pequenosCariocas ?? false);
+  }
+
+  async function alternarConfirmacao(r: Resposta, confirmado: boolean) {
+    if (!responsavel?.inscricaoId) return;
+    setRespostas((atual) => atual.map((x) => (x.ich_perg_id === r.ich_perg_id ? { ...x, confirmado } : x)));
+    try {
+      await confirmarResposta(responsavel.inscricaoId, r.ich_perg_id, confirmado, "painel-creche");
+    } catch (e) {
+      setRespostas((atual) => atual.map((x) => (x.ich_perg_id === r.ich_perg_id ? { ...x, confirmado: !confirmado } : x)));
+      setErro(e instanceof ApiError ? e.message : "Não foi possível gravar a confirmação.");
+    }
   }
 
   function concluir() {
@@ -100,45 +134,43 @@ export function VerificarResponsavelWizard({
           )}
         </label>
 
-        {responsavel && jaVerificado && (
+        {responsavel && !responsavel.inscricaoId && (
+          <p className="text-sm muted">
+            Sem inscrição vinculada (dado de exemplo) — em produção as opções abaixo viriam da inscrição real
+            da família (<code>GET /inscricoes/{"{id}"}</code>).
+          </p>
+        )}
+
+        {responsavel && responsavel.inscricaoId && carregando && <p className="text-sm muted">Carregando respostas da inscrição…</p>}
+        {erro && <p className="text-sm" style={{ color: "var(--danger)" }}>{erro}</p>}
+
+        {responsavel && responsavel.inscricaoId && !carregando && respostas.length > 0 && (
           <div className="stack" style={{ gap: "var(--sp-2)" }}>
-            <p className="text-sm muted">Este responsável já foi verificado. Abaixo está o que foi preenchido na época.</p>
-            <div className={`wizard-check readonly ${irmaoNaRede ? "checked" : ""}`}>
-              <span aria-hidden="true">{irmaoNaRede ? "✓" : "—"}</span>
-              <span>Criança tem irmão na rede: {irmaoNaRede ? "Sim" : "Não"}</span>
-            </div>
-            <div className={`wizard-check readonly ${pequenosCariocas ? "checked" : ""}`}>
-              <span aria-hidden="true">{pequenosCariocas ? "✓" : "—"}</span>
-              <span>Criança está no programa Pequenos Cariocas: {pequenosCariocas ? "Sim" : "Não"}</span>
-            </div>
+            <p className="text-sm muted">
+              {jaVerificado
+                ? "Este responsável já foi verificado. Abaixo está o que a família declarou e o que foi confirmado."
+                : "Confira cada critério declarado pela família contra o documento físico e marque o que for comprovado."}
+            </p>
+            {respostas
+              .filter((r) => r.resposta)
+              .map((r) =>
+                jaVerificado ? (
+                  <div key={r.ich_perg_id} className={`wizard-check readonly ${r.confirmado ? "checked" : ""}`}>
+                    <span aria-hidden="true">{r.confirmado ? "✓" : "—"}</span>
+                    <span>{r.texto ?? `Critério #${r.ich_perg_id}`}</span>
+                  </div>
+                ) : (
+                  <label key={r.ich_perg_id} className={`wizard-check ${r.confirmado ? "checked" : ""}`}>
+                    <input type="checkbox" checked={r.confirmado} onChange={(e) => alternarConfirmacao(r, e.target.checked)} />
+                    <span>{r.texto ?? `Critério #${r.ich_perg_id}`}</span>
+                  </label>
+                ),
+              )}
           </div>
         )}
 
-        {responsavel && !jaVerificado && (
-          <div className="stack" style={{ gap: "var(--sp-2)" }}>
-            <label className={`wizard-check ${irmaoNaRede ? "checked" : ""}`}>
-              <input
-                type="checkbox"
-                checked={irmaoNaRede}
-                onChange={(e) => {
-                  setIrmaoNaRede(e.target.checked);
-                  salvarIrmaoNaRede(responsavel.id, e.target.checked);
-                }}
-              />
-              <span>Criança tem irmão na rede</span>
-            </label>
-            <label className={`wizard-check ${pequenosCariocas ? "checked" : ""}`}>
-              <input
-                type="checkbox"
-                checked={pequenosCariocas}
-                onChange={(e) => {
-                  setPequenosCariocas(e.target.checked);
-                  salvarPequenosCariocas(responsavel.id, e.target.checked);
-                }}
-              />
-              <span>Criança está no programa Pequenos Cariocas</span>
-            </label>
-          </div>
+        {responsavel && responsavel.inscricaoId && !carregando && respostas.filter((r) => r.resposta).length === 0 && !erro && (
+          <p className="text-sm muted">Esta inscrição não declarou nenhum critério pontuado para conferir.</p>
         )}
 
         <div className="dialog-actions">
