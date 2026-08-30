@@ -19,6 +19,10 @@ import MultiReservaPage from "./pages/MultiReservaPage";
 import SmeRedePage from "./pages/SmeRedePage";
 import ReguaPage from "./pages/ReguaPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import CrecheDashboardPage from "./pages/CrecheDashboardPage";
+import CrecheVagasPage from "./pages/CrecheVagasPage";
+import CrecheNovosAlunosPage from "./pages/CrecheNovosAlunosPage";
+import CrecheDocumentosPage from "./pages/CrecheDocumentosPage";
 import ChatAssistente from "./components/ChatAssistente";
 
 export default function App() {
@@ -55,6 +59,12 @@ export default function App() {
         <Route path="/sme/unidades" element={<UnidadesPage />} />
         <Route path="/sme/unidades/:codigo" element={<UnidadeDetalhePage />} />
         <Route path="/sme/regua" element={<ReguaPage />} />
+
+        {/* Creche / EDI */}
+        <Route path="/creche" element={<CrecheDashboardPage />} />
+        <Route path="/creche/vagas" element={<CrecheVagasPage />} />
+        <Route path="/creche/novos-alunos" element={<CrecheNovosAlunosPage />} />
+        <Route path="/creche/documentos" element={<CrecheDocumentosPage />} />
 
         {/* endereços antigos */}
         <Route path="/convocacoes/*" element={<Navigate to="/cre/convocacoes" replace />} />

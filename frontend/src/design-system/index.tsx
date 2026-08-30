@@ -7,6 +7,7 @@ import "./components.css";
 /* ---------- AppHeader — faixa branca com logos + barra azul (matricula.rio) ---------- */
 import { AREA_LABEL, useArea } from "../areas/AreaContext";
 import { CRES } from "../components/Filters";
+import { UNIDADE_EXEMPLO } from "../creche/mock";
 import { Meter } from "./viz";
 import type { VizTone } from "./viz";
 
@@ -30,6 +31,12 @@ const NAV_POR_AREA: Record<string, { to: string; label: string; end?: boolean }[
     { to: "/sme/inscricoes", label: "Inscrições" },
     { to: "/sme/unidades", label: "Unidades" },
     { to: "/sme/regua", label: "Régua" },
+  ],
+  creche: [
+    { to: "/creche", label: "Dashboard", end: true },
+    { to: "/creche/vagas", label: "Administração de Vagas" },
+    { to: "/creche/novos-alunos", label: "Novos Alunos" },
+    { to: "/creche/documentos", label: "Verificação de Documentos" },
   ],
 };
 
@@ -72,7 +79,10 @@ export function AppHeader() {
         <div className="container">
           {area ? (
             <>
-              <span className="app-area">{AREA_LABEL[area]}</span>
+              <span className="app-area">
+                {AREA_LABEL[area]}
+                {area === "creche" && <span className="app-unidade"> · {UNIDADE_EXEMPLO.nome}</span>}
+              </span>
               <nav aria-label="Principal">
                 <ul className="app-nav">
                   {nav.map((n) => (
@@ -462,6 +472,40 @@ export function DataTable<T>({
       {footer && <div className="table-foot">{footer}</div>}
     </div>
   );
+}
+
+/* ---------- Pagination ---------- */
+export function Pagination({
+  page,
+  pageSize,
+  total,
+  onPageChange,
+}: {
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (page: number) => void;
+}) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (totalPages <= 1) return null;
+  return (
+    <div className="pagination">
+      <button type="button" className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+        ‹ Anterior
+      </button>
+      <span className="text-sm muted">
+        Página {page} de {totalPages}
+      </span>
+      <button type="button" className="btn btn-ghost btn-sm" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
+        Próxima ›
+      </button>
+    </div>
+  );
+}
+
+export function paginar<T>(lista: T[], page: number, pageSize: number): T[] {
+  const start = (page - 1) * pageSize;
+  return lista.slice(start, start + pageSize);
 }
 
 /* ---------- EmptyState ---------- */

@@ -1,5 +1,5 @@
+import { Baby, Landmark, School, Users } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Landmark, School, Users } from "lucide-react";
 
 const PERFIS = [
   {
@@ -22,6 +22,13 @@ const PERFIS = [
     chamada: "Classificação e rede",
     texto: "Rode a classificação por criança, compare regimes, acompanhe as 11 CREs e consulte a régua de pontuação.",
     Icone: Landmark,
+  },
+  {
+    to: "/creche",
+    titulo: "Sou da creche / EDI",
+    chamada: "Gestão da minha unidade",
+    texto: "Vagas por segmento, novos alunos para convocar e verificação de documentos dos responsáveis.",
+    Icone: Baby,
   },
 ];
 

@@ -1,13 +1,14 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 
-/** As três áreas do produto. `null` = página de escolha de perfil. */
-export type Area = "familia" | "cre" | "sme" | null;
+/** As áreas do produto. `null` = página de escolha de perfil. */
+export type Area = "familia" | "cre" | "sme" | "creche" | null;
 
 export const AREA_LABEL: Record<Exclude<Area, null>, string> = {
   familia: "Família",
   cre: "CRE / polo",
   sme: "Nível Central SME",
+  creche: "Creche / EDI",
 };
 
 const CRE_KEY = "creche.cre";
@@ -17,6 +18,7 @@ function areaFromPath(pathname: string): Area {
   if (pathname === "/familia" || pathname.startsWith("/familia/")) return "familia";
   if (pathname === "/cre" || pathname.startsWith("/cre/")) return "cre";
   if (pathname === "/sme" || pathname.startsWith("/sme/")) return "sme";
+  if (pathname === "/creche" || pathname.startsWith("/creche/")) return "creche";
   return null;
 }
 
