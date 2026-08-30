@@ -7,6 +7,7 @@ import { Spinner } from "../design-system";
 import MapaCreches, { COR_CHANCE, ROTULO_CHANCE, fmtKm } from "../components/MapaCreches";
 
 const RASCUNHO_KEY = "creche.precadastro.rascunho";
+const MIN_CONTATOS = 3;
 const GRUPAMENTOS = ["Berçário", "Maternal I", "Maternal II"] as const;
 const PARENTESCOS = ["mãe", "pai", "avó", "avô", "tio(a)", "outro"];
 const CANAIS: { v: Canal; rotulo: string }[] = [
@@ -42,7 +43,11 @@ const VAZIO: Rascunho = {
   cepAlternativo: "",
   semLocalizacao: false,
   respostas: {},
-  contatos: [{ nome: "", parentesco: "mãe", canal: "celular", valor: "", principal: true }],
+  contatos: [
+    { nome: "", parentesco: "mãe", canal: "whatsapp", valor: "", principal: true },
+    { nome: "", parentesco: "pai", canal: "celular", valor: "", principal: false },
+    { nome: "", parentesco: "avó", canal: "email", valor: "", principal: false },
+  ],
   escolhas: [],
   cpf: "",
   nomeResponsavel: "",
@@ -53,7 +58,9 @@ function lerRascunho(): Rascunho {
   try {
     const s = localStorage.getItem(RASCUNHO_KEY);
     if (!s) return VAZIO;
-    return { ...VAZIO, ...(JSON.parse(s) as Partial<Rascunho>) };
+    const r = { ...VAZIO, ...(JSON.parse(s) as Partial<Rascunho>) };
+    while (r.contatos.length < MIN_CONTATOS) r.contatos.push({ ...VAZIO.contatos[r.contatos.length], principal: false });
+    return r;
   } catch {
     return VAZIO;
   }
@@ -157,6 +164,15 @@ export default function PreCadastroPage() {
   const [verifCarregando, setVerifCarregando] = useState(false);
   const [tentouEnviar, setTentouEnviar] = useState(false);
   const secCreches = useRef<HTMLElement>(null);
+  const [destacada, setDestacada] = useState<string | null>(null);
+  function focarUnidade(codigo: string) {
+    setDestacada(codigo);
+    const el = document.getElementById(`unidade-${codigo}`);
+    const det = el?.closest("details");
+    if (det && !det.open) det.open = true;
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => setDestacada((d) => (d === codigo ? null : d)), 2500);
+  }
 
   const regua = useQuery({ queryKey: ["familia", "regua"], queryFn: getReguaFamilia, staleTime: 3600_000 });
 
@@ -285,7 +301,7 @@ export default function PreCadastroPage() {
     set("contatos", [...r.contatos, { nome: "", parentesco: "pai", canal: "whatsapp", valor: "", principal: false }]);
   }
   function removerContato(i: number) {
-    if (r.contatos.length === 1) return;
+    if (r.contatos.length <= MIN_CONTATOS) return;
     const cs = r.contatos.filter((_, k) => k !== i);
     if (!cs.some((c) => c.principal)) cs[0].principal = true;
     set("contatos", cs);
@@ -293,19 +309,20 @@ export default function PreCadastroPage() {
   const contatoOk = (c: Contato) =>
     c.nome.trim().length >= 2 && c.valor.trim().length > 0 && (c.canal === "email" ? emailValido(c.valor) : telefoneValido(c.valor));
   const contatosValidos = r.contatos.filter(contatoOk);
+  const canaisDistintos = new Set(contatosValidos.map((c) => c.canal)).size;
 
   // validação final
   const cepOk = (geo != null && geo.lat != null && geo.lon != null) || (cepDigitos.length === 8 && r.semLocalizacao);
   const pendencias: string[] = [];
-  if (!nascAnoMes) pendencias.push("data de nascimento da criança");
-  if (!r.grupamento) pendencias.push("grupamento");
-  if (!r.horario) pendencias.push("turno");
-  if (!cepOk) pendencias.push(cepDigitos.length === 8 ? "confirme o CEP (ou marque “continuar sem localização”)" : "CEP da casa");
-  if (contatosValidos.length < 1) pendencias.push("pelo menos 1 contato completo");
-  if (r.escolhas.length < 1) pendencias.push("pelo menos 1 creche escolhida");
-  if (!cpfValido(r.cpf)) pendencias.push("CPF do responsável");
-  if (r.nomeResponsavel.trim().length < 3) pendencias.push("nome do responsável");
-  if (!r.consentimento) pendencias.push("autorização de uso dos dados");
+  if (!nascAnoMes) pendencias.push("passo 1: data de nascimento da criança");
+  if (!r.grupamento) pendencias.push("passo 1: grupamento");
+  if (!r.horario) pendencias.push("passo 1: turno");
+  if (!cpfValido(r.cpf)) pendencias.push("passo 1: CPF do responsável");
+  if (!cepOk) pendencias.push(cepDigitos.length === 8 ? "passo 3: confirme o CEP (ou marque “continuar sem localização”)" : "passo 3: CEP da casa");
+  if (contatosValidos.length < MIN_CONTATOS) pendencias.push("passo 4: pelo menos 3 contatos preenchidos");
+  if (r.escolhas.length < 1) pendencias.push("passo 5: pelo menos 1 creche escolhida");
+  if (r.nomeResponsavel.trim().length < 3) pendencias.push("passo 6: nome do responsável");
+  if (!r.consentimento) pendencias.push("passo 6: autorização de uso dos dados");
 
   const enviar = useMutation({
     mutationFn: (body: PreCadastroIn) => criarPreCadastro(body),
@@ -456,59 +473,16 @@ export default function PreCadastroPage() {
           </label>
           <input id="cpf" className="fam-input" inputMode="numeric" placeholder="000.000.000-00" value={r.cpf} onChange={(e) => set("cpf", mascaraCpf(e.target.value))} />
           {r.cpf && cpfDigitos.length === 11 && !cpfOk && <p className="fam-erro">CPF inválido. Confira os números.</p>}
-          {cpfOk && verifCarregando && <p className="fam-ajuda">Consultando as bases do governo…</p>}
-          {cpfOk && verif && !verifCarregando && <p className="pc-ok">CPF verificado. Veja no passo 3 o que já foi confirmado automaticamente.</p>}
+          {cpfOk && verifCarregando && <p className="fam-ajuda">Verificando…</p>}
+          {cpfOk && verif && !verifCarregando && <p className="pc-ok">CPF verificado. Veja no passo 2 o que já foi confirmado automaticamente.</p>}
           {cpfOk && verifErro && <p className="fam-erro">{verifErro}</p>}
           <p className="fam-ajuda">Com o CPF conferimos CadÚnico, Bolsa Família e outros critérios nas bases oficiais — sem papel.</p>
         </section>
 
-        {/* 2. Onde mora */}
+        {/* 2. Situação da família */}
         <section className="fam-sec pc-sec">
           <h2>
-            <span className="pc-num">2</span> Onde a família mora
-          </h2>
-          <label className="fam-label" htmlFor="cep">
-            CEP da casa
-          </label>
-          <input
-            id="cep"
-            className="fam-input"
-            inputMode="numeric"
-            placeholder="00000-000"
-            value={r.cep}
-            onChange={(e) => {
-              set("cep", mascaraCep(e.target.value));
-              set("semLocalizacao", false);
-            }}
-          />
-          {geoCarregando && <p className="fam-ajuda">Procurando o endereço…</p>}
-          {geo && !geoErro && (
-            <p className="pc-ok">
-              Endereço encontrado: {[geo.logradouro, geo.bairro].filter(Boolean).join(", ") || geo.cep}
-              {geo.cidade ? ` — ${geo.cidade}` : ""}
-            </p>
-          )}
-          {geoErro && (
-            <div className="pc-aviso">
-              <p>{geoErro}</p>
-              {geo && (
-                <label className="pc-check">
-                  <input type="checkbox" checked={r.semLocalizacao} onChange={(e) => set("semLocalizacao", e.target.checked)} />
-                  Continuar sem localização (mostramos as creches pelo bairro)
-                </label>
-              )}
-            </div>
-          )}
-          <label className="fam-label" htmlFor="cepAlt">
-            Outro endereço de referência <span className="pc-opcional">(trabalho, avó… opcional)</span>
-          </label>
-          <input id="cepAlt" className="fam-input" inputMode="numeric" placeholder="00000-000" value={r.cepAlternativo} onChange={(e) => set("cepAlternativo", mascaraCep(e.target.value))} />
-        </section>
-
-        {/* 3. Situação da família */}
-        <section className="fam-sec pc-sec">
-          <h2>
-            <span className="pc-num">3</span> Situação da família
+            <span className="pc-num">2</span> Situação da família
           </h2>
           {regua.isLoading && <Spinner label="Carregando critérios…" />}
           {regua.isError && <p className="fam-erro">Não deu para carregar os critérios agora.</p>}
@@ -516,7 +490,16 @@ export default function PreCadastroPage() {
             <>
               <h3 className="pc-h3">Verificado automaticamente pelo CPF</h3>
               {!cpfOk && <p className="fam-ajuda">Digite o CPF no passo 1 para verificar automaticamente.</p>}
-              {cpfOk && verifCarregando && !verif && <Spinner label="Consultando as bases do governo…" />}
+              {cpfOk && verifCarregando ? (
+                <div className="pc-verif-loading" role="status" aria-live="polite">
+                  <Spinner label="Consultando CadÚnico, Bolsa Família e Saúde pelo CPF…" />
+                  <ul className="pc-skeleton" aria-hidden="true">
+                    <li />
+                    <li />
+                    <li />
+                  </ul>
+                </div>
+              ) : (
               <ul className="pc-criterios">
                 {regua.data.perguntas
                   .filter((p) => p.automatico)
@@ -555,6 +538,7 @@ export default function PreCadastroPage() {
                     );
                   })}
               </ul>
+              )}
 
               <h3 className="pc-h3">Conte-nos o resto</h3>
               <p className="fam-ajuda">Estes critérios ainda não têm base oficial para conferir automaticamente; serão comprovados na matrícula.</p>
@@ -605,21 +589,64 @@ export default function PreCadastroPage() {
           </div>
         </section>
 
+        {/* 3. Onde mora */}
+        <section className="fam-sec pc-sec">
+          <h2>
+            <span className="pc-num">3</span> Onde a família mora
+          </h2>
+          <label className="fam-label" htmlFor="cep">
+            CEP da casa
+          </label>
+          <input
+            id="cep"
+            className="fam-input"
+            inputMode="numeric"
+            placeholder="00000-000"
+            value={r.cep}
+            onChange={(e) => {
+              set("cep", mascaraCep(e.target.value));
+              set("semLocalizacao", false);
+            }}
+          />
+          {geoCarregando && <p className="fam-ajuda">Procurando o endereço…</p>}
+          {geo && !geoErro && (
+            <p className="pc-ok">
+              Endereço encontrado: {[geo.logradouro, geo.bairro].filter(Boolean).join(", ") || geo.cep}
+              {geo.cidade ? ` — ${geo.cidade}` : ""}
+            </p>
+          )}
+          {geoErro && (
+            <div className="pc-aviso">
+              <p>{geoErro}</p>
+              {geo && (
+                <label className="pc-check">
+                  <input type="checkbox" checked={r.semLocalizacao} onChange={(e) => set("semLocalizacao", e.target.checked)} />
+                  Continuar sem localização (mostramos as creches pelo bairro)
+                </label>
+              )}
+            </div>
+          )}
+          <label className="fam-label" htmlFor="cepAlt">
+            Outro endereço de referência <span className="pc-opcional">(trabalho, avó… opcional)</span>
+          </label>
+          <input id="cepAlt" className="fam-input" inputMode="numeric" placeholder="00000-000" value={r.cepAlternativo} onChange={(e) => set("cepAlternativo", mascaraCep(e.target.value))} />
+        </section>
+
         {/* 4. Contatos */}
         <section className="fam-sec pc-sec">
           <h2>
             <span className="pc-num">4</span> Contatos
           </h2>
           <div className="pc-aviso pc-aviso-forte">
-            Se não conseguirmos falar com você em 3 dias, a vaga passa para outra criança. Cadastre <strong>mais de uma pessoa</strong> e{" "}
-            <strong>mais de um canal</strong>.
+            Se não conseguirmos falar com você em 3 dias, a vaga passa para outra criança — por isso pedimos <strong>3 pessoas ou canais diferentes</strong>.
           </div>
-          {contatosValidos.length < 2 && (
-            <span className="pill pill-warn">
-              {contatosValidos.length === 0 ? "Falta pelo menos 1 contato completo" : "Só 1 contato — adicione outro para garantir"}
-            </span>
+          <span className={`pill ${contatosValidos.length >= MIN_CONTATOS ? "pill-ok" : "pill-warn"} pc-contador`}>
+            Contatos: {Math.min(contatosValidos.length, MIN_CONTATOS)} de {MIN_CONTATOS}
+            {contatosValidos.length > MIN_CONTATOS ? ` (+${contatosValidos.length - MIN_CONTATOS})` : ""}
+          </span>
+          {contatosValidos.length >= MIN_CONTATOS && canaisDistintos === 1 && (
+            <p className="fam-ajuda">Melhor ter mais de um canal: WhatsApp, celular e e-mail.</p>
           )}
-          {contatosValidos.length >= 2 && <span className="pill pill-ok">{contatosValidos.length} contatos — ótimo</span>}
           <ul className="pc-contatos">
             {r.contatos.map((c, i) => (
               <li key={i} className="pc-contato">
@@ -665,7 +692,7 @@ export default function PreCadastroPage() {
                     <input type="radio" name="principal" checked={c.principal} onChange={() => setContato(i, { principal: true })} />
                     Contato principal
                   </label>
-                  {r.contatos.length > 1 && (
+                  {r.contatos.length > MIN_CONTATOS && (
                     <button type="button" className="pc-link" onClick={() => removerContato(i)}>
                       Remover
                     </button>
@@ -697,7 +724,7 @@ export default function PreCadastroPage() {
 
           {unidades.length > 0 && (
             <>
-              <MapaCreches casa={casa} unidades={unidades} escolhidas={r.escolhas} onEscolher={escolher} casaAproximada={casaAproximada} />
+              <MapaCreches casa={casa} unidades={unidades} escolhidas={r.escolhas} onSelecionar={focarUnidade} casaAproximada={casaAproximada} />
               {casaAproximada && <p className="fam-ajuda">🏠 Localização aproximada pelo bairro.</p>}
               {sug.isFetching && <p className="fam-ajuda">Atualizando…</p>}
 
@@ -728,7 +755,7 @@ export default function PreCadastroPage() {
 
               <ul className="pc-unidades">
                 {top5.map((u) => (
-                  <CardUnidade key={u.codigo} u={u} pontos={pontos} ano={sug.data?.regua_ano} escolhida={r.escolhas.includes(u.codigo)} cheio={r.escolhas.length >= 5} onEscolher={escolher} onRemover={remover} destaque />
+                  <CardUnidade key={u.codigo} u={u} pontos={pontos} ano={sug.data?.regua_ano} escolhida={r.escolhas.includes(u.codigo)} destacada={destacada === u.codigo} cheio={r.escolhas.length >= 5} onEscolher={escolher} onRemover={remover} destaque />
                 ))}
               </ul>
               {resto.length > 0 && (
@@ -736,7 +763,7 @@ export default function PreCadastroPage() {
                   <summary>Ver mais creches perto ({resto.length})</summary>
                   <ul className="pc-unidades">
                     {resto.map((u) => (
-                      <CardUnidade key={u.codigo} u={u} pontos={pontos} ano={sug.data?.regua_ano} escolhida={r.escolhas.includes(u.codigo)} cheio={r.escolhas.length >= 5} onEscolher={escolher} onRemover={remover} />
+                      <CardUnidade key={u.codigo} u={u} pontos={pontos} ano={sug.data?.regua_ano} escolhida={r.escolhas.includes(u.codigo)} destacada={destacada === u.codigo} cheio={r.escolhas.length >= 5} onEscolher={escolher} onRemover={remover} />
                     ))}
                   </ul>
                 </details>
@@ -843,6 +870,7 @@ function CardUnidade({
   pontos,
   ano,
   escolhida,
+  destacada,
   cheio,
   onEscolher,
   onRemover,
@@ -852,13 +880,14 @@ function CardUnidade({
   pontos: number;
   ano: number | undefined;
   escolhida: boolean;
+  destacada?: boolean;
   cheio: boolean;
   onEscolher: (c: string) => void;
   onRemover: (c: string) => void;
   destaque?: boolean;
 }) {
   return (
-    <li className={`pc-unidade ${destaque ? "destaque" : ""} ${escolhida ? "escolhida" : ""}`}>
+    <li id={`unidade-${u.codigo}`} className={`pc-unidade ${destaque ? "destaque" : ""} ${escolhida ? "escolhida" : ""} ${destacada ? "foco" : ""}`}>
       <div className="pc-unidade-topo">
         {destaque && <span className="pc-unidade-ordem">{ordinal(u.ordem_sugerida)} sugerido</span>}
         <span className="pill" style={{ background: COR_CHANCE[u.chance], color: "#fff" }}>

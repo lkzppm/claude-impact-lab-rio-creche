@@ -459,7 +459,7 @@ class PreCadastroIn(BaseModel):
     lat: float | None = None
     lon: float | None = None
     respostas: dict[str, bool] = Field(default_factory=dict)
-    contatos: list[ContatoIn] = Field(min_length=1)
+    contatos: list[ContatoIn] = Field(min_length=3)   # regra do produto: 3 contatos evitam o gargalo da convocação
     escolhas: list[str] = Field(min_length=1, max_length=5)
     verificacoes: list[dict[str, Any]] | None = None
     consentimento: bool

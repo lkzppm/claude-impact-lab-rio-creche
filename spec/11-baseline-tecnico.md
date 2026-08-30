@@ -118,7 +118,7 @@ mesmo `hash_entrada` → mesma saída).
 | GET | `/familia/regua?ano=` | critérios do questionário com pontos (norma, só leitura) para o pré-cadastro |
 | GET | `/geo/cep/{cep}` | endereço (BrasilAPI) + coordenada (Nominatim → centroide do bairro na base); `fonte` declara a precisão |
 | POST | `/familia/sugestoes` `{cep\|lat,lon, grupamento, horario, respostas}` | **tempo real**: pontuação pelo motor + até 15 unidades com distância, vagas e `chance` (= % das crianças com até a sua pontuação que escolheram a unidade e conseguiram vaga no ano da régua); as 5 primeiras são o top 5 |
-| POST | `/familia/pre-cadastro` | grava pré-cadastro (jul–ago): criança, CEP(s), respostas, **≥1 contato com parentesco e canal**, até 5 escolhas em ordem, consentimento; CPF só como hash; devolve `protocolo` |
+| POST | `/familia/pre-cadastro` | grava pré-cadastro (jul–ago): criança, CEP(s), respostas, **≥3 contatos (pessoas/canais distintos) com parentesco e canal**, até 5 escolhas em ordem, consentimento; CPF só como hash; devolve `protocolo` |
 | GET | `/familia/pre-cadastro/{protocolo}` | consulta do pré-cadastro |
 
 Erros em JSON `{detail}`; paginação `{items, total, page, size}`.

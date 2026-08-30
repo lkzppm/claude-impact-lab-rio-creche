@@ -26,26 +26,27 @@ interface Props {
   casa: { lat: number; lon: number } | null;
   unidades: UnidadeSugerida[];
   escolhidas: string[];
-  onEscolher?: (codigo: string) => void;
+  onSelecionar?: (codigo: string) => void;
   casaAproximada?: boolean;
 }
 
-/** Mapa OpenStreetMap com a casa da família e as creches sugeridas (top 5 em destaque). */
-export default function MapaCreches({ casa, unidades, escolhidas, onEscolher, casaAproximada }: Props) {
+/** Mapa minimalista (CARTO Positron): casa da família, top 5 numerados, demais creches como pontos. */
+export default function MapaCreches({ casa, unidades, escolhidas, onSelecionar, casaAproximada }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const camadaRef = useRef<L.LayerGroup | null>(null);
-  const onEscolherRef = useRef(onEscolher);
-  onEscolherRef.current = onEscolher;
+  const onSelecionarRef = useRef(onSelecionar);
+  onSelecionarRef.current = onSelecionar;
 
   useEffect(() => {
     if (!ref.current || mapRef.current) return;
-    const map = L.map(ref.current, { scrollWheelZoom: false, zoomControl: true, attributionControl: true });
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    const map = L.map(ref.current, { scrollWheelZoom: false, dragging: true, tap: true, zoomControl: true, attributionControl: true } as L.MapOptions);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      subdomains: "abcd",
+      attribution: "© OpenStreetMap © CARTO",
     }).addTo(map);
-    map.setView([-22.91, -43.35], 11); // Rio de Janeiro
+    map.setView([-22.91, -43.35], 11);
     camadaRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
     return () => {
@@ -65,11 +66,11 @@ export default function MapaCreches({ casa, unidades, escolhidas, onEscolher, ca
     if (casa) {
       const icone = L.divIcon({
         className: "mapa-casa",
-        html: `<span class="mapa-casa-pino">🏠</span><span class="mapa-casa-rotulo">${casaAproximada ? "Sua casa (aprox.)" : "Sua casa"}</span>`,
-        iconSize: [80, 44],
-        iconAnchor: [16, 40],
+        html: `<span class="mapa-casa-pino"></span><span class="mapa-casa-rotulo">${casaAproximada ? "Sua casa (aprox.)" : "Sua casa"}</span>`,
+        iconSize: [90, 22],
+        iconAnchor: [8, 11],
       });
-      L.marker([casa.lat, casa.lon], { icon: icone, zIndexOffset: 1000 }).addTo(camada);
+      L.marker([casa.lat, casa.lon], { icon: icone, zIndexOffset: 1000, interactive: false }).addTo(camada);
       pontos.push([casa.lat, casa.lon]);
     }
 
@@ -77,35 +78,30 @@ export default function MapaCreches({ casa, unidades, escolhidas, onEscolher, ca
       if (u.lat == null || u.lon == null) return;
       const top5 = u.ordem_sugerida <= 5;
       const escolhida = escolhidas.includes(u.codigo);
-      const marker = L.circleMarker([u.lat, u.lon], {
-        radius: top5 ? 11 : 7,
-        color: escolhida ? "#005e96" : "#ffffff",
-        weight: escolhida ? 3 : 1.5,
-        fillColor: COR_CHANCE[u.chance],
-        fillOpacity: 0.95,
-      });
-      const pos = escolhidas.indexOf(u.codigo);
-      marker.bindPopup(
-        `<div class="mapa-popup"><strong>${u.nome}</strong><br/>${fmtKm(u.distancia_km)} · vagas: ${u.vagas}` +
-          `<br/><span style="color:${COR_CHANCE[u.chance]};font-weight:600">${ROTULO_CHANCE[u.chance]}</span>` +
-          (pos >= 0 ? `<br/><em>Sua ${pos + 1}ª escolha</em>` : "") +
-          (onEscolherRef.current && pos < 0 && u.chance !== "sem_vaga"
-            ? `<br/><button type="button" class="mapa-popup-btn" data-codigo="${u.codigo}">Escolher</button>`
-            : "") +
-          `</div>`,
-      );
-      marker.on("popupopen", (e) => {
-        const el = (e.popup.getElement() as HTMLElement | null)?.querySelector<HTMLButtonElement>(".mapa-popup-btn");
-        el?.addEventListener("click", () => {
-          onEscolherRef.current?.(u.codigo);
-          map.closePopup();
+      let marker: L.Layer;
+      if (top5) {
+        const icone = L.divIcon({
+          className: "mapa-top",
+          html: `<span class="mapa-top-n ${escolhida ? "escolhida" : ""}" style="background:${COR_CHANCE[u.chance]}">${u.ordem_sugerida}</span>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15],
         });
-      });
+        marker = L.marker([u.lat, u.lon], { icon: icone, title: u.nome, zIndexOffset: 500 });
+        pontos.push([u.lat, u.lon]);
+      } else {
+        marker = L.circleMarker([u.lat, u.lon], {
+          radius: 5,
+          color: escolhida ? "#005e96" : "#ffffff",
+          weight: escolhida ? 3 : 1,
+          fillColor: "#9aa3ad",
+          fillOpacity: 0.9,
+        });
+      }
+      marker.on("click", () => onSelecionarRef.current?.(u.codigo));
       marker.addTo(camada);
-      if (top5) pontos.push([u.lat, u.lon]);
     });
 
-    if (pontos.length >= 2) map.fitBounds(L.latLngBounds(pontos), { padding: [28, 28], maxZoom: 15 });
+    if (pontos.length >= 2) map.fitBounds(L.latLngBounds(pontos), { padding: [32, 32], maxZoom: 15 });
     else if (pontos.length === 1) map.setView(pontos[0], 14);
     setTimeout(() => map.invalidateSize(), 50);
   }, [casa, unidades, escolhidas, casaAproximada]);
@@ -113,21 +109,25 @@ export default function MapaCreches({ casa, unidades, escolhidas, onEscolher, ca
   return (
     <div className="mapa-wrap">
       <div ref={ref} className="mapa" role="img" aria-label="Mapa com a sua casa e as creches sugeridas" />
-      <div className="mapa-legenda">
+      <p className="mapa-legenda">
         <span>
-          <i style={{ background: COR_CHANCE.alta }} /> Boa chance
+          <i style={{ background: COR_CHANCE.alta }} />
+          Alta
         </span>
         <span>
-          <i style={{ background: COR_CHANCE.media }} /> Chance média
+          <i style={{ background: COR_CHANCE.media }} />
+          Média
         </span>
         <span>
-          <i style={{ background: COR_CHANCE.baixa }} /> Chance baixa
+          <i style={{ background: COR_CHANCE.baixa }} />
+          Baixa
         </span>
         <span>
-          <i style={{ background: COR_CHANCE.sem_vaga }} /> Sem vaga
+          <i style={{ background: COR_CHANCE.sem_vaga }} />
+          Sem vaga
         </span>
-        <span>🏠 Sua casa</span>
-      </div>
+        <span>Toque em uma creche para ver o cartão dela.</span>
+      </p>
     </div>
   );
 }

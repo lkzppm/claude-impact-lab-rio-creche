@@ -343,6 +343,10 @@ def criar_pre_cadastro(body: PreCadastroIn, db: Session = Depends(get_db)):
         raise HTTPException(422, "CEP deve ter 8 dígitos.")
     if len(set(body.escolhas)) != len(body.escolhas):
         raise HTTPException(422, "Há creche repetida nas escolhas.")
+    if len(body.contatos) < 3:
+        raise HTTPException(422, "Informe pelo menos 3 contatos (pessoas ou canais diferentes).")
+    if len({(c.canal, c.valor.strip().lower()) for c in body.contatos}) < len(body.contatos):
+        raise HTTPException(422, "Há contato repetido: cada linha precisa ser uma pessoa ou canal diferente.")
     existentes = {u for (u,) in db.execute(select(Unidade.codigo).where(Unidade.codigo.in_(body.escolhas))).all()}
     faltam = [c for c in body.escolhas if c not in existentes]
     if faltam:
